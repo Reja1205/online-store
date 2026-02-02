@@ -8,9 +8,16 @@ const app = express();
 app.use(express.json());
 app.use(cookieParser());
 
+// CORS (for cookies)
 const allowedOrigin = process.env.FRONTEND_ORIGIN || "http://localhost:3000";
-app.use(cors({ origin: allowedOrigin, credentials: true }));
+app.use(
+  cors({
+    origin: allowedOrigin,
+    credentials: true,
+  })
+);
 
+// Routes
 const authRoutes = require("./routes/auth.routes");
 const adminRoutes = require("./routes/admin.routes");
 
@@ -25,8 +32,10 @@ app.get("/health", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 
+// 404
 app.use((req, res) => res.status(404).json({ message: "Route not found" }));
 
+// Error handler
 app.use((err, req, res, next) => {
   console.error("API_ERROR:", err);
   res.status(500).json({ message: "Server error", error: err.message });
