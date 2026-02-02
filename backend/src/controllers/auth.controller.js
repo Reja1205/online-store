@@ -2,27 +2,36 @@ const bcrypt = require("bcrypt");
 const User = require("../models/User");
 const { signToken } = require("../utils/jwt");
 
+// ---------------- COOKIE OPTIONS ----------------
 function buildCookieOptions() {
   const isProd = process.env.NODE_ENV === "production";
+
   return {
     httpOnly: true,
-    secure: isProd,                // ✅ true on Render
+    secure: isProd,                 // REQUIRED for https (Render/Vercel)
     sameSite: isProd ? "none" : "lax",
-    maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: "/",                      // IMPORTANT
+    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
   };
 }
 
-// POST /api/auth/register-user
+// ---------------- REGISTER USER ----------------
 async function registerUser(req, res) {
   try {
     const { name, email, password } = req.body || {};
+
     if (!name || !email || !password) {
-      return res.status(400).json({ message: "Name, email, password are required" });
+      return res.status(400).json({
+        message: "Name, email, password are required"
+      });
     }
 
     const cleanEmail = email.toLowerCase().trim();
-    const existing = await User.findOne({ email: cleanEmail });
-    if (existing) return res.status(409).json({ message: "Email already in use" });
+
+    const exists = await User.findOne({ email: cleanEmail });
+    if (exists) {
+      return res.status(409).json({ message: "Email already in use" });
+    }
 
     const hashed = await bcrypt.hash(password, 10);
 
@@ -30,40 +39,45 @@ async function registerUser(req, res) {
       name: name.trim(),
       email: cleanEmail,
       password: hashed,
-      role: "user",
+      role: "user"
     });
 
     return res.status(201).json({
       message: "User registered successfully",
-      user: { id: user._id, name: user.name, email: user.email, role: user.role },
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
     });
   } catch (err) {
     console.error("REGISTER_USER_ERROR:", err);
-    return res.status(500).json({ message: "Server error", error: err.message });
+    return res.status(500).json({ message: "Server error" });
   }
 }
 
-// POST /api/auth/register-admin
+// ---------------- REGISTER ADMIN ----------------
 async function registerAdmin(req, res) {
   try {
     const { name, email, password, adminSecret } = req.body || {};
+
     if (!name || !email || !password || !adminSecret) {
       return res.status(400).json({
-        message: "Name, email, password, adminSecret are required",
+        message: "Name, email, password, adminSecret are required"
       });
     }
 
-    const expectedSecret = process.env.ADMIN_SECRET;
-    if (!expectedSecret) {
-      return res.status(500).json({ message: "ADMIN_SECRET is not set on server" });
-    }
-    if (adminSecret !== expectedSecret) {
+    if (adminSecret !== process.env.ADMIN_SECRET) {
       return res.status(403).json({ message: "Invalid admin secret" });
     }
 
     const cleanEmail = email.toLowerCase().trim();
-    const existing = await User.findOne({ email: cleanEmail });
-    if (existing) return res.status(409).json({ message: "Email already in use" });
+
+    const exists = await User.findOne({ email: cleanEmail });
+    if (exists) {
+      return res.status(409).json({ message: "Email already in use" });
+    }
 
     const hashed = await bcrypt.hash(password, 10);
 
@@ -71,76 +85,106 @@ async function registerAdmin(req, res) {
       name: name.trim(),
       email: cleanEmail,
       password: hashed,
-      role: "admin",
+      role: "admin"
     });
 
     return res.status(201).json({
       message: "Admin registered successfully",
-      user: { id: user._id, name: user.name, email: user.email, role: user.role },
-    });
-  } catch (err) {
-    console.error("REGISTER_ADMIN_ERROR:", err);
-    return res.status(500).json({ message: "Server error", error: err.message });
-  }
-}
-
-// POST /api/auth/login
-async function login(req, res) {
-  try {
-    const { email, password } = req.body || {};
-    if (!email || !password) {
-      return res.status(400).json({ message: "Email and password are required" });
-    }
-
-    const user = await User.findOne({ email: email.toLowerCase().trim() });
-    if (!user) return res.status(401).json({ message: "Invalid credentials" });
-
-    const ok = await bcrypt.compare(password, user.password);
-    if (!ok) return res.status(401).json({ message: "Invalid credentials" });
-
-    const token = signToken({ id: user._id.toString(), role: user.role });
-
-    // ✅ Cookie (optional, nice-to-have)
-    const cookieName = process.env.COOKIE_NAME || "token";
-    res.cookie(cookieName, token, buildCookieOptions());
-
-    // ✅ Token in response (recommended for Vercel/Render)
-    return res.json({
-      message: "Login successful",
-      token,
       user: {
         id: user._id,
         name: user.name,
         email: user.email,
-        role: user.role,
-      },
+        role: user.role
+      }
     });
   } catch (err) {
-    console.error("LOGIN_ERROR:", err);
-    return res.status(500).json({ message: "Server error", error: err.message });
+    console.error("REGISTER_ADMIN_ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
   }
 }
 
-// POST /api/auth/logout
+// ---------------- LOGIN ----------------
+async function login(req, res) {
+  try {
+    const { email, password } = req.body || {};
+
+    if (!email || !password) {
+      return res.status(400).json({
+        message: "Email and password are required"
+      });
+    }
+
+    const user = await User.findOne({
+      email: email.toLowerCase().trim()
+    });
+
+    if (!user) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    const token = signToken({
+      id: user._id.toString(),
+      role: user.role
+    });
+
+    const cookieName = process.env.COOKIE_NAME || "token";
+    res.cookie(cookieName, token, buildCookieOptions());
+
+    return res.json({
+      message: "Login successful",
+      token, // useful for Postman/debug
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    });
+  } catch (err) {
+    console.error("LOGIN_ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+}
+
+// ---------------- LOGOUT ----------------
 function logout(req, res) {
   const cookieName = process.env.COOKIE_NAME || "token";
   res.clearCookie(cookieName, buildCookieOptions());
   return res.json({ message: "Logged out" });
 }
 
-// GET /api/auth/me
+// ---------------- CURRENT USER (/me) ----------------
 async function me(req, res) {
   try {
     const user = await User.findById(req.user.id).select("-password");
-    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
     return res.json({
-      user: { id: user._id, name: user.name, email: user.email, role: user.role },
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
     });
   } catch (err) {
     console.error("ME_ERROR:", err);
-    return res.status(500).json({ message: "Server error", error: err.message });
+    return res.status(500).json({ message: "Server error" });
   }
 }
 
-module.exports = { registerUser, registerAdmin, login, logout, me };
+module.exports = {
+  registerUser,
+  registerAdmin,
+  login,
+  logout,
+  me
+};

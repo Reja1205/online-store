@@ -8,17 +8,25 @@ const app = express();
 app.use(express.json());
 app.use(cookieParser());
 
-// CORS for production cookies
-const allowedOrigin = process.env.FRONTEND_ORIGIN;
+const allowedOrigins = [
+  process.env.FRONTEND_ORIGIN,        // your vercel url
+  "http://localhost:3000",            // local dev
+].filter(Boolean);
 
 app.use(
   cors({
-    origin: allowedOrigin,
+    origin: function (origin, callback) {
+      // allow Postman / server-to-server requests (no origin)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+
+      return callback(new Error("CORS blocked: " + origin));
+    },
     credentials: true,
   })
 );
 
-// Routes
 const authRoutes = require("./routes/auth.routes");
 
 app.get("/health", (req, res) => {
@@ -30,7 +38,6 @@ app.get("/health", (req, res) => {
 
 app.use("/api/auth", authRoutes);
 
-// 404
 app.use((req, res) => res.status(404).json({ message: "Route not found" }));
 
 module.exports = app;
