@@ -10,12 +10,11 @@ export default function ProfilePage() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // CHECK LOGIN
   useEffect(() => {
-    const checkUser = async () => {
+    async function load() {
       try {
         const res = await fetch(`${API}/api/auth/me`, {
-          credentials: "include", // IMPORTANT
+          credentials: "include", // ✅ MUST for cookie auth
         });
 
         if (!res.ok) {
@@ -25,40 +24,25 @@ export default function ProfilePage() {
 
         const data = await res.json();
         setUser(data.user);
-      } catch (err) {
+      } catch (e) {
         router.push("/login");
       } finally {
         setLoading(false);
       }
-    };
+    }
 
-    checkUser();
+    load();
   }, [router]);
 
-  // LOGOUT
-  const handleLogout = async () => {
-    await fetch(`${API}/api/auth/logout`, {
-      method: "POST",
-      credentials: "include",
-    });
-    router.push("/login");
-  };
-
-  if (loading) return <p style={{ padding: 20 }}>Loading...</p>;
-
+  if (loading) return <div style={{ padding: 20 }}>Loading...</div>;
   if (!user) return null;
 
   return (
     <div style={{ padding: 20 }}>
       <h1>Profile</h1>
-
       <p><b>Name:</b> {user.name}</p>
       <p><b>Email:</b> {user.email}</p>
       <p><b>Role:</b> {user.role}</p>
-
-      <button onClick={handleLogout} style={{ padding: 10 }}>
-        Logout
-      </button>
     </div>
   );
 }

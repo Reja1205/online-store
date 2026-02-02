@@ -6,31 +6,24 @@ import { useRouter } from "next/navigation";
 export default function LoginPage() {
   const router = useRouter();
 
-  const [email, setEmail] = useState("admin@test.com");
-  const [password, setPassword] = useState("123456");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // IMPORTANT: env must exist in Vercel
-  const API = process.env.NEXT_PUBLIC_API_URL || "";
+  const API =
+    process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
-    // guard if env missing
-    if (!API) {
-      setError("API URL missing. Check NEXT_PUBLIC_API_URL in Vercel.");
-      setLoading(false);
-      return;
-    }
-
     try {
       const res = await fetch(`${API}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        credentials: "include", // IMPORTANT for cookies
         body: JSON.stringify({ email, password }),
       });
 
@@ -42,13 +35,8 @@ export default function LoginPage() {
         return;
       }
 
-      // optional token storage (helps production)
-      if (data.token) {
-        localStorage.setItem("token", data.token);
-      }
-
-      // go home after success
-      router.push("/");
+      // Success → go to profile
+      router.push("/profile");
       router.refresh();
     } catch (err) {
       setError("Network error");
@@ -58,7 +46,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div style={{ padding: 20, maxWidth: 420 }}>
+    <div style={{ padding: 20, maxWidth: 420, margin: "auto" }}>
       <h1>Login</h1>
 
       <form onSubmit={handleSubmit} style={{ display: "grid", gap: 12 }}>
@@ -66,9 +54,11 @@ export default function LoginPage() {
           <label>Email</label>
           <input
             style={{ width: "100%", padding: 10 }}
+            type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="email"
+            placeholder="Enter email"
+            required
           />
         </div>
 
@@ -79,7 +69,8 @@ export default function LoginPage() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="password"
+            placeholder="Enter password"
+            required
           />
         </div>
 
