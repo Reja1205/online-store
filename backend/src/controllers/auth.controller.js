@@ -6,9 +6,10 @@ function buildCookieOptions() {
   const isProd = process.env.NODE_ENV === "production";
   return {
     httpOnly: true,
-    secure: isProd, // true on Render/HTTPS
+    secure: isProd, // true on Render (HTTPS)
     sameSite: isProd ? "none" : "lax",
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: "/", // ✅ important for consistent clearCookie
   };
 }
 
@@ -26,9 +27,7 @@ async function registerUser(req, res) {
     const cleanEmail = email.toLowerCase().trim();
 
     const existing = await User.findOne({ email: cleanEmail });
-    if (existing) {
-      return res.status(409).json({ message: "Email already in use" });
-    }
+    if (existing) return res.status(409).json({ message: "Email already in use" });
 
     const hashed = await bcrypt.hash(password, 10);
 
@@ -72,9 +71,7 @@ async function registerAdmin(req, res) {
     const cleanEmail = email.toLowerCase().trim();
 
     const existing = await User.findOne({ email: cleanEmail });
-    if (existing) {
-      return res.status(409).json({ message: "Email already in use" });
-    }
+    if (existing) return res.status(409).json({ message: "Email already in use" });
 
     const hashed = await bcrypt.hash(password, 10);
 
@@ -115,9 +112,12 @@ async function login(req, res) {
     const cookieName = process.env.COOKIE_NAME || "token";
     res.cookie(cookieName, token, buildCookieOptions());
 
+    const isProd = process.env.NODE_ENV === "production";
+
     return res.json({
       message: "Login successful",
-      token,
+      // ✅ only return token in dev (nice for Postman)
+      ...(isProd ? {} : { token }),
       user: {
         id: user._id,
         name: user.name,
@@ -138,7 +138,7 @@ function logout(req, res) {
   return res.json({ message: "Logged out" });
 }
 
-// GET /api/auth/me  ✅ THIS IS THE REAL VERSION
+// GET /api/auth/me
 async function me(req, res) {
   try {
     const user = await User.findById(req.user.id).select("-password");
@@ -158,10 +158,4 @@ async function me(req, res) {
   }
 }
 
-module.exports = {
-  registerUser,
-  registerAdmin,
-  login,
-  logout,
-  me,
-};
+module.exports = { registerUser, registerAdmin, login, logout, me };
