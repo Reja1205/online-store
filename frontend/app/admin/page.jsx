@@ -1,57 +1,58 @@
 "use client";
-const API = process.env.NEXT_PUBLIC_API_URL;
+
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+
+const API = process.env.NEXT_PUBLIC_API_URL;
 
 export default function AdminPage() {
+  const router = useRouter();
+  const [status, setStatus] = useState("loading");
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
   useEffect(() => {
-    fetch(`${base}/api/auth/me`, {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
+    fetch(`${API}/api/auth/me`, {
+      method: "GET",
       credentials: "include",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
-      .then((res) => res.json())
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.message || "Not authorized");
+        return data;
+      })
       .then((data) => {
-        setUser(data.user || null);
-        setLoading(false);
+        if (!data?.user) {
+          router.push("/login");
+          return;
+        }
+
+        if (data.user.role !== "admin") {
+          router.push("/");
+          return;
+        }
+
+        setUser(data.user);
+        setStatus("ready");
       })
       .catch(() => {
-        setUser(null);
-        setLoading(false);
+        router.push("/login");
       });
-  }, []);
+  }, [router]);
 
-  if (loading) return <p style={{ padding: 20 }}>Loading...</p>;
-
-  if (!user) {
-    return (
-      <div style={{ padding: 20 }}>
-        <h2>Admin Page</h2>
-        <p>You are not logged in</p>
-      </div>
-    );
-  }
-
-  if (user.role !== "admin") {
-    return (
-      <div style={{ padding: 20 }}>
-        <h2>Admin Page</h2>
-        <p>Access Denied</p>
-      </div>
-    );
-  }
+  if (status === "loading") return <p style={{ padding: 20 }}>Checking admin access...</p>;
 
   return (
     <div style={{ padding: 20 }}>
-      <h2>Admin Dashboard</h2>
-      <p>Welcome Admin {user.name}</p>
-      <p>Email: {user.email}</p>
-      <p>Role: {user.role}</p>
+      <h1>Admin Dashboard</h1>
+      <p>Welcome, {user?.name}</p>
+      <p>Role: {user?.role}</p>
 
-      <hr />
-      <p>Here you will later manage users, products, orders, etc.</p>
+      <p style={{ marginTop: 20 }}>
+        ✅ This page is protected. Only admins can see it.
+      </p>
     </div>
   );
 }
