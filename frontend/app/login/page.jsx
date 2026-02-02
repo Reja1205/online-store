@@ -33,10 +33,10 @@ export default function LoginPage() {
         return;
       }
 
-      // ✅ Go home AND refresh so homepage re-checks /me
+      // Go home and force the page to re-fetch /me
       router.push("/");
-      router.refresh(); // important
-    } catch (err) {
+      router.refresh(); // ✅ important
+    } catch {
       setError("Network error");
     } finally {
       setLoading(false);
@@ -54,7 +54,6 @@ export default function LoginPage() {
             style={{ width: "100%", padding: 10 }}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="email"
           />
         </div>
 
@@ -65,21 +64,16 @@ export default function LoginPage() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="password"
           />
         </div>
 
         {error && <p style={{ color: "red", margin: 0 }}>{error}</p>}
 
-        <button type="submit" disabled={loading} style={{ padding: 10, cursor: "pointer" }}>
+        <button type="submit" disabled={loading} style={{ padding: 10 }}>
           {loading ? "Logging in..." : "Login"}
         </button>
 
-        <button
-          type="button"
-          onClick={() => router.push("/")}
-          style={{ padding: 10, cursor: "pointer" }}
-        >
+        <button type="button" onClick={() => router.push("/")} style={{ padding: 10 }}>
           Back
         </button>
       </form>

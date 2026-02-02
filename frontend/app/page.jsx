@@ -1,38 +1,48 @@
 "use client";
 
-const API = process.env.NEXT_PUBLIC_API_URL;
 import { useEffect, useState } from "react";
+
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 export default function Home() {
   const [user, setUser] = useState(null);
-  const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+  const [loading, setLoading] = useState(true);
+
+  const loadMe = async () => {
+    try {
+      const res = await fetch(`${API}/api/auth/me`, {
+        credentials: "include",
+        cache: "no-store",
+      });
+
+      const data = await res.json();
+      setUser(data?.user || null);
+    } catch {
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    fetch(`${base}/api/auth/me`, {
-      credentials: "include",
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.user) setUser(data.user);
-        else setUser(null);
-      })
-      .catch(() => setUser(null));
-  }, [base]);
+    loadMe();
+  }, []);
 
   const handleLogout = async () => {
-    await fetch(`${base}/api/auth/logout`, {
+    await fetch(`${API}/api/auth/logout`, {
       method: "POST",
       credentials: "include",
     });
-    location.reload();
+    window.location.href = "/"; // ✅ simplest and reliable
   };
 
   return (
-    <div style={{ padding: "20px", fontFamily: "system-ui" }}>
+    <div style={{ padding: "20px" }}>
       <h1>Online Store</h1>
 
-      {/* NOT LOGGED IN */}
-      {!user && (
+      {loading && <p>Loading...</p>}
+
+      {!loading && !user && (
         <>
           <a href="/login">Login</a>
           <br />
@@ -40,22 +50,13 @@ export default function Home() {
         </>
       )}
 
-      {/* LOGGED IN */}
-      {user && (
+      {!loading && user && (
         <>
           <p>Welcome {user.name}</p>
           <p>Role: {user.role}</p>
-
-          {/* ADMIN ONLY */}
-          {user.role === "admin" && (
-            <>
-              <br />
-              <a href="/admin">Admin Panel</a>
-            </>
-          )}
-
-          <br />
-          <button onClick={handleLogout}>Logout</button>
+          <button onClick={handleLogout} style={{ padding: 10 }}>
+            Logout
+          </button>
         </>
       )}
     </div>
