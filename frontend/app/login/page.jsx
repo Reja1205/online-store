@@ -3,8 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-const API = process.env.NEXT_PUBLIC_API_URL;
-
 export default function LoginPage() {
   const router = useRouter();
 
@@ -13,16 +11,26 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // IMPORTANT: env must exist in Vercel
+  const API = process.env.NEXT_PUBLIC_API_URL || "";
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
+    // guard if env missing
+    if (!API) {
+      setError("API URL missing. Check NEXT_PUBLIC_API_URL in Vercel.");
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await fetch(`${API}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // credentials optional now (we'll use token)
+        credentials: "include",
         body: JSON.stringify({ email, password }),
       });
 
@@ -30,15 +38,19 @@ export default function LoginPage() {
 
       if (!res.ok) {
         setError(data?.message || "Login failed");
+        setLoading(false);
         return;
       }
 
-      // ✅ Save JWT so production always works
-      localStorage.setItem("token", data.token);
+      // optional token storage (helps production)
+      if (data.token) {
+        localStorage.setItem("token", data.token);
+      }
 
+      // go home after success
       router.push("/");
       router.refresh();
-    } catch {
+    } catch (err) {
       setError("Network error");
     } finally {
       setLoading(false);
@@ -56,6 +68,7 @@ export default function LoginPage() {
             style={{ width: "100%", padding: 10 }}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            placeholder="email"
           />
         </div>
 
@@ -66,16 +79,29 @@ export default function LoginPage() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            placeholder="password"
           />
         </div>
 
-        {error && <p style={{ color: "red", margin: 0 }}>{error}</p>}
+        {error && (
+          <p style={{ color: "red", margin: 0 }}>
+            {error}
+          </p>
+        )}
 
-        <button type="submit" disabled={loading} style={{ padding: 10 }}>
+        <button
+          type="submit"
+          disabled={loading}
+          style={{ padding: 10, cursor: "pointer" }}
+        >
           {loading ? "Logging in..." : "Login"}
         </button>
 
-        <button type="button" onClick={() => router.push("/")} style={{ padding: 10 }}>
+        <button
+          type="button"
+          onClick={() => router.push("/")}
+          style={{ padding: 10, cursor: "pointer" }}
+        >
           Back
         </button>
       </form>

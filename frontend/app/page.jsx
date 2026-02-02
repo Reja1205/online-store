@@ -1,48 +1,42 @@
 "use client";
-
 import { useEffect, useState } from "react";
 
-const API = process.env.NEXT_PUBLIC_API_URL;
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 export default function Home() {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  const loadMe = async () => {
-    try {
-      const token = localStorage.getItem("token");
-
-      const res = await fetch(`${API}/api/auth/me`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-        cache: "no-store",
-      });
-
-      const data = await res.json();
-      setUser(data?.user || null);
-    } catch {
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
-    loadMe();
+    const token = localStorage.getItem("token");
+
+    fetch(`${API}/api/auth/me`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.user) setUser(data.user);
+        else setUser(null);
+      })
+      .catch(() => setUser(null));
   }, []);
 
   const handleLogout = async () => {
-    // optional: call backend logout, but token logout is local
+    // remove token (main thing)
     localStorage.removeItem("token");
-    window.location.href = "/";
+
+    // optional: also hit backend logout if you still set cookies sometimes
+    try {
+      await fetch(`${API}/api/auth/logout`, { method: "POST" });
+    } catch {}
+
+    location.reload();
   };
 
   return (
     <div style={{ padding: "20px" }}>
       <h1>Online Store</h1>
 
-      {loading && <p>Loading...</p>}
-
-      {!loading && !user && (
+      {!user && (
         <>
           <a href="/login">Login</a>
           <br />
@@ -50,7 +44,7 @@ export default function Home() {
         </>
       )}
 
-      {!loading && user && (
+      {user && (
         <>
           <p>Welcome {user.name}</p>
           <p>Role: {user.role}</p>
