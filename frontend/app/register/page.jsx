@@ -1,4 +1,5 @@
 "use client";
+const API = process.env.NEXT_PUBLIC_API_URL;
 import { useState } from "react";
 
 export default function Register() {
