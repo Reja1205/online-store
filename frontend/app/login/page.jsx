@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+const API = process.env.NEXT_PUBLIC_API_URL;
 
 export default function LoginPage() {
   const router = useRouter();
@@ -22,7 +22,7 @@ export default function LoginPage() {
       const res = await fetch(`${API}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        // credentials optional now (we'll use token)
         body: JSON.stringify({ email, password }),
       });
 
@@ -33,9 +33,11 @@ export default function LoginPage() {
         return;
       }
 
-      // Go home and force the page to re-fetch /me
+      // ✅ Save JWT so production always works
+      localStorage.setItem("token", data.token);
+
       router.push("/");
-      router.refresh(); // ✅ important
+      router.refresh();
     } catch {
       setError("Network error");
     } finally {

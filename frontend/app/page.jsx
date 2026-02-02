@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+const API = process.env.NEXT_PUBLIC_API_URL;
 
 export default function Home() {
   const [user, setUser] = useState(null);
@@ -10,8 +10,10 @@ export default function Home() {
 
   const loadMe = async () => {
     try {
+      const token = localStorage.getItem("token");
+
       const res = await fetch(`${API}/api/auth/me`, {
-        credentials: "include",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
         cache: "no-store",
       });
 
@@ -29,11 +31,9 @@ export default function Home() {
   }, []);
 
   const handleLogout = async () => {
-    await fetch(`${API}/api/auth/logout`, {
-      method: "POST",
-      credentials: "include",
-    });
-    window.location.href = "/"; // ✅ simplest and reliable
+    // optional: call backend logout, but token logout is local
+    localStorage.removeItem("token");
+    window.location.href = "/";
   };
 
   return (
