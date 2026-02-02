@@ -8,53 +8,55 @@ const API = process.env.NEXT_PUBLIC_API_URL;
 export default function ProfilePage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
+  // CHECK LOGIN
   useEffect(() => {
-    fetch(`${API}/api/auth/me`, {
-      credentials: "include",
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (!data.user) {
+    const checkUser = async () => {
+      try {
+        const res = await fetch(`${API}/api/auth/me`, {
+          credentials: "include", // IMPORTANT
+        });
+
+        if (!res.ok) {
           router.push("/login");
-        } else {
-          setUser(data.user);
+          return;
         }
-      })
-      .catch(() => router.push("/login"));
+
+        const data = await res.json();
+        setUser(data.user);
+      } catch (err) {
+        router.push("/login");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkUser();
   }, [router]);
 
+  // LOGOUT
   const handleLogout = async () => {
     await fetch(`${API}/api/auth/logout`, {
       method: "POST",
       credentials: "include",
     });
-    router.push("/");
-    router.refresh();
+    router.push("/login");
   };
 
-  if (!user) {
-    return <p style={{ padding: 20 }}>Loading...</p>;
-  }
+  if (loading) return <p style={{ padding: 20 }}>Loading...</p>;
+
+  if (!user) return null;
 
   return (
     <div style={{ padding: 20 }}>
       <h1>Profile</h1>
 
-      <p>
-        <b>Name:</b> {user.name}
-      </p>
-      <p>
-        <b>Email:</b> {user.email}
-      </p>
-      <p>
-        <b>Role:</b> {user.role}
-      </p>
+      <p><b>Name:</b> {user.name}</p>
+      <p><b>Email:</b> {user.email}</p>
+      <p><b>Role:</b> {user.role}</p>
 
-      <button
-        onClick={handleLogout}
-        style={{ padding: 10, marginTop: 10, cursor: "pointer" }}
-      >
+      <button onClick={handleLogout} style={{ padding: 10 }}>
         Logout
       </button>
     </div>
