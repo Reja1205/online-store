@@ -1,27 +1,28 @@
 const jwt = require("jsonwebtoken");
 
-module.exports = function auth(req, res, next) {
+const auth = (req, res, next) => {
   try {
-    let token = null;
+    const cookieName = process.env.COOKIE_NAME || "token";
 
-    // 1) Bearer token (recommended)
-    const authHeader = req.headers.authorization;
-    if (authHeader?.startsWith("Bearer ")) {
-      token = authHeader.split(" ")[1];
-    }
+    // 1) Try cookie first
+    let token = req.cookies?.[cookieName];
 
-    // 2) Fallback to cookie token
+    // 2) If not found, try Authorization: Bearer <token>
     if (!token) {
-      const cookieName = process.env.COOKIE_NAME || "token";
-      token = req.cookies?.[cookieName];
+      const authHeader = req.headers.authorization || "";
+      if (authHeader.startsWith("Bearer ")) {
+        token = authHeader.replace("Bearer ", "").trim();
+      }
     }
 
     if (!token) return res.status(401).json({ message: "Not logged in" });
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
+    req.user = decoded; // { id, role }
     next();
-  } catch {
+  } catch (err) {
     return res.status(401).json({ message: "Invalid/expired token" });
   }
 };
+
+module.exports = auth;
