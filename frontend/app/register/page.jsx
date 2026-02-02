@@ -1,115 +1,89 @@
 "use client";
-const API = process.env.NEXT_PUBLIC_API_URL;
+
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
-export default function Register() {
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    password: "",
-    adminSecret: "",
-    isAdmin: false,
-  });
+const API = process.env.NEXT_PUBLIC_API_URL;
 
-  const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+export default function RegisterPage() {
+  const router = useRouter();
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setForm({
-      ...form,
-      [name]: type === "checkbox" ? checked : value,
-    });
-  };
+  const [name, setName] = useState("Test User");
+  const [email, setEmail] = useState("user@test.com");
+  const [password, setPassword] = useState("123456");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+    setLoading(true);
 
-    const url = form.isAdmin
-      ? `${base}/api/auth/register-admin`
-      : `${base}/api/auth/register-user`;
+    try {
+      const res = await fetch(`${API}/api/auth/register-user`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      });
 
-    const body = form.isAdmin
-      ? {
-          name: form.name,
-          email: form.email,
-          password: form.password,
-          adminSecret: form.adminSecret,
-        }
-      : {
-          name: form.name,
-          email: form.email,
-          password: form.password,
-        };
+      const data = await res.json();
 
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+      if (!res.ok) {
+        setError(data?.message || "Registration failed");
+        return;
+      }
 
-    const data = await res.json();
-
-    if (res.ok) {
-      alert("Registration successful");
-      window.location.href = "/login";
-    } else {
-      alert(data.message || "Error");
+      router.push("/login");
+    } catch {
+      setError("Network error");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div style={{ padding: 20 }}>
-      <h2>Register</h2>
+    <div style={{ padding: 20, maxWidth: 420 }}>
+      <h1>Register</h1>
 
-      <form onSubmit={handleSubmit}>
-        <input
-          name="name"
-          placeholder="Name"
-          onChange={handleChange}
-        />
-        <br />
-
-        <input
-          name="email"
-          placeholder="Email"
-          onChange={handleChange}
-        />
-        <br />
-
-        <input
-          name="password"
-          placeholder="Password"
-          type="password"
-          onChange={handleChange}
-        />
-        <br />
-
-        <label>
+      <form onSubmit={handleSubmit} style={{ display: "grid", gap: 12 }}>
+        <div>
+          <label>Name</label>
           <input
-            type="checkbox"
-            name="isAdmin"
-            onChange={handleChange}
+            style={{ width: "100%", padding: 10 }}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
           />
-          Register as Admin
-        </label>
+        </div>
 
-        {form.isAdmin && (
-          <>
-            <br />
-            <input
-              name="adminSecret"
-              placeholder="Admin Secret"
-              onChange={handleChange}
-            />
-          </>
-        )}
+        <div>
+          <label>Email</label>
+          <input
+            style={{ width: "100%", padding: 10 }}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </div>
 
-        <br />
-        <button type="submit">Register</button>
+        <div>
+          <label>Password</label>
+          <input
+            style={{ width: "100%", padding: 10 }}
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </div>
+
+        {error && <p style={{ color: "red", margin: 0 }}>{error}</p>}
+
+        <button type="submit" disabled={loading} style={{ padding: 10 }}>
+          {loading ? "Creating..." : "Register"}
+        </button>
+
+        <button type="button" onClick={() => router.push("/")} style={{ padding: 10 }}>
+          Back
+        </button>
       </form>
-
-      <br />
-      <a href="/">Back</a>
     </div>
   );
 }

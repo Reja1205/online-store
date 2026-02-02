@@ -6,10 +6,9 @@ function buildCookieOptions() {
   const isProd = process.env.NODE_ENV === "production";
   return {
     httpOnly: true,
-    secure: isProd, // true on Render (HTTPS)
+    secure: isProd,                // ✅ true on Render
     sameSite: isProd ? "none" : "lax",
     maxAge: 7 * 24 * 60 * 60 * 1000,
-    path: "/", // ✅ important for consistent clearCookie
   };
 }
 
@@ -17,15 +16,11 @@ function buildCookieOptions() {
 async function registerUser(req, res) {
   try {
     const { name, email, password } = req.body || {};
-
     if (!name || !email || !password) {
-      return res
-        .status(400)
-        .json({ message: "Name, email, password are required" });
+      return res.status(400).json({ message: "Name, email, password are required" });
     }
 
     const cleanEmail = email.toLowerCase().trim();
-
     const existing = await User.findOne({ email: cleanEmail });
     if (existing) return res.status(409).json({ message: "Email already in use" });
 
@@ -52,7 +47,6 @@ async function registerUser(req, res) {
 async function registerAdmin(req, res) {
   try {
     const { name, email, password, adminSecret } = req.body || {};
-
     if (!name || !email || !password || !adminSecret) {
       return res.status(400).json({
         message: "Name, email, password, adminSecret are required",
@@ -63,13 +57,11 @@ async function registerAdmin(req, res) {
     if (!expectedSecret) {
       return res.status(500).json({ message: "ADMIN_SECRET is not set on server" });
     }
-
     if (adminSecret !== expectedSecret) {
       return res.status(403).json({ message: "Invalid admin secret" });
     }
 
     const cleanEmail = email.toLowerCase().trim();
-
     const existing = await User.findOne({ email: cleanEmail });
     if (existing) return res.status(409).json({ message: "Email already in use" });
 
@@ -96,7 +88,6 @@ async function registerAdmin(req, res) {
 async function login(req, res) {
   try {
     const { email, password } = req.body || {};
-
     if (!email || !password) {
       return res.status(400).json({ message: "Email and password are required" });
     }
@@ -109,15 +100,14 @@ async function login(req, res) {
 
     const token = signToken({ id: user._id.toString(), role: user.role });
 
+    // ✅ Cookie (optional, nice-to-have)
     const cookieName = process.env.COOKIE_NAME || "token";
     res.cookie(cookieName, token, buildCookieOptions());
 
-    const isProd = process.env.NODE_ENV === "production";
-
+    // ✅ Token in response (recommended for Vercel/Render)
     return res.json({
       message: "Login successful",
-      // ✅ only return token in dev (nice for Postman)
-      ...(isProd ? {} : { token }),
+      token,
       user: {
         id: user._id,
         name: user.name,
@@ -145,12 +135,7 @@ async function me(req, res) {
     if (!user) return res.status(404).json({ message: "User not found" });
 
     return res.json({
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
+      user: { id: user._id, name: user.name, email: user.email, role: user.role },
     });
   } catch (err) {
     console.error("ME_ERROR:", err);

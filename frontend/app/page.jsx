@@ -1,39 +1,39 @@
 "use client";
+
 import { useEffect, useState } from "react";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+const API = process.env.NEXT_PUBLIC_API_URL;
 
 export default function Home() {
   const [user, setUser] = useState(null);
 
-  useEffect(() => {
+  async function loadMe() {
     const token = localStorage.getItem("token");
+    if (!token) return setUser(null);
 
-    fetch(`${API}/api/auth/me`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.user) setUser(data.user);
-        else setUser(null);
-      })
-      .catch(() => setUser(null));
+    try {
+      const res = await fetch(`${API}/api/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok && data.user) setUser(data.user);
+      else setUser(null);
+    } catch {
+      setUser(null);
+    }
+  }
+
+  useEffect(() => {
+    loadMe();
   }, []);
 
   const handleLogout = async () => {
-    // remove token (main thing)
     localStorage.removeItem("token");
-
-    // optional: also hit backend logout if you still set cookies sometimes
-    try {
-      await fetch(`${API}/api/auth/logout`, { method: "POST" });
-    } catch {}
-
-    location.reload();
+    setUser(null);
   };
 
   return (
-    <div style={{ padding: "20px" }}>
+    <div style={{ padding: 20 }}>
       <h1>Online Store</h1>
 
       {!user && (
