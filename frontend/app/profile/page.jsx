@@ -8,41 +8,37 @@ const API = process.env.NEXT_PUBLIC_API_URL;
 export default function ProfilePage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function load() {
-      try {
-        const res = await fetch(`${API}/api/auth/me`, {
-          credentials: "include", // ✅ MUST for cookie auth
-        });
+    fetch(`${API}/api/auth/me`, {
+      credentials: "include",
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error();
+        return res.json();
+      })
+      .then((data) => setUser(data.user))
+      .catch(() => router.push("/login"));
+  }, []);
 
-        if (!res.ok) {
-          router.push("/login");
-          return;
-        }
+  const logout = async () => {
+    await fetch(`${API}/api/auth/logout`, {
+      method: "POST",
+      credentials: "include",
+    });
+    router.push("/login");
+  };
 
-        const data = await res.json();
-        setUser(data.user);
-      } catch (e) {
-        router.push("/login");
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    load();
-  }, [router]);
-
-  if (loading) return <div style={{ padding: 20 }}>Loading...</div>;
-  if (!user) return null;
+  if (!user) return <p>Loading...</p>;
 
   return (
     <div style={{ padding: 20 }}>
       <h1>Profile</h1>
-      <p><b>Name:</b> {user.name}</p>
-      <p><b>Email:</b> {user.email}</p>
-      <p><b>Role:</b> {user.role}</p>
+      <p>Name: {user.name}</p>
+      <p>Email: {user.email}</p>
+      <p>Role: {user.role}</p>
+
+      <button onClick={logout}>Logout</button>
     </div>
   );
 }
