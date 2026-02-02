@@ -1,8 +1,9 @@
 "use client";
-const API = process.env.NEXT_PUBLIC_API_URL;
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -11,8 +12,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState("123456");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -23,7 +22,7 @@ export default function LoginPage() {
       const res = await fetch(`${API}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include", // IMPORTANT (cookie)
+        credentials: "include",
         body: JSON.stringify({ email, password }),
       });
 
@@ -31,12 +30,12 @@ export default function LoginPage() {
 
       if (!res.ok) {
         setError(data?.message || "Login failed");
-        setLoading(false);
         return;
       }
 
-      // success -> go back home
+      // ✅ Go home AND refresh so homepage re-checks /me
       router.push("/");
+      router.refresh(); // important
     } catch (err) {
       setError("Network error");
     } finally {
@@ -70,17 +69,9 @@ export default function LoginPage() {
           />
         </div>
 
-        {error && (
-          <p style={{ color: "red", margin: 0 }}>
-            {error}
-          </p>
-        )}
+        {error && <p style={{ color: "red", margin: 0 }}>{error}</p>}
 
-        <button
-          type="submit"
-          disabled={loading}
-          style={{ padding: 10, cursor: "pointer" }}
-        >
+        <button type="submit" disabled={loading} style={{ padding: 10, cursor: "pointer" }}>
           {loading ? "Logging in..." : "Login"}
         </button>
 
