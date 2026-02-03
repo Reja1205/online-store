@@ -1,7 +1,7 @@
 const router = require("express").Router();
 
 const auth = require("../middleware/auth.middleware");
-const adminOnly = require("../middleware/admin.middleware");
+const requireAdmin = require("../middleware/admin.middleware");
 
 const {
   listProducts,
@@ -11,13 +11,13 @@ const {
   deleteProduct,
 } = require("../controllers/product.controller");
 
-// public
+// Public
 router.get("/", listProducts);
 router.get("/:id", getProduct);
 
-// admin only
-router.post("/", auth, adminOnly, createProduct);
-router.put("/:id", auth, adminOnly, updateProduct);
-router.delete("/:id", auth, adminOnly, deleteProduct);
+// Admin only
+router.post("/", auth, requireAdmin, createProduct);
+router.put("/:id", auth, requireAdmin, updateProduct);
+router.delete("/:id", auth, requireAdmin, deleteProduct);
 
 module.exports = router;

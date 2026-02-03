@@ -1,6 +1,10 @@
 module.exports = function requireAdmin(req, res, next) {
-  if (!req.user || req.user.role !== "admin") {
+  // auth middleware must run before this so req.user exists
+  if (!req.user) return res.status(401).json({ message: "Not logged in" });
+
+  if (req.user.role !== "admin") {
     return res.status(403).json({ message: "Admin only" });
   }
+
   next();
 };
