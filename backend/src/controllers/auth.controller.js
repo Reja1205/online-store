@@ -10,18 +10,21 @@ function buildCookieOptions() {
 
   return {
     httpOnly: true,
-    secure: isProd,                 // ✅ must be true for SameSite=None
+    secure: isProd, // ✅ must be true for SameSite=None
     sameSite: isProd ? "none" : "lax",
     maxAge: 7 * 24 * 60 * 60 * 1000,
-    path: "/",                      // ✅ important
+    path: "/", // ✅ important
   };
 }
 
+// POST /api/auth/register-user
 async function registerUser(req, res) {
   try {
     const { name, email, password } = req.body || {};
     if (!name || !email || !password) {
-      return res.status(400).json({ message: "Name, email, password are required" });
+      return res
+        .status(400)
+        .json({ message: "Name, email, password are required" });
     }
 
     const cleanEmail = email.toLowerCase().trim();
@@ -47,6 +50,7 @@ async function registerUser(req, res) {
   }
 }
 
+// POST /api/auth/register-admin
 async function registerAdmin(req, res) {
   try {
     const { name, email, password, adminSecret } = req.body || {};
@@ -57,8 +61,12 @@ async function registerAdmin(req, res) {
     }
 
     const expectedSecret = process.env.ADMIN_SECRET;
-    if (!expectedSecret) return res.status(500).json({ message: "ADMIN_SECRET is not set on server" });
-    if (adminSecret !== expectedSecret) return res.status(403).json({ message: "Invalid admin secret" });
+    if (!expectedSecret) {
+      return res.status(500).json({ message: "ADMIN_SECRET is not set on server" });
+    }
+    if (adminSecret !== expectedSecret) {
+      return res.status(403).json({ message: "Invalid admin secret" });
+    }
 
     const cleanEmail = email.toLowerCase().trim();
     const existing = await User.findOne({ email: cleanEmail });
@@ -83,10 +91,13 @@ async function registerAdmin(req, res) {
   }
 }
 
+// POST /api/auth/login
 async function login(req, res) {
   try {
     const { email, password } = req.body || {};
-    if (!email || !password) return res.status(400).json({ message: "Email and password are required" });
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required" });
+    }
 
     const user = await User.findOne({ email: email.toLowerCase().trim() });
     if (!user) return res.status(401).json({ message: "Invalid credentials" });
@@ -96,11 +107,14 @@ async function login(req, res) {
 
     const token = signToken({ id: user._id.toString(), role: user.role });
 
+    // ✅ cookie (works in many browsers, but can be blocked cross-site on Safari)
     const cookieName = process.env.COOKIE_NAME || "token";
     res.cookie(cookieName, token, buildCookieOptions());
 
+    // ✅ IMPORTANT: return token for frontend Bearer auth (most reliable)
     return res.json({
       message: "Login successful",
+      token,
       user: { id: user._id, name: user.name, email: user.email, role: user.role },
     });
   } catch (err) {
@@ -109,12 +123,14 @@ async function login(req, res) {
   }
 }
 
+// POST /api/auth/logout
 function logout(req, res) {
   const cookieName = process.env.COOKIE_NAME || "token";
   res.clearCookie(cookieName, buildCookieOptions());
   return res.json({ message: "Logged out" });
 }
 
+// GET /api/auth/me
 async function me(req, res) {
   try {
     const user = await User.findById(req.user.id).select("-password");

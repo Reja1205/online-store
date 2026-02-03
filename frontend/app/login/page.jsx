@@ -1,90 +1,24 @@
-"use client";
+const jwt = require("jsonwebtoken");
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+module.exports = function auth(req, res, next) {
+  try {
+    // 1) Prefer Authorization header (works everywhere)
+    const authHeader = req.headers.authorization || "";
+    const bearerToken = authHeader.startsWith("Bearer ")
+      ? authHeader.slice(7)
+      : null;
 
-export default function LoginPage() {
-  const router = useRouter();
+    // 2) Fallback to cookie (may be blocked on Safari cross-site)
+    const cookieName = process.env.COOKIE_NAME || "token";
+    const cookieToken = req.cookies?.[cookieName];
 
-  const API =
-    process.env.NEXT_PUBLIC_API_URL?.trim() || "http://localhost:4000";
+    const token = bearerToken || cookieToken;
+    if (!token) return res.status(401).json({ message: "Not logged in" });
 
-  const [email, setEmail] = useState("admin@test.com");
-  const [password, setPassword] = useState("123456");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-
-    try {
-      const res = await fetch(`${API}/api/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include", // ✅ needed for cookies
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        setError(data?.message || `Login failed (${res.status})`);
-        return;
-      }
-
-      router.push("/");
-      router.refresh();
-    } catch (err) {
-      setError("Network error (check API URL + CORS + cookie)");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div style={{ padding: 20, maxWidth: 420 }}>
-      <h1>Login</h1>
-
-      <p style={{ fontSize: 12, opacity: 0.7 }}>
-        API: {API}
-      </p>
-
-      <form onSubmit={handleSubmit} style={{ display: "grid", gap: 12 }}>
-        <div>
-          <label>Email</label>
-          <input
-            style={{ width: "100%", padding: 10 }}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </div>
-
-        <div>
-          <label>Password</label>
-          <input
-            style={{ width: "100%", padding: 10 }}
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </div>
-
-        {error && <p style={{ color: "red", margin: 0 }}>{error}</p>}
-
-        <button type="submit" disabled={loading} style={{ padding: 10 }}>
-          {loading ? "Logging in..." : "Login"}
-        </button>
-
-        <button
-          type="button"
-          onClick={() => router.push("/")}
-          style={{ padding: 10 }}
-        >
-          Back
-        </button>
-      </form>
-    </div>
-  );
-}
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded; // { id, role, ... }
+    next();
+  } catch (err) {
+    return res.status(401).json({ message: "Invalid/expired token" });
+  }
+};
