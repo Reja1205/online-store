@@ -4,6 +4,7 @@ const cookieParser = require("cookie-parser");
 const mongoose = require("mongoose");
 
 const authRoutes = require("./routes/auth.routes");
+const productRoutes = require("./routes/product.routes"); // ✅ ADD
 
 const app = express();
 
@@ -42,6 +43,7 @@ app.get("/health", (req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/products", productRoutes); // ✅ ADD
 
 app.use((req, res) => res.status(404).json({ message: "Route not found" }));
 
