@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -9,11 +10,10 @@ export default function Home() {
 
   async function loadMe() {
     try {
-      const token = localStorage.getItem("token");
-
       const res = await fetch(`${API}/api/auth/me`, {
+        credentials: "include",
         headers: {
-          Authorization: "Bearer " + token,
+          Authorization: "Bearer " + localStorage.getItem("token"),
         },
       });
 
@@ -29,12 +29,11 @@ export default function Home() {
   }, []);
 
   const handleLogout = async () => {
-    const token = localStorage.getItem("token");
-
     await fetch(`${API}/api/auth/logout`, {
       method: "POST",
+      credentials: "include",
       headers: {
-        Authorization: "Bearer " + token,
+        Authorization: "Bearer " + localStorage.getItem("token"),
       },
     });
 
@@ -46,16 +45,30 @@ export default function Home() {
     <div style={{ padding: 20 }}>
       <h1>Online Store</h1>
 
-      {!user ? (
+      {!user && (
         <>
-          <a href="/login">Login</a>
+          <Link href="/login">Login</Link>
           <br />
-          <a href="/register">Register</a>
+          <Link href="/register">Register</Link>
         </>
-      ) : (
+      )}
+
+      {user && (
         <>
           <p>Welcome {user.name}</p>
           <p>Role: {user.role}</p>
+
+          <Link href="/profile">Profile</Link>
+          <br />
+
+          {/* ADMIN ONLY */}
+          {user.role === "admin" && (
+            <>
+              <Link href="/admin">Admin Dashboard</Link>
+              <br />
+            </>
+          )}
+
           <button onClick={handleLogout}>Logout</button>
         </>
       )}
