@@ -6,72 +6,61 @@ import Link from "next/link";
 const API = process.env.NEXT_PUBLIC_API_URL;
 
 export default function Home() {
-  const [user, setUser] = useState(null);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  async function loadMe() {
+  async function loadProducts() {
     try {
-      const res = await fetch(`${API}/api/auth/me`, {
-        credentials: "include",
-        headers: {
-          Authorization: "Bearer " + localStorage.getItem("token"),
-        },
-      });
-
+      const res = await fetch(`${API}/api/products`);
       const data = await res.json();
-      setUser(data?.user || null);
+      setProducts(data.products || []);
     } catch {
-      setUser(null);
+      setProducts([]);
+    } finally {
+      setLoading(false);
     }
   }
 
   useEffect(() => {
-    loadMe();
+    loadProducts();
   }, []);
-
-  const handleLogout = async () => {
-    await fetch(`${API}/api/auth/logout`, {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        Authorization: "Bearer " + localStorage.getItem("token"),
-      },
-    });
-
-    localStorage.removeItem("token");
-    setUser(null);
-  };
 
   return (
     <div style={{ padding: 20 }}>
       <h1>Online Store</h1>
 
-      {!user && (
-        <>
-          <Link href="/login">Login</Link>
-          <br />
-          <Link href="/register">Register</Link>
-        </>
-      )}
+      <div style={{ marginBottom: 20 }}>
+        <Link href="/login">Login</Link>
+        <br />
+        <Link href="/register">Register</Link>
+      </div>
 
-      {user && (
-        <>
-          <p>Welcome {user.name}</p>
-          <p>Role: {user.role}</p>
+      <h2>Products</h2>
 
-          <Link href="/profile">Profile</Link>
-          <br />
+      {loading && <p>Loading...</p>}
 
-          {/* ADMIN ONLY */}
-          {user.role === "admin" && (
-            <>
-              <Link href="/admin">Admin Dashboard</Link>
-              <br />
-            </>
-          )}
+      {!loading && products.length === 0 && <p>No products yet</p>}
 
-          <button onClick={handleLogout}>Logout</button>
-        </>
-      )}
+      <div style={{ display: "grid", gap: 20 }}>
+        {products.map((p) => (
+          <div
+            key={p._id}
+            style={{
+              border: "1px solid #ccc",
+              padding: 15,
+              borderRadius: 8,
+            }}
+          >
+            <h3>{p.title}</h3>
+            <p>{p.description}</p>
+            <p><strong>${p.priceUSD}</strong></p>
+
+            <Link href={`/products/${p._id}`}>
+              View Details
+            </Link>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
