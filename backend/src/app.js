@@ -1,7 +1,3 @@
-
-
-
-
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
@@ -14,13 +10,22 @@ const app = express();
 app.use(express.json());
 app.use(cookieParser());
 
-// IMPORTANT: must be exact Vercel URL in production
-// Example: https://online-store-six-gules.vercel.app
-const allowedOrigin = process.env.FRONTEND_ORIGIN || "http://localhost:3000";
+// ✅ Allow multiple origins (local + Vercel)
+const allowedOrigins = [
+  "http://localhost:3000",
+  process.env.FRONTEND_ORIGIN, // e.g. https://online-store-six-gules.vercel.app
+].filter(Boolean);
 
 app.use(
   cors({
-    origin: allowedOrigin,
+    origin: function (origin, callback) {
+      // allow Postman / curl (no origin)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+
+      return callback(new Error(`CORS blocked: ${origin}`), false);
+    },
     credentials: true,
   })
 );
