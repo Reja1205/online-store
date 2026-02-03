@@ -3,56 +3,57 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-const API = process.env.NEXT_PUBLIC_API_URL;
+const API =
+  process.env.NEXT_PUBLIC_API_URL ||
+  "https://online-store-7kh8.onrender.com"; // fallback for safety
 
 export default function Home() {
   const [products, setProducts] = useState([]);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    async function loadProducts() {
-      try {
-        const res = await fetch(`${API}/api/products`);
-        const data = await res.json();
-        setProducts(data || []);
-      } catch (err) {
-        console.error("Product load error", err);
-      }
-    }
-
     loadProducts();
   }, []);
+
+  async function loadProducts() {
+    try {
+      const res = await fetch(`${API}/api/products`);
+      if (!res.ok) throw new Error("Failed to load products");
+      const data = await res.json();
+      setProducts(data || []);
+    } catch (err) {
+      console.error(err);
+      setError("Could not load products");
+    }
+  }
 
   return (
     <div style={{ padding: 20 }}>
       <h1>Online Store</h1>
 
-      {products.length === 0 && <p>No products found</p>}
+      {error && <p style={{ color: "red" }}>{error}</p>}
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-          gap: 20,
-        }}
-      >
+      {products.length === 0 && !error && <p>Loading products...</p>}
+
+      <div style={{ display: "grid", gap: 16 }}>
         {products.map((p) => (
           <div
             key={p._id}
             style={{
               border: "1px solid #ccc",
-              padding: 15,
+              padding: 16,
               borderRadius: 8,
-              background: "#fafafa",
             }}
           >
-            <h3>{p.title}</h3>
-
-            <p>
-              <strong>${p.priceUSD}</strong>
-            </p>
+            <h3>{p.title || p.name}</h3>
+            <p>Price: ${p.priceUSD || p.price}</p>
+            <p>{p.description}</p>
+            <p>Stock: {p.stockQty || p.stock}</p>
 
             <Link href={`/products/${p._id}`}>
-              View Details
+              <button style={{ padding: 8, cursor: "pointer" }}>
+                View Details
+              </button>
             </Link>
           </div>
         ))}
