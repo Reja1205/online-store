@@ -10,42 +10,48 @@ export default function ProductDetails() {
   const router = useRouter();
 
   const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadProduct() {
       try {
         const res = await fetch(`${API}/api/products/${id}`);
         const data = await res.json();
-        setProduct(data);
+
+        // IMPORTANT LINE
+        setProduct(data.product || null);
       } catch (err) {
-        console.error("PRODUCT_DETAILS_ERROR", err);
+        setProduct(null);
+      } finally {
+        setLoading(false);
       }
     }
 
     if (id) loadProduct();
   }, [id]);
 
-  if (!product) return <p style={{ padding: 20 }}>Loading...</p>;
+  if (loading) return <p style={{ padding: 20 }}>Loading...</p>;
+  if (!product) return <p style={{ padding: 20 }}>Product not found</p>;
 
   return (
-    <div style={{ padding: 20 }}>
-      <h2>{product.name}</h2>
+    <div style={{ padding: 20, maxWidth: 600 }}>
+      <h1>{product.name}</h1>
 
       {product.imageUrl && (
         <img
           src={product.imageUrl}
           alt={product.name}
-          style={{ width: 200, marginBottom: 16 }}
+          style={{ width: "100%", maxHeight: 300, objectFit: "cover" }}
         />
       )}
 
+      <p><strong>Description:</strong> {product.description || "N/A"}</p>
       <p><strong>Price:</strong> ${product.price}</p>
       <p><strong>Stock:</strong> {product.stock}</p>
-      <p>{product.description}</p>
 
       <button
         onClick={() => router.push("/")}
-        style={{ marginTop: 20, padding: 10 }}
+        style={{ marginTop: 20, padding: 10, cursor: "pointer" }}
       >
         Back to Products
       </button>
