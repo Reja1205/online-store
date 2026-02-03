@@ -1,19 +1,9 @@
 const jwt = require("jsonwebtoken");
 
-const auth = (req, res, next) => {
+const authMiddleware = (req, res, next) => {
   try {
     const cookieName = process.env.COOKIE_NAME || "token";
-
-    // 1) Try cookie first
-    let token = req.cookies?.[cookieName];
-
-    // 2) If not found, try Authorization: Bearer <token>
-    if (!token) {
-      const authHeader = req.headers.authorization || "";
-      if (authHeader.startsWith("Bearer ")) {
-        token = authHeader.replace("Bearer ", "").trim();
-      }
-    }
+    const token = req.cookies?.[cookieName];
 
     if (!token) return res.status(401).json({ message: "Not logged in" });
 
@@ -25,4 +15,4 @@ const auth = (req, res, next) => {
   }
 };
 
-module.exports = auth;
+module.exports = authMiddleware;

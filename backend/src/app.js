@@ -1,3 +1,7 @@
+
+
+
+
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
@@ -10,7 +14,8 @@ const app = express();
 app.use(express.json());
 app.use(cookieParser());
 
-// ===== CORS (VERY IMPORTANT FOR LOGIN) =====
+// IMPORTANT: must be exact Vercel URL in production
+// Example: https://online-store-six-gules.vercel.app
 const allowedOrigin = process.env.FRONTEND_ORIGIN || "http://localhost:3000";
 
 app.use(
@@ -20,7 +25,6 @@ app.use(
   })
 );
 
-// ===== HEALTH =====
 app.get("/health", (req, res) => {
   res.json({
     status: "OK",
@@ -29,13 +33,10 @@ app.get("/health", (req, res) => {
   });
 });
 
-// ===== ROUTES =====
 app.use("/api/auth", authRoutes);
 
-// ===== 404 =====
 app.use((req, res) => res.status(404).json({ message: "Route not found" }));
 
-// ===== ERROR HANDLER =====
 app.use((err, req, res, next) => {
   console.error("API_ERROR:", err);
   res.status(500).json({ message: "Server error", error: err.message });

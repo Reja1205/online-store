@@ -1,3 +1,6 @@
+
+
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -8,16 +11,10 @@ export default function Home() {
   const [user, setUser] = useState(null);
 
   async function loadMe() {
-    const token = localStorage.getItem("token");
-    if (!token) return setUser(null);
-
     try {
-      const res = await fetch(`${API}/api/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(`${API}/api/auth/me`, { credentials: "include" });
       const data = await res.json();
-      if (res.ok && data.user) setUser(data.user);
-      else setUser(null);
+      setUser(data?.user || null);
     } catch {
       setUser(null);
     }
@@ -28,7 +25,7 @@ export default function Home() {
   }, []);
 
   const handleLogout = async () => {
-    localStorage.removeItem("token");
+    await fetch(`${API}/api/auth/logout`, { method: "POST", credentials: "include" });
     setUser(null);
   };
 
@@ -36,21 +33,17 @@ export default function Home() {
     <div style={{ padding: 20 }}>
       <h1>Online Store</h1>
 
-      {!user && (
+      {!user ? (
         <>
           <a href="/login">Login</a>
           <br />
           <a href="/register">Register</a>
         </>
-      )}
-
-      {user && (
+      ) : (
         <>
           <p>Welcome {user.name}</p>
           <p>Role: {user.role}</p>
-          <button onClick={handleLogout} style={{ padding: 10 }}>
-            Logout
-          </button>
+          <button onClick={handleLogout}>Logout</button>
         </>
       )}
     </div>

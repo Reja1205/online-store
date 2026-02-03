@@ -1,10 +1,12 @@
+
+
 const mongoose = require("mongoose");
 
 const connectDB = async () => {
   try {
     const uri =
-      process.env.MONGO_URI ||
       process.env.MONGODB_URI ||
+      process.env.MONGO_URI ||
       "mongodb://localhost:27017/ecommerce";
 
     await mongoose.connect(uri);

@@ -5,10 +5,9 @@ const connectDB = require("./config/db");
 
 const PORT = process.env.PORT || 4000;
 
-// connect database first
-connectDB();
-
-// listen on all interfaces (important for Render/Docker)
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server running on port ${PORT}`);
-});
+(async () => {
+  await connectDB();
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+})();
