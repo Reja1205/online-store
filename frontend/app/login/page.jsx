@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 export default function LoginPage() {
   const router = useRouter();
 
-  const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+  const API =
+    process.env.NEXT_PUBLIC_API_URL?.trim() || "http://localhost:4000";
 
   const [email, setEmail] = useState("admin@test.com");
   const [password, setPassword] = useState("123456");
@@ -22,11 +23,8 @@ export default function LoginPage() {
       const res = await fetch(`${API}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include", // ✅ REQUIRED for cookie auth
-        body: JSON.stringify({
-          email: email.trim(),
-          password,
-        }),
+        credentials: "include", // ✅ needed for cookies
+        body: JSON.stringify({ email, password }),
       });
 
       const data = await res.json().catch(() => ({}));
@@ -36,11 +34,10 @@ export default function LoginPage() {
         return;
       }
 
-      // ✅ go home after success
-      router.replace("/");
+      router.push("/");
       router.refresh();
     } catch (err) {
-      setError("Network error (backend unreachable or CORS blocked)");
+      setError("Network error (check API URL + CORS + cookie)");
     } finally {
       setLoading(false);
     }
@@ -50,6 +47,10 @@ export default function LoginPage() {
     <div style={{ padding: 20, maxWidth: 420 }}>
       <h1>Login</h1>
 
+      <p style={{ fontSize: 12, opacity: 0.7 }}>
+        API: {API}
+      </p>
+
       <form onSubmit={handleSubmit} style={{ display: "grid", gap: 12 }}>
         <div>
           <label>Email</label>
@@ -57,7 +58,6 @@ export default function LoginPage() {
             style={{ width: "100%", padding: 10 }}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            autoComplete="email"
           />
         </div>
 
@@ -68,7 +68,6 @@ export default function LoginPage() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
           />
         </div>
 

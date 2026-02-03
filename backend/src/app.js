@@ -7,24 +7,27 @@ const authRoutes = require("./routes/auth.routes");
 
 const app = express();
 
+// Render/Proxy friendly (good practice)
+app.set("trust proxy", 1);
+
 app.use(express.json());
 app.use(cookieParser());
 
-// ✅ Allow multiple origins (local + Vercel)
-const allowedOrigins = [
+// ✅ Allow ONLY your Vercel site (and localhost for dev)
+const allowList = [
   "http://localhost:3000",
-  process.env.FRONTEND_ORIGIN, // e.g. https://online-store-six-gules.vercel.app
-].filter(Boolean);
+  "https://online-store-six-gules.vercel.app",
+];
 
 app.use(
   cors({
-    origin: function (origin, callback) {
-      // allow Postman / curl (no origin)
-      if (!origin) return callback(null, true);
+    origin: function (origin, cb) {
+      // allow Postman/curl (no Origin header)
+      if (!origin) return cb(null, true);
 
-      if (allowedOrigins.includes(origin)) return callback(null, true);
+      if (allowList.includes(origin)) return cb(null, true);
 
-      return callback(new Error(`CORS blocked: ${origin}`), false);
+      return cb(new Error("CORS blocked: " + origin));
     },
     credentials: true,
   })

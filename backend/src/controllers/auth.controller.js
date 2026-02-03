@@ -1,16 +1,19 @@
-
 const bcrypt = require("bcrypt");
 const User = require("../models/User");
 const { signToken } = require("../utils/jwt");
 
 function buildCookieOptions() {
-  const isProd = process.env.NODE_ENV === "production";
+  const frontend = process.env.FRONTEND_ORIGIN || "";
+  const isHttpsFrontend = frontend.startsWith("https://");
+
+  const isProd = process.env.NODE_ENV === "production" || isHttpsFrontend;
+
   return {
     httpOnly: true,
-    secure: isProd,                 // true on Render/HTTPS
+    secure: isProd,                 // ✅ must be true for SameSite=None
     sameSite: isProd ? "none" : "lax",
     maxAge: 7 * 24 * 60 * 60 * 1000,
-    path: "/",                      // important
+    path: "/",                      // ✅ important
   };
 }
 
@@ -26,6 +29,7 @@ async function registerUser(req, res) {
     if (existing) return res.status(409).json({ message: "Email already in use" });
 
     const hashed = await bcrypt.hash(password, 10);
+
     const user = await User.create({
       name: name.trim(),
       email: cleanEmail,
@@ -53,18 +57,15 @@ async function registerAdmin(req, res) {
     }
 
     const expectedSecret = process.env.ADMIN_SECRET;
-    if (!expectedSecret) {
-      return res.status(500).json({ message: "ADMIN_SECRET is not set on server" });
-    }
-    if (adminSecret !== expectedSecret) {
-      return res.status(403).json({ message: "Invalid admin secret" });
-    }
+    if (!expectedSecret) return res.status(500).json({ message: "ADMIN_SECRET is not set on server" });
+    if (adminSecret !== expectedSecret) return res.status(403).json({ message: "Invalid admin secret" });
 
     const cleanEmail = email.toLowerCase().trim();
     const existing = await User.findOne({ email: cleanEmail });
     if (existing) return res.status(409).json({ message: "Email already in use" });
 
     const hashed = await bcrypt.hash(password, 10);
+
     const user = await User.create({
       name: name.trim(),
       email: cleanEmail,
@@ -85,9 +86,7 @@ async function registerAdmin(req, res) {
 async function login(req, res) {
   try {
     const { email, password } = req.body || {};
-    if (!email || !password) {
-      return res.status(400).json({ message: "Email and password are required" });
-    }
+    if (!email || !password) return res.status(400).json({ message: "Email and password are required" });
 
     const user = await User.findOne({ email: email.toLowerCase().trim() });
     if (!user) return res.status(401).json({ message: "Invalid credentials" });
