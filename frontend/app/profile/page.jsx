@@ -3,42 +3,45 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-const API = process.env.NEXT_PUBLIC_API_URL;
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 export default function ProfilePage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${API}/api/auth/me`, {
-      credentials: "include",
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error();
+    fetch(`${API}/api/auth/me`, { credentials: "include" })
+      .then(async (res) => {
+        if (!res.ok) throw new Error("Not logged in");
         return res.json();
       })
       .then((data) => setUser(data.user))
-      .catch(() => router.push("/login"));
-  }, []);
+      .catch(() => router.replace("/login"))
+      .finally(() => setLoading(false));
+  }, [router]);
 
-  const logout = async () => {
+  const handleLogout = async () => {
     await fetch(`${API}/api/auth/logout`, {
       method: "POST",
       credentials: "include",
     });
-    router.push("/login");
+    router.replace("/");
+    router.refresh();
   };
 
-  if (!user) return <p>Loading...</p>;
+  if (loading) return <p style={{ padding: 20 }}>Loading...</p>;
 
   return (
     <div style={{ padding: 20 }}>
       <h1>Profile</h1>
-      <p>Name: {user.name}</p>
-      <p>Email: {user.email}</p>
-      <p>Role: {user.role}</p>
+      <p>Name: {user?.name}</p>
+      <p>Email: {user?.email}</p>
+      <p>Role: {user?.role}</p>
 
-      <button onClick={logout}>Logout</button>
+      <button onClick={handleLogout} style={{ padding: 10 }}>
+        Logout
+      </button>
     </div>
   );
 }
