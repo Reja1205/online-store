@@ -8,8 +8,8 @@ const API = process.env.NEXT_PUBLIC_API_URL;
 export default function LoginPage() {
   const router = useRouter();
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("admin@test.com");
+  const [password, setPassword] = useState("123456");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -19,10 +19,10 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
+      // 1) login
       const res = await fetch(`${API}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ email, password }),
       });
 
@@ -33,13 +33,32 @@ export default function LoginPage() {
         return;
       }
 
-      // save token for profile/me requests
-      if (data.token) {
-        localStorage.setItem("token", data.token);
+      // 2) save token
+      const token = data?.token;
+      if (!token) {
+        setError("No token returned from server");
+        return;
+      }
+      localStorage.setItem("token", token);
+
+      // 3) get current user role
+      const meRes = await fetch(`${API}/api/auth/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const meData = await meRes.json();
+
+      if (!meRes.ok) {
+        setError(meData?.message || "Could not load user");
+        return;
       }
 
-      router.push("/profile");
-      router.refresh();
+      // 4) redirect based on role
+      const role = meData?.user?.role;
+      if (role === "admin") router.push("/admin");
+      else router.push("/profile");
     } catch (err) {
       setError("Network error");
     } finally {
@@ -58,7 +77,6 @@ export default function LoginPage() {
             style={{ width: "100%", padding: 10 }}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="Email"
           />
         </div>
 
@@ -69,21 +87,16 @@ export default function LoginPage() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password"
           />
         </div>
 
-        {error && <p style={{ color: "red" }}>{error}</p>}
+        {error && <p style={{ color: "red", margin: 0 }}>{error}</p>}
 
         <button type="submit" disabled={loading} style={{ padding: 10 }}>
           {loading ? "Logging in..." : "Login"}
         </button>
 
-        <button
-          type="button"
-          onClick={() => router.push("/")}
-          style={{ padding: 10 }}
-        >
+        <button type="button" onClick={() => router.push("/")} style={{ padding: 10 }}>
           Back
         </button>
       </form>
