@@ -1,6 +1,3 @@
-
-
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -12,7 +9,14 @@ export default function Home() {
 
   async function loadMe() {
     try {
-      const res = await fetch(`${API}/api/auth/me`, { credentials: "include" });
+      const token = localStorage.getItem("token");
+
+      const res = await fetch(`${API}/api/auth/me`, {
+        headers: {
+          Authorization: "Bearer " + token,
+        },
+      });
+
       const data = await res.json();
       setUser(data?.user || null);
     } catch {
@@ -25,7 +29,16 @@ export default function Home() {
   }, []);
 
   const handleLogout = async () => {
-    await fetch(`${API}/api/auth/logout`, { method: "POST", credentials: "include" });
+    const token = localStorage.getItem("token");
+
+    await fetch(`${API}/api/auth/logout`, {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + token,
+      },
+    });
+
+    localStorage.removeItem("token");
     setUser(null);
   };
 

@@ -1,39 +1,31 @@
 "use client";
-
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
 export default function AdminPage() {
-  const router = useRouter();
-  const [message, setMessage] = useState("");
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
+    const token = localStorage.getItem("token");
+
     fetch(`${API}/api/auth/me`, {
-      credentials: "include",
+      headers: {
+        Authorization: "Bearer " + token,
+      },
     })
-      .then((res) => res.json())
-      .then((data) => {
-        if (!data.user) {
-          router.push("/login");
-          return;
-        }
+      .then(res => res.json())
+      .then(data => setUser(data.user))
+      .catch(() => setUser(null));
+  }, []);
 
-        if (data.user.role !== "admin") {
-          router.push("/");
-          return;
-        }
-
-        setMessage(`Welcome Admin: ${data.user.name}`);
-      })
-      .catch(() => router.push("/login"));
-  }, [router]);
+  if (!user) return <p>Login required</p>;
+  if (user.role !== "admin") return <p>Access denied</p>;
 
   return (
     <div style={{ padding: 20 }}>
       <h1>Admin Dashboard</h1>
-      <p>{message || "Loading..."}</p>
+      <p>Welcome {user.name}</p>
     </div>
   );
 }
