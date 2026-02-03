@@ -1,31 +1,27 @@
 "use client";
-import { useEffect, useState } from "react";
 
-const API = process.env.NEXT_PUBLIC_API_URL;
+import Link from "next/link";
 
-export default function AdminPage() {
-  const [user, setUser] = useState(null);
-
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-
-    fetch(`${API}/api/auth/me`, {
-      headers: {
-        Authorization: "Bearer " + token,
-      },
-    })
-      .then(res => res.json())
-      .then(data => setUser(data.user))
-      .catch(() => setUser(null));
-  }, []);
-
-  if (!user) return <p>Login required</p>;
-  if (user.role !== "admin") return <p>Access denied</p>;
-
+export default function AdminDashboardPage() {
   return (
     <div style={{ padding: 20 }}>
       <h1>Admin Dashboard</h1>
-      <p>Welcome {user.name}</p>
+
+      <p>Manage your store here.</p>
+
+      <div style={{ display: "grid", gap: 12, marginTop: 16, maxWidth: 320 }}>
+        <Link href="/admin/products">
+          <button style={{ padding: 10, cursor: "pointer" }}>
+            Manage Products
+          </button>
+        </Link>
+
+        <Link href="/">
+          <button style={{ padding: 10, cursor: "pointer" }}>
+            Back to Home
+          </button>
+        </Link>
+      </div>
     </div>
   );
 }
