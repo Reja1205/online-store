@@ -3,14 +3,14 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+const API = process.env.NEXT_PUBLIC_API_URL;
 
 function authHeaders() {
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : "";
+  const token = localStorage.getItem("token");
   return token ? { Authorization: "Bearer " + token } : {};
 }
 
-export default function MyOrdersPage() {
+export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
   const [error, setError] = useState("");
 
@@ -44,7 +44,7 @@ export default function MyOrdersPage() {
     <div style={{ padding: 20 }}>
       <h1>My Orders</h1>
 
-      <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
+      <div style={{ marginBottom: 12 }}>
         <Link href="/">
           <button style={{ padding: 8, cursor: "pointer" }}>Back Home</button>
         </Link>
@@ -66,6 +66,9 @@ export default function MyOrdersPage() {
               </p>
               <p>
                 <b>Status:</b> {o.status}
+              </p>
+              <p>
+                <b>Items:</b> {Array.isArray(o.items) ? o.items.length : 0}
               </p>
               <p>
                 <b>Total:</b> ${o.totalUSD ?? 0}
