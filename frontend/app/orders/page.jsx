@@ -10,102 +10,140 @@ function authHeaders() {
   return token ? { Authorization: "Bearer " + token } : {};
 }
 
-export default function OrdersPage() {
-  const [user, setUser] = useState(null);
+const STATUS_OPTIONS = ["pending", "paid", "shipped", "delivered", "cancelled"];
+
+export default function AdminOrdersPage() {
   const [orders, setOrders] = useState([]);
+  const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
 
-  async function loadMe() {
-    const res = await fetch(`${API}/api/auth/me`, {
-      headers: { ...authHeaders() },
-    });
-    const data = await res.json();
-    if (!res.ok) return null;
-    return data.user;
-  }
-
-  async function loadOrders(u) {
-    setMsg("");
+  async function loadAllOrders() {
+    setError("");
     try {
-      const url = u?.role === "admin" ? `${API}/api/orders` : `${API}/api/orders/my`;
-
-      const res = await fetch(url, {
+      const res = await fetch(`${API}/api/orders`, {
         headers: { ...authHeaders() },
       });
 
       const data = await res.json();
+
       if (!res.ok) {
-        setMsg(data?.message || "Failed to load orders");
+        setError(data?.message || "Failed to load admin orders");
         setOrders([]);
         return;
       }
 
       setOrders(Array.isArray(data.orders) ? data.orders : []);
     } catch {
-      setMsg("Network error");
+      setError("Network error");
       setOrders([]);
     }
   }
 
-  useEffect(() => {
-    (async () => {
-      const u = await loadMe();
-      setUser(u);
-      if (!u) return;
-      await loadOrders(u);
-    })();
-  }, []);
+  async function updateStatus(orderId, status) {
+    setMsg("");
+    setError("");
+    try {
+      const res = await fetch(`${API}/api/orders/${orderId}/status`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeaders(),
+        },
+        body: JSON.stringify({ status }),
+      });
 
-  if (!user) {
-    return (
-      <div style={{ padding: 20 }}>
-        <h1>Orders</h1>
-        <p>Please login first.</p>
-        <Link href="/login">Go to Login</Link>
-      </div>
-    );
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data?.message || "Failed to update status");
+        return;
+      }
+
+      setMsg("Status updated ✅");
+      setTimeout(() => setMsg(""), 1500);
+
+      // refresh list
+      await loadAllOrders();
+    } catch {
+      setError("Network error");
+    }
   }
+
+  useEffect(() => {
+    loadAllOrders();
+  }, []);
 
   return (
     <div style={{ padding: 20 }}>
-      <h1>{user.role === "admin" ? "All Orders (Admin)" : "My Orders"}</h1>
+      <h1>Admin: All Orders</h1>
 
-      <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
-        <Link href="/">Back Home</Link>
-        {user.role === "admin" && <Link href="/admin">Admin Dashboard</Link>}
+      <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
+        <Link href="/admin">
+          <button style={{ padding: 8, cursor: "pointer" }}>Back Admin</button>
+        </Link>
+        <Link href="/">
+          <button style={{ padding: 8, cursor: "pointer" }}>Back Home</button>
+        </Link>
       </div>
 
-      {msg && <p style={{ color: "red" }}>{msg}</p>}
+      {msg && <p>{msg}</p>}
+      {error && <p style={{ color: "red" }}>{error}</p>}
 
       {orders.length === 0 ? (
-        <p>No orders yet.</p>
+        <p>No orders found.</p>
       ) : (
         <div style={{ display: "grid", gap: 12 }}>
           {orders.map((o) => (
             <div
               key={o._id}
-              style={{ border: "1px solid #ccc", padding: 12, borderRadius: 8 }}
+              style={{ border: "1px solid #ccc", padding: 16, borderRadius: 8 }}
             >
-              <p><b>Order:</b> {o._id}</p>
-              <p><b>Status:</b> {o.status}</p>
-              <p><b>Total:</b> ${o.totalUSD ?? 0}</p>
+              <p>
+                <b>Order ID:</b> {o._id}
+              </p>
 
-              {user.role === "admin" && o.user && (
-                <p>
-                  <b>Customer:</b> {o.user.name} ({o.user.email})
-                </p>
-              )}
+              <p>
+                <b>User:</b>{" "}
+                {o.user?.email
+                  ? `${o.user.name || "User"} (${o.user.email})`
+                  : "Unknown"}
+              </p>
 
-              <details>
-                <summary>Items</summary>
-                <ul>
-                  {(o.items || []).map((it, idx) => (
-                    <li key={idx}>
-                      {it.name} x {it.qty} = ${it.lineTotal ?? (it.price * it.qty)}
-                    </li>
+              <p>
+                <b>Status:</b> {o.status}
+              </p>
+
+              <p>
+                <b>Total:</b> ${o.totalUSD ?? 0}
+              </p>
+
+              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                <label>
+                  <b>Update Status:</b>
+                </label>
+                <select
+                  value={o.status}
+                  onChange={(e) => updateStatus(o._id, e.target.value)}
+                >
+                  {STATUS_OPTIONS.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
                   ))}
-                </ul>
-              </details>
+                </select>
+              </div>
+
+              <hr />
+
+              {Array.isArray(o.items) &&
+                o.items.map((it, idx) => (
+                  <div key={idx} style={{ marginBottom: 6 }}>
+                    <div>
+                      {it.name} x {it.qty}
+                    </div>
+                    <div>${it.price ?? 0} each</div>
+                  </div>
+                ))}
             </div>
           ))}
         </div>

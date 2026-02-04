@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-const API = process.env.NEXT_PUBLIC_API_URL;
+// ✅ safe fallback
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 function authHeaders() {
   const token = localStorage.getItem("token");
@@ -20,6 +21,12 @@ export default function Home() {
       const res = await fetch(`${API}/api/auth/me`, {
         headers: { ...authHeaders() },
       });
+
+      // ✅ 401 just means “not logged in”
+      if (res.status === 401) {
+        setUser(null);
+        return;
+      }
 
       const data = await res.json();
       setUser(data?.user || null);
@@ -72,8 +79,6 @@ export default function Home() {
   }
 
   async function handleLogout() {
-    // If your backend supports logout (cookie-based), keep it.
-    // If you're purely token-based, this is optional.
     try {
       await fetch(`${API}/api/auth/logout`, {
         method: "POST",
@@ -104,7 +109,6 @@ export default function Home() {
           <p>Welcome {user.name}</p>
           <p>Role: {user.role}</p>
 
-          {/* ✅ UPDATED NAV LINKS */}
           <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
             <Link href="/profile">Profile</Link>
             <Link href="/cart">Cart</Link>
