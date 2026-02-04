@@ -2,21 +2,21 @@ const jwt = require("jsonwebtoken");
 
 module.exports = function requireAuth(req, res, next) {
   try {
-    // 1) Authorization header (best for production)
+    // Prefer Authorization header (works everywhere)
     const authHeader = req.headers.authorization || "";
-    const bearer = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    const bearerToken = authHeader.startsWith("Bearer ")
+      ? authHeader.slice(7)
+      : null;
 
-    // 2) fallback cookie
+    // Fallback to cookie
     const cookieName = process.env.COOKIE_NAME || "token";
     const cookieToken = req.cookies?.[cookieName];
 
-    const token = bearer || cookieToken;
+    const token = bearerToken || cookieToken;
     if (!token) return res.status(401).json({ message: "Not logged in" });
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    // decoded should contain { id, role }
-    req.user = decoded;
-
+    req.user = decoded; // { id, role, ... }
     next();
   } catch (err) {
     return res.status(401).json({ message: "Invalid/expired token" });
