@@ -2,10 +2,14 @@ const mongoose = require("mongoose");
 
 const orderItemSchema = new mongoose.Schema(
   {
-    productId: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
-    name: { type: String, default: "" },
-    price: { type: Number, default: 0 },
-    qty: { type: Number, default: 1 },
+    product: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
+
+    // snapshot fields (so even if product changes later, order stays correct)
+    name: { type: String, required: true },
+    price: { type: Number, required: true, min: 0 },
+
+    qty: { type: Number, required: true, min: 1 },
+    lineTotal: { type: Number, required: true, min: 0 },
   },
   { _id: false }
 );
@@ -16,14 +20,9 @@ const orderSchema = new mongoose.Schema(
 
     items: { type: [orderItemSchema], default: [] },
 
-    shippingAddress: {
-      address: { type: String, default: "" },
-      city: { type: String, default: "" },
-      country: { type: String, default: "" },
-      postalCode: { type: String, default: "" },
-    },
-
-    totalUSD: { type: Number, default: 0 },
+    itemsTotal: { type: Number, required: true, min: 0, default: 0 },
+    shippingFee: { type: Number, required: true, min: 0, default: 0 },
+    totalUSD: { type: Number, required: true, min: 0, default: 0 },
 
     status: {
       type: String,

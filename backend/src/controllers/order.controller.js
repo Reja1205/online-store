@@ -1,73 +1,51 @@
-const Order = require("../models/Order");
-const Cart = require("../models/Cart");
-const Product = require("../models/Product");
+// helper: compute totals even if old orders are missing fields
+function normalizeOrder(orderDoc) {
+  const o = orderDoc.toObject ? orderDoc.toObject() : orderDoc;
 
-// POST /api/orders  (user creates an order from their cart)
-async function createOrder(req, res) {
+  const items = Array.isArray(o.items) ? o.items : [];
+
+  const itemsTotal = items.reduce((sum, it) => {
+    const qty = Number(it.qty || 0);
+    const price = Number(it.price || 0);
+    const line = Number(it.lineTotal);
+    // prefer saved lineTotal, else compute price*qty
+    return sum + (Number.isFinite(line) ? line : price * qty);
+  }, 0);
+
+  const shippingFee = Number(o.shippingFee ?? process.env.SHIPPING_FEE_USD ?? 0);
+  const totalUSD = Number(o.totalUSD ?? itemsTotal + shippingFee);
+
+  return {
+    ...o,
+    itemsTotal,
+    shippingFee,
+    totalUSD,
+  };
+}
+
+// GET /api/orders/my
+async function myOrders(req, res) {
   try {
-    // You can adjust this based on your cart schema.
-    const cart = await Cart.findOne({ user: req.user.id }).populate("items.product");
-    if (!cart || !cart.items || cart.items.length === 0) {
-      return res.status(400).json({ message: "Cart is empty" });
-    }
-
-    // Build order items from cart
-    const items = cart.items.map((i) => ({
-      product: i.product._id,
-      name: i.product.name,
-      price: i.product.price,
-      qty: i.qty,
-    }));
-
-    const total = items.reduce((sum, i) => sum + i.price * i.qty, 0);
-
-    const order = await Order.create({
-      user: req.user.id,
-      items,
-      total,
-      status: "pending",
-    });
-
-    // Optional: clear cart after order
-    cart.items = [];
-    await cart.save();
-
-    return res.status(201).json({ message: "Order created", order });
+    const docs = await Order.find({ user: req.user.id }).sort({ createdAt: -1 });
+    const orders = docs.map(normalizeOrder);
+    return res.json({ orders });
   } catch (err) {
-    console.error("CREATE_ORDER_ERROR:", err);
+    console.error("MY_ORDERS_ERROR:", err);
     return res.status(500).json({ message: "Server error", error: err.message });
   }
 }
 
-// GET /api/orders/my  (user sees their orders)
-async function myOrders(req, res) {
-  const orders = await Order.find({ user: req.user.id }).sort({ createdAt: -1 });
-  res.json({ orders });
-}
-
-// GET /api/orders  (admin sees all orders)
+// GET /api/orders (admin)
 async function allOrders(req, res) {
-  const orders = await Order.find().sort({ createdAt: -1 });
-  res.json({ orders });
-}
+  try {
+    const docs = await Order.find()
+      .populate("user", "name email role")
+      .sort({ createdAt: -1 });
 
-// PATCH /api/orders/:id/status (admin updates status)
-async function updateStatus(req, res) {
-  const { status } = req.body || {};
-  const allowed = ["pending", "paid", "shipped", "delivered", "cancelled"];
-
-  if (!allowed.includes(status)) {
-    return res.status(400).json({ message: "Invalid status" });
+    const orders = docs.map(normalizeOrder);
+    return res.json({ orders });
+  } catch (err) {
+    console.error("ALL_ORDERS_ERROR:", err);
+    return res.status(500).json({ message: "Server error", error: err.message });
   }
-
-  const order = await Order.findByIdAndUpdate(
-    req.params.id,
-    { $set: { status } },
-    { new: true }
-  );
-
-  if (!order) return res.status(404).json({ message: "Order not found" });
-  res.json({ message: "Status updated", order });
 }
-
-module.exports = { createOrder, myOrders, allOrders, updateStatus };

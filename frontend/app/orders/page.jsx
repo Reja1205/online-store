@@ -12,23 +12,26 @@ function authHeaders() {
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState([]);
-  const [error, setError] = useState("");
+  const [msg, setMsg] = useState("");
 
   async function loadOrders() {
-    setError("");
+    setMsg("");
     try {
-      const res = await fetch(`${API}/api/orders/my`, { headers: { ...authHeaders() } });
+      const res = await fetch(`${API}/api/orders/my`, {
+        headers: { ...authHeaders() },
+      });
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data?.message || "Failed to load orders");
+        setMsg(data?.message || "Failed to load orders");
         setOrders([]);
         return;
       }
 
       setOrders(Array.isArray(data.orders) ? data.orders : []);
     } catch {
-      setError("Network error");
+      setMsg("Network error");
+      setOrders([]);
     }
   }
 
@@ -39,20 +42,20 @@ export default function OrdersPage() {
   return (
     <div style={{ padding: 20 }}>
       <h1>My Orders</h1>
-      <Link href="/">← Back Home</Link>
+      <Link href="/"><button style={{ padding: 8 }}>Back Home</button></Link>
 
-      {error && <p style={{ color: "red" }}>{error}</p>}
+      {msg && <p>{msg}</p>}
+      {orders.length === 0 && <p>No orders yet.</p>}
 
-      {orders.length === 0 && !error && <p>No orders yet.</p>}
-
-      {orders.map((o) => (
-        <div key={o._id} style={{ border: "1px solid #ddd", padding: 12, borderRadius: 8, marginTop: 12 }}>
-          <b>Order:</b> {o._id}
-          <p style={{ margin: "6px 0" }}>Status: {o.status}</p>
-          <p style={{ margin: "6px 0" }}>Total: ${o.total}</p>
-          <p style={{ margin: "6px 0" }}>Items: {o.items?.length || 0}</p>
-        </div>
-      ))}
+      <div style={{ display: "grid", gap: 12, marginTop: 12 }}>
+        {orders.map((o) => (
+          <div key={o._id} style={{ border: "1px solid #ccc", padding: 12, borderRadius: 8 }}>
+            <p><b>Status:</b> {o.status}</p>
+            <p><b>Total:</b> ${o.totalUSD ?? 0}</p>
+            <p><b>Items:</b> {o.items?.length || 0}</p>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

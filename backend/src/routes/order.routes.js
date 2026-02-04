@@ -7,15 +7,19 @@ const {
   createOrder,
   myOrders,
   allOrders,
-  updateStatus,
+  updateOrderStatus,
 } = require("../controllers/order.controller");
 
-// user
+// User creates order
 router.post("/", requireAuth, createOrder);
+
+// User sees only their orders
 router.get("/my", requireAuth, myOrders);
 
-// admin
+// Admin sees all orders
 router.get("/", requireAuth, requireAdmin, allOrders);
-router.patch("/:id/status", requireAuth, requireAdmin, updateStatus);
+
+// Admin updates status
+router.put("/:id/status", requireAuth, requireAdmin, updateOrderStatus);
 
 module.exports = router;
