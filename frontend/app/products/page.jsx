@@ -7,19 +7,22 @@ const API = process.env.NEXT_PUBLIC_API_URL;
 
 export default function ProductsPage() {
   const [products, setProducts] = useState([]);
-  const [err, setErr] = useState("");
+  const [error, setError] = useState("");
 
   useEffect(() => {
     async function load() {
-      setErr("");
       try {
-        const res = await fetch(`${API}/api/products`);
+        setError("");
+        const res = await fetch(`${API}/api/products`, { cache: "no-store" });
         const data = await res.json();
-        setProducts(data.products || []);
+
+        const list = Array.isArray(data) ? data : data.products; // supports both shapes
+        setProducts(Array.isArray(list) ? list : []);
       } catch (e) {
-        setErr("Failed to load products");
+        setError("Failed to load products");
       }
     }
+
     load();
   }, []);
 
@@ -27,23 +30,28 @@ export default function ProductsPage() {
     <div style={{ padding: 20 }}>
       <h1>Products</h1>
 
-      {err && <p style={{ color: "red" }}>{err}</p>}
+      {error && <p style={{ color: "red" }}>{error}</p>}
 
-      {products.length === 0 ? (
-        <p>No products yet.</p>
-      ) : (
-        <ul>
-          {products.map((p) => (
-            <li key={p._id}>
-              <Link href={`/products/${p._id}`}>{p.name}</Link> — ${p.price}
-            </li>
-          ))}
-        </ul>
-      )}
+      {products.map((p) => (
+        <div
+          key={p._id}
+          style={{
+            border: "1px solid #ccc",
+            padding: 16,
+            borderRadius: 8,
+            marginBottom: 12,
+          }}
+        >
+          <h3>{p.name}</h3>
+          <p>Price: ${p.price}</p>
 
-      <p style={{ marginTop: 20 }}>
-        <Link href="/">Back home</Link>
-      </p>
+          <Link href={`/products/${p._id}`}>
+            <button style={{ padding: 8, cursor: "pointer" }}>
+              View Details
+            </button>
+          </Link>
+        </div>
+      ))}
     </div>
   );
 }
