@@ -3,10 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+const API = process.env.NEXT_PUBLIC_API_URL;
 
 function authHeaders() {
-  if (typeof window === "undefined") return {};
   const token = localStorage.getItem("token");
   return token ? { Authorization: "Bearer " + token } : {};
 }
@@ -22,21 +21,19 @@ export default function AdminOrdersPage() {
     setError("");
     try {
       const res = await fetch(`${API}/api/orders`, {
-        headers: {
-          ...authHeaders(),
-        },
+        headers: { ...authHeaders() },
       });
 
-      const data = await res.json().catch(() => ({}));
+      const data = await res.json();
 
       if (!res.ok) {
-        setError(data?.message || `Failed (${res.status})`);
+        setError(data?.message || "Failed to load admin orders");
         setOrders([]);
         return;
       }
 
       setOrders(Array.isArray(data.orders) ? data.orders : []);
-    } catch (e) {
+    } catch {
       setError("Network error");
       setOrders([]);
     }
@@ -45,7 +42,6 @@ export default function AdminOrdersPage() {
   async function updateStatus(orderId, status) {
     setMsg("");
     setError("");
-
     try {
       const res = await fetch(`${API}/api/orders/${orderId}/status`, {
         method: "PUT",
@@ -56,15 +52,17 @@ export default function AdminOrdersPage() {
         body: JSON.stringify({ status }),
       });
 
-      const data = await res.json().catch(() => ({}));
+      const data = await res.json();
 
       if (!res.ok) {
-        setError(data?.message || `Failed (${res.status})`);
+        setError(data?.message || "Failed to update status");
         return;
       }
 
       setMsg("Status updated ✅");
-      setTimeout(() => setMsg(""), 1200);
+      setTimeout(() => setMsg(""), 1500);
+
+      // refresh list
       await loadAllOrders();
     } catch {
       setError("Network error");
