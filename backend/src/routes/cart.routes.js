@@ -1,19 +1,17 @@
 const router = require("express").Router();
 
-const auth = require("../middleware/auth.middleware"); // ✅ your auth middleware that sets req.user
+const requireAuth = require("../middleware/auth.middleware");
 
 const {
-  getMyCart,
+  getCart,
   addToCart,
-  updateCartItem,
-  removeCartItem,
+  removeFromCart,
   clearCart,
 } = require("../controllers/cart.controller");
 
-router.get("/", auth, getMyCart);
-router.post("/add", auth, addToCart);
-router.put("/item/:productId", auth, updateCartItem);
-router.delete("/item/:productId", auth, removeCartItem);
-router.post("/clear", auth, clearCart);
+router.get("/", requireAuth, getCart);
+router.post("/add", requireAuth, addToCart);
+router.post("/remove", requireAuth, removeFromCart);
+router.post("/clear", requireAuth, clearCart);
 
 module.exports = router;
