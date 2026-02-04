@@ -17,7 +17,10 @@ export default function Home() {
 
   async function loadMe() {
     try {
-      const res = await fetch(`${API}/api/auth/me`, { headers: { ...authHeaders() } });
+      const res = await fetch(`${API}/api/auth/me`, {
+        headers: { ...authHeaders() },
+      });
+
       const data = await res.json();
       setUser(data?.user || null);
     } catch {
@@ -69,8 +72,17 @@ export default function Home() {
   }
 
   async function handleLogout() {
-    // If you still use cookie logout on backend, keep it. If not needed, you can remove.
-    await fetch(`${API}/api/auth/logout`, { method: "POST", headers: { ...authHeaders() } });
+    // If your backend supports logout (cookie-based), keep it.
+    // If you're purely token-based, this is optional.
+    try {
+      await fetch(`${API}/api/auth/logout`, {
+        method: "POST",
+        headers: { ...authHeaders() },
+      });
+    } catch {
+      // ignore
+    }
+
     localStorage.removeItem("token");
     setUser(null);
   }
@@ -92,9 +104,12 @@ export default function Home() {
           <p>Welcome {user.name}</p>
           <p>Role: {user.role}</p>
 
-          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+          {/* ✅ UPDATED NAV LINKS */}
+          <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
             <Link href="/profile">Profile</Link>
             <Link href="/cart">Cart</Link>
+            <Link href="/checkout">Checkout</Link>
+            <Link href="/orders">My Orders</Link>
 
             {user.role === "admin" && <Link href="/admin">Admin Dashboard</Link>}
 
@@ -111,7 +126,10 @@ export default function Home() {
 
       <div style={{ display: "grid", gap: 12 }}>
         {products.map((p) => (
-          <div key={p._id} style={{ border: "1px solid #ccc", padding: 16, borderRadius: 8 }}>
+          <div
+            key={p._id}
+            style={{ border: "1px solid #ccc", padding: 16, borderRadius: 8 }}
+          >
             <h3>{p.name}</h3>
             <p>Price: ${p.price}</p>
             <p>{p.description}</p>
