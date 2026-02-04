@@ -3,81 +3,71 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+const API = process.env.NEXT_PUBLIC_API_URL;
 
 export default function ProductDetailsPage({ params }) {
-  const { id } = params;
+  const id = params?.id;
 
   const [product, setProduct] = useState(null);
-  const [err, setErr] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
-  async function loadProduct() {
-    setLoading(true);
-    setErr("");
-    setProduct(null);
-
-    try {
-      const res = await fetch(`${API}/api/products/${id}`, { cache: "no-store" });
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        setErr(data?.message || `Request failed (${res.status})`);
-        setLoading(false);
-        return;
-      }
-
-      setProduct(data.product || null);
-      setLoading(false);
-    } catch (e) {
-      setErr("Network error");
-      setLoading(false);
-    }
-  }
-
   useEffect(() => {
-    loadProduct();
+    async function load() {
+      try {
+        setError("");
+        setLoading(true);
+
+        if (!id) {
+          setError("Invalid product id");
+          setLoading(false);
+          return;
+        }
+
+        const res = await fetch(`${API}/api/products/${id}`);
+        const data = await res.json();
+
+        if (!res.ok) {
+          setError(data?.message || "Failed to load product");
+          setLoading(false);
+          return;
+        }
+
+        setProduct(data.product);
+      } catch (e) {
+        setError("Network error");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    load();
   }, [id]);
 
-  return (
-    <div style={{ padding: 20, maxWidth: 700 }}>
-      <h1>Product Details</h1>
+  if (loading) return <div style={{ padding: 20 }}>Loading...</div>;
 
-      {loading && <p>Loading...</p>}
-
-      {!loading && err && (
-        <p style={{ color: "red" }}>
-          {err}
-        </p>
-      )}
-
-      {!loading && !err && product && (
-        <div style={{ border: "1px solid #ddd", borderRadius: 10, padding: 16 }}>
-          <h2 style={{ marginTop: 0 }}>{product.name}</h2>
-          <p>Price: ${product.price}</p>
-          <p>Stock: {product.stock}</p>
-          <p>{product.description || "No description"}</p>
-
-          {product.imageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={product.imageUrl}
-              alt={product.name}
-              style={{ maxWidth: "100%", borderRadius: 8, marginTop: 10 }}
-            />
-          ) : null}
-        </div>
-      )}
-
-      <div style={{ marginTop: 16, display: "flex", gap: 10 }}>
-        <Link href="/">
-          <button style={{ padding: 10, cursor: "pointer" }}>Back to Products</button>
-        </Link>
-
-        <button onClick={loadProduct} style={{ padding: 10, cursor: "pointer" }}>
-          Retry
-        </button>
+  if (error) {
+    return (
+      <div style={{ padding: 20 }}>
+        <p style={{ color: "red" }}>{error}</p>
+        <Link href="/products">Back to products</Link>
       </div>
+    );
+  }
+
+  return (
+    <div style={{ padding: 20 }}>
+      <h1>{product?.name}</h1>
+      <p>{product?.description}</p>
+      <p>Price: ${product?.price}</p>
+      <p>Stock: {product?.stock}</p>
+
+      <br />
+      <Link href="/products">
+        <button style={{ padding: 10, cursor: "pointer" }}>
+          Back to products
+        </button>
+      </Link>
     </div>
   );
 }
