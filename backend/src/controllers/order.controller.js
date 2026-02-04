@@ -1,28 +1,49 @@
-
 const Order = require("../models/Order");
 
-// GET /api/orders/my
+// USER – create order
+async function createOrder(req, res) {
+  try {
+    const { items, total, address } = req.body || {};
+
+    if (!items || items.length === 0) {
+      return res.status(400).json({ message: "No items" });
+    }
+
+    const order = await Order.create({
+      userId: req.user._id,
+      items,
+      total,
+      address: address || "",
+    });
+
+    res.status(201).json({ order });
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+}
+
+// USER – see own orders
 async function myOrders(req, res) {
-  const orders = await Order.find({ user: req.user.id }).sort({ createdAt: -1 });
-  return res.json({ orders });
+  const orders = await Order.find({ userId: req.user._id }).sort({ createdAt: -1 });
+  res.json({ orders });
 }
 
-// GET /api/orders/:id  (owner or admin)
-async function getOrderById(req, res) {
-  const order = await Order.findById(req.params.id).populate("user", "name email role");
-  if (!order) return res.status(404).json({ message: "Order not found" });
-
-  const isOwner = order.user?._id?.toString() === req.user.id;
-  const isAdmin = req.user.role === "admin";
-  if (!isOwner && !isAdmin) return res.status(403).json({ message: "Forbidden" });
-
-  return res.json({ order });
-}
-
-// GET /api/orders  (admin)
+// ADMIN – see all orders
 async function allOrders(req, res) {
-  const orders = await Order.find().sort({ createdAt: -1 }).populate("user", "name email role");
-  return res.json({ orders });
+  const orders = await Order.find().sort({ createdAt: -1 });
+  res.json({ orders });
 }
 
-module.exports = { myOrders, getOrderById, allOrders };
+// ADMIN – update status
+async function updateStatus(req, res) {
+  const { status } = req.body;
+  const order = await Order.findByIdAndUpdate(
+    req.params.id,
+    { status },
+    { new: true }
+  );
+
+  res.json({ order });
+}
+
+module.exports = { createOrder, myOrders, allOrders, updateStatus };
