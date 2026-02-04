@@ -1,60 +1,77 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 
-const API = process.env.NEXT_PUBLIC_API_URL;
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
-export default function ProductDetails() {
-  const { id } = useParams();
-  const router = useRouter();
+export default function ProductDetailsPage({ params }) {
+  const { id } = params;
 
   const [product, setProduct] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
+
+  async function loadProduct() {
+    try {
+      setErr("");
+      const res = await fetch(`${API}/api/products/${id}`, { cache: "no-store" });
+      const data = await res.json();
+
+      // expected: { product: {...} }
+      if (!res.ok) {
+        setErr(data?.message || "Failed to load product");
+        setProduct(null);
+        return;
+      }
+
+      setProduct(data.product || null);
+    } catch {
+      setErr("Failed to load product");
+      setProduct(null);
+    }
+  }
 
   useEffect(() => {
-    async function loadProduct() {
-      try {
-        const res = await fetch(`${API}/api/products/${id}`);
-        const data = await res.json();
-
-        // IMPORTANT LINE
-        setProduct(data.product || null);
-      } catch (err) {
-        setProduct(null);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    if (id) loadProduct();
+    loadProduct();
   }, [id]);
 
-  if (loading) return <p style={{ padding: 20 }}>Loading...</p>;
-  if (!product) return <p style={{ padding: 20 }}>Product not found</p>;
-
   return (
-    <div style={{ padding: 20, maxWidth: 600 }}>
-      <h1>{product.name}</h1>
+    <div style={{ padding: 20, maxWidth: 700 }}>
+      <h1>Product Details</h1>
 
-      {product.imageUrl && (
-        <img
-          src={product.imageUrl}
-          alt={product.name}
-          style={{ width: "100%", maxHeight: 300, objectFit: "cover" }}
-        />
+      {err && <p style={{ color: "red" }}>{err}</p>}
+
+      {!product ? (
+        <p>Loading...</p>
+      ) : (
+        <div
+          style={{
+            border: "1px solid #ddd",
+            borderRadius: 10,
+            padding: 16,
+          }}
+        >
+          <h2 style={{ marginTop: 0 }}>{product.name}</h2>
+          <p>Price: ${product.price}</p>
+          <p>Stock: {product.stock}</p>
+          <p>{product.description || "No description"}</p>
+
+          {product.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={product.imageUrl}
+              alt={product.name}
+              style={{ maxWidth: "100%", borderRadius: 8, marginTop: 10 }}
+            />
+          ) : null}
+        </div>
       )}
 
-      <p><strong>Description:</strong> {product.description || "N/A"}</p>
-      <p><strong>Price:</strong> ${product.price}</p>
-      <p><strong>Stock:</strong> {product.stock}</p>
-
-      <button
-        onClick={() => router.push("/")}
-        style={{ marginTop: 20, padding: 10, cursor: "pointer" }}
-      >
-        Back to Products
-      </button>
+      <div style={{ marginTop: 16 }}>
+        <Link href="/">
+          <button style={{ padding: 10, cursor: "pointer" }}>Back to Products</button>
+        </Link>
+      </div>
     </div>
   );
 }
