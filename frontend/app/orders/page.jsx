@@ -3,31 +3,28 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-const API = process.env.NEXT_PUBLIC_API_URL;
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 function authHeaders() {
-  const token = localStorage.getItem("token");
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : "";
   return token ? { Authorization: "Bearer " + token } : {};
 }
 
-const STATUS_OPTIONS = ["pending", "paid", "shipped", "delivered", "cancelled"];
-
-export default function AdminOrdersPage() {
+export default function MyOrdersPage() {
   const [orders, setOrders] = useState([]);
   const [error, setError] = useState("");
-  const [msg, setMsg] = useState("");
 
-  async function loadAllOrders() {
+  async function loadMyOrders() {
     setError("");
     try {
-      const res = await fetch(`${API}/api/orders`, {
+      const res = await fetch(`${API}/api/orders/my`, {
         headers: { ...authHeaders() },
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data?.message || "Failed to load admin orders");
+        setError(data?.message || "Failed to load orders");
         setOrders([]);
         return;
       }
@@ -39,58 +36,24 @@ export default function AdminOrdersPage() {
     }
   }
 
-  async function updateStatus(orderId, status) {
-    setMsg("");
-    setError("");
-    try {
-      const res = await fetch(`${API}/api/orders/${orderId}/status`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          ...authHeaders(),
-        },
-        body: JSON.stringify({ status }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data?.message || "Failed to update status");
-        return;
-      }
-
-      setMsg("Status updated ✅");
-      setTimeout(() => setMsg(""), 1500);
-
-      // refresh list
-      await loadAllOrders();
-    } catch {
-      setError("Network error");
-    }
-  }
-
   useEffect(() => {
-    loadAllOrders();
+    loadMyOrders();
   }, []);
 
   return (
     <div style={{ padding: 20 }}>
-      <h1>Admin: All Orders</h1>
+      <h1>My Orders</h1>
 
       <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
-        <Link href="/admin">
-          <button style={{ padding: 8, cursor: "pointer" }}>Back Admin</button>
-        </Link>
         <Link href="/">
           <button style={{ padding: 8, cursor: "pointer" }}>Back Home</button>
         </Link>
       </div>
 
-      {msg && <p>{msg}</p>}
       {error && <p style={{ color: "red" }}>{error}</p>}
 
       {orders.length === 0 ? (
-        <p>No orders found.</p>
+        <p>No orders yet.</p>
       ) : (
         <div style={{ display: "grid", gap: 12 }}>
           {orders.map((o) => (
@@ -101,37 +64,12 @@ export default function AdminOrdersPage() {
               <p>
                 <b>Order ID:</b> {o._id}
               </p>
-
-              <p>
-                <b>User:</b>{" "}
-                {o.user?.email
-                  ? `${o.user.name || "User"} (${o.user.email})`
-                  : "Unknown"}
-              </p>
-
               <p>
                 <b>Status:</b> {o.status}
               </p>
-
               <p>
                 <b>Total:</b> ${o.totalUSD ?? 0}
               </p>
-
-              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                <label>
-                  <b>Update Status:</b>
-                </label>
-                <select
-                  value={o.status}
-                  onChange={(e) => updateStatus(o._id, e.target.value)}
-                >
-                  {STATUS_OPTIONS.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-              </div>
 
               <hr />
 
