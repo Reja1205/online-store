@@ -1,27 +1,35 @@
 const mongoose = require("mongoose");
 
+const orderItemSchema = new mongoose.Schema(
+  {
+    productId: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
+    name: { type: String, default: "" },
+    price: { type: Number, default: 0 },
+    qty: { type: Number, default: 1 },
+  },
+  { _id: false }
+);
+
 const orderSchema = new mongoose.Schema(
   {
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
 
-    items: [
-      {
-        productId: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
-        name: String,
-        price: Number,
-        qty: Number,
-      },
-    ],
+    items: { type: [orderItemSchema], default: [] },
 
-    total: { type: Number, required: true },
+    shippingAddress: {
+      address: { type: String, default: "" },
+      city: { type: String, default: "" },
+      country: { type: String, default: "" },
+      postalCode: { type: String, default: "" },
+    },
+
+    totalUSD: { type: Number, default: 0 },
 
     status: {
       type: String,
-      enum: ["pending", "paid", "shipped", "delivered"],
+      enum: ["pending", "paid", "shipped", "delivered", "cancelled"],
       default: "pending",
     },
-
-    address: { type: String, default: "" },
   },
   { timestamps: true }
 );

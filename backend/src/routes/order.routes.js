@@ -1,5 +1,6 @@
 const router = require("express").Router();
-const { requireAuth } = require("../middleware/auth.middleware");
+
+const requireAuth = require("../middleware/auth.middleware");
 const requireAdmin = require("../middleware/admin.middleware");
 
 const {
@@ -9,12 +10,12 @@ const {
   updateStatus,
 } = require("../controllers/order.controller");
 
-// USER
+// user
 router.post("/", requireAuth, createOrder);
-router.get("/mine", requireAuth, myOrders);
+router.get("/my", requireAuth, myOrders);
 
-// ADMIN
-router.get("/all", requireAuth, requireAdmin, allOrders);
-router.put("/:id", requireAuth, requireAdmin, updateStatus);
+// admin
+router.get("/", requireAuth, requireAdmin, allOrders);
+router.patch("/:id/status", requireAuth, requireAdmin, updateStatus);
 
 module.exports = router;
