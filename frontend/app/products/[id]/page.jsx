@@ -10,24 +10,28 @@ export default function ProductDetailsPage({ params }) {
 
   const [product, setProduct] = useState(null);
   const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(true);
 
   async function loadProduct() {
-    try {
-      setErr("");
-      const res = await fetch(`${API}/api/products/${id}`, { cache: "no-store" });
-      const data = await res.json();
+    setLoading(true);
+    setErr("");
+    setProduct(null);
 
-      // expected: { product: {...} }
+    try {
+      const res = await fetch(`${API}/api/products/${id}`, { cache: "no-store" });
+      const data = await res.json().catch(() => ({}));
+
       if (!res.ok) {
-        setErr(data?.message || "Failed to load product");
-        setProduct(null);
+        setErr(data?.message || `Request failed (${res.status})`);
+        setLoading(false);
         return;
       }
 
       setProduct(data.product || null);
-    } catch {
-      setErr("Failed to load product");
-      setProduct(null);
+      setLoading(false);
+    } catch (e) {
+      setErr("Network error");
+      setLoading(false);
     }
   }
 
@@ -39,18 +43,16 @@ export default function ProductDetailsPage({ params }) {
     <div style={{ padding: 20, maxWidth: 700 }}>
       <h1>Product Details</h1>
 
-      {err && <p style={{ color: "red" }}>{err}</p>}
+      {loading && <p>Loading...</p>}
 
-      {!product ? (
-        <p>Loading...</p>
-      ) : (
-        <div
-          style={{
-            border: "1px solid #ddd",
-            borderRadius: 10,
-            padding: 16,
-          }}
-        >
+      {!loading && err && (
+        <p style={{ color: "red" }}>
+          {err}
+        </p>
+      )}
+
+      {!loading && !err && product && (
+        <div style={{ border: "1px solid #ddd", borderRadius: 10, padding: 16 }}>
           <h2 style={{ marginTop: 0 }}>{product.name}</h2>
           <p>Price: ${product.price}</p>
           <p>Stock: {product.stock}</p>
@@ -67,10 +69,14 @@ export default function ProductDetailsPage({ params }) {
         </div>
       )}
 
-      <div style={{ marginTop: 16 }}>
+      <div style={{ marginTop: 16, display: "flex", gap: 10 }}>
         <Link href="/">
           <button style={{ padding: 10, cursor: "pointer" }}>Back to Products</button>
         </Link>
+
+        <button onClick={loadProduct} style={{ padding: 10, cursor: "pointer" }}>
+          Retry
+        </button>
       </div>
     </div>
   );
