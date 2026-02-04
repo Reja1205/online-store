@@ -3,71 +3,137 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+const API = process.env.NEXT_PUBLIC_API_URL;
 
-export default function HomePage() {
+function authHeaders() {
+  const token = localStorage.getItem("token");
+  return token ? { Authorization: "Bearer " + token } : {};
+}
+
+export default function Home() {
+  const [user, setUser] = useState(null);
   const [products, setProducts] = useState([]);
-  const [err, setErr] = useState("");
+  const [msg, setMsg] = useState("");
+
+  async function loadMe() {
+    try {
+      const res = await fetch(`${API}/api/auth/me`, { headers: { ...authHeaders() } });
+      const data = await res.json();
+      setUser(data?.user || null);
+    } catch {
+      setUser(null);
+    }
+  }
 
   async function loadProducts() {
     try {
-      setErr("");
-      const res = await fetch(`${API}/api/products`, { cache: "no-store" });
+      const res = await fetch(`${API}/api/products`);
       const data = await res.json();
 
-      // support both {products:[...]} and [...]
+      // supports either {products:[...]} or plain [...]
       const list = Array.isArray(data) ? data : data.products;
       setProducts(Array.isArray(list) ? list : []);
-    } catch (e) {
-      setErr("Failed to load products");
+    } catch {
       setProducts([]);
     }
   }
 
   useEffect(() => {
+    loadMe();
     loadProducts();
   }, []);
+
+  async function addToCart(productId) {
+    setMsg("");
+    try {
+      const res = await fetch(`${API}/api/cart/add`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeaders(),
+        },
+        body: JSON.stringify({ productId, qty: 1 }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setMsg(data?.message || "Failed to add to cart");
+        return;
+      }
+
+      setMsg("Added to cart ✅");
+      setTimeout(() => setMsg(""), 1500);
+    } catch {
+      setMsg("Network error");
+    }
+  }
+
+  async function handleLogout() {
+    // If you still use cookie logout on backend, keep it. If not needed, you can remove.
+    await fetch(`${API}/api/auth/logout`, { method: "POST", headers: { ...authHeaders() } });
+    localStorage.removeItem("token");
+    setUser(null);
+  }
 
   return (
     <div style={{ padding: 20 }}>
       <h1>Online Store</h1>
 
-      <div style={{ display: "flex", gap: 12, marginBottom: 14 }}>
-        <Link href="/login">Login</Link>
-        <Link href="/register">Register</Link>
-        <Link href="/profile">Profile</Link>
-        <Link href="/admin">Admin Dashboard</Link>
-      </div>
+      {msg && <p>{msg}</p>}
 
-      {err && <p style={{ color: "red" }}>{err}</p>}
-
-      {products.length === 0 ? (
-        <p>No products yet.</p>
+      {!user ? (
+        <>
+          <Link href="/login">Login</Link>
+          <br />
+          <Link href="/register">Register</Link>
+        </>
       ) : (
-        <div style={{ display: "grid", gap: 12, maxWidth: 800 }}>
-          {products.map((p) => (
-            <div
-              key={p._id}
-              style={{
-                border: "1px solid #ddd",
-                padding: 16,
-                borderRadius: 10,
-              }}
-            >
-              <h3 style={{ margin: "0 0 6px 0" }}>{p.name}</h3>
-              <p style={{ margin: 0 }}>Price: ${p.price}</p>
-              <p style={{ margin: 0 }}>Stock: {p.stock}</p>
-              {p.description ? <p style={{ marginTop: 8 }}>{p.description}</p> : null}
+        <>
+          <p>Welcome {user.name}</p>
+          <p>Role: {user.role}</p>
 
-              <Link href={`/products/${p._id}`}>
-                <button style={{ marginTop: 10, padding: 10, cursor: "pointer" }}>
-                  View Details
-                </button>
-              </Link>
-            </div>
-          ))}
-        </div>
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <Link href="/profile">Profile</Link>
+            <Link href="/cart">Cart</Link>
+
+            {user.role === "admin" && <Link href="/admin">Admin Dashboard</Link>}
+
+            <button onClick={handleLogout}>Logout</button>
+          </div>
+        </>
       )}
+
+      <hr style={{ margin: "16px 0" }} />
+
+      <h2>Products</h2>
+
+      {products.length === 0 && <p>No products yet.</p>}
+
+      <div style={{ display: "grid", gap: 12 }}>
+        {products.map((p) => (
+          <div key={p._id} style={{ border: "1px solid #ccc", padding: 16, borderRadius: 8 }}>
+            <h3>{p.name}</h3>
+            <p>Price: ${p.price}</p>
+            <p>{p.description}</p>
+            <p>Stock: {p.stock}</p>
+
+            <div style={{ display: "flex", gap: 10 }}>
+              <Link href={`/products/${p._id}`}>
+                <button style={{ padding: 8, cursor: "pointer" }}>View Details</button>
+              </Link>
+
+              <button
+                style={{ padding: 8, cursor: "pointer" }}
+                onClick={() => addToCart(p._id)}
+                disabled={!user}
+                title={!user ? "Login to add items" : ""}
+              >
+                Add to Cart
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
