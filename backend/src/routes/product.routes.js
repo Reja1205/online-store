@@ -2,7 +2,6 @@ const router = require("express").Router();
 
 const auth = require("../middleware/auth.middleware");
 const requireAdmin = require("../middleware/admin.middleware");
-const requireAuth = require("../middleware/auth.middleware");
 
 const {
   listProducts,
