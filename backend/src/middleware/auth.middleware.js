@@ -7,7 +7,6 @@ module.exports = function requireAuth(req, res, next) {
       ? authHeader.slice(7)
       : null;
 
-    // optional cookie fallback
     const cookieName = process.env.COOKIE_NAME || "token";
     const cookieToken = req.cookies?.[cookieName];
 

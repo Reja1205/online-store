@@ -1,6 +1,6 @@
 const router = require("express").Router();
 
-const auth = require("../middleware/auth.middleware");
+const requireAuth = require("../middleware/auth.middleware");
 const requireAdmin = require("../middleware/admin.middleware");
 
 const {
@@ -16,8 +16,8 @@ router.get("/", listProducts);
 router.get("/:id", getProduct);
 
 // Admin only
-router.post("/", auth, requireAdmin, createProduct);
-router.put("/:id", auth, requireAdmin, updateProduct);
-router.delete("/:id", auth, requireAdmin, deleteProduct);
+router.post("/", requireAuth, requireAdmin, createProduct);
+router.put("/:id", requireAuth, requireAdmin, updateProduct);
+router.delete("/:id", requireAuth, requireAdmin, deleteProduct);
 
 module.exports = router;
