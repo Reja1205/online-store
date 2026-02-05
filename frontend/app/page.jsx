@@ -3,12 +3,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-// IMPORTANT: in production this MUST be your Render URL via Vercel env var.
-// Keep localhost only for local dev.
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 function authHeaders() {
-  const token = localStorage.getItem("token");
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
   return token ? { Authorization: "Bearer " + token } : {};
 }
 
@@ -19,13 +17,9 @@ export default function Home() {
 
   async function loadMe() {
     try {
-      const res = await fetch(`${API}/api/auth/me`, {
-        headers: authHeaders(),
-      });
+      const res = await fetch(`${API}/api/auth/me`, { headers: authHeaders() });
 
-      // ✅ If token is missing/invalid, clear it so UI is consistent
       if (res.status === 401) {
-        localStorage.removeItem("token");
         setUser(null);
         return;
       }
@@ -41,8 +35,6 @@ export default function Home() {
     try {
       const res = await fetch(`${API}/api/products`);
       const data = await res.json();
-
-      // supports either {products:[...]} or plain [...]
       const list = Array.isArray(data) ? data : data.products;
       setProducts(Array.isArray(list) ? list : []);
     } catch {
@@ -67,7 +59,7 @@ export default function Home() {
         body: JSON.stringify({ productId, qty: 1 }),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setMsg(data?.message || "Failed to add to cart");
         return;
@@ -81,7 +73,10 @@ export default function Home() {
   }
 
   async function handleLogout() {
-    // Token-based logout = just remove token
+    try {
+      await fetch(`${API}/api/auth/logout`, { method: "POST", headers: authHeaders() });
+    } catch {}
+
     localStorage.removeItem("token");
     setUser(null);
   }
@@ -107,7 +102,12 @@ export default function Home() {
             <Link href="/profile">Profile</Link>
             <Link href="/cart">Cart</Link>
             <Link href="/checkout">Checkout</Link>
+
+            {/* User-only orders */}
             <Link href="/orders">My Orders</Link>
+
+            {/* Admin-only: all orders */}
+            {user.role === "admin" && <Link href="/admin/orders">Admin Orders</Link>}
 
             {user.role === "admin" && <Link href="/admin">Admin Dashboard</Link>}
 
@@ -124,10 +124,7 @@ export default function Home() {
 
       <div style={{ display: "grid", gap: 12 }}>
         {products.map((p) => (
-          <div
-            key={p._id}
-            style={{ border: "1px solid #ccc", padding: 16, borderRadius: 8 }}
-          >
+          <div key={p._id} style={{ border: "1px solid #ccc", padding: 16, borderRadius: 8 }}>
             <h3>{p.name}</h3>
             <p>Price: ${p.price}</p>
             <p>{p.description}</p>

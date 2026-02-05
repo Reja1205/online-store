@@ -21,6 +21,8 @@ export default function AdminOrdersPage() {
     setMsg("");
     setError("");
     setCountInfo("");
+    console.log("TOKEN:", localStorage.getItem("token"));
+console.log("CALLING:", `${API}/api/orders`);
 
     try {
       const headers = authHeaders();
