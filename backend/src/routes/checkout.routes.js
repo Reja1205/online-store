@@ -1,8 +1,12 @@
 const router = require("express").Router();
 
-const auth = require("../middleware/auth.middleware");
-const { checkout } = require("../controllers/checkout.controller");
+const requireAuth = require("../middleware/auth.middleware");
+const { previewCheckout, payCheckout } = require("../controllers/checkout.controller");
 
-router.post("/", auth, checkout);
+// Preview cart totals
+router.get("/preview", requireAuth, previewCheckout);
+
+// Mock “Pay Now” -> creates paid order + clears cart
+router.post("/pay", requireAuth, payCheckout);
 
 module.exports = router;
