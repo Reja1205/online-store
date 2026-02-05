@@ -10,6 +10,7 @@ const {
 
 const requireAuth = require("../middleware/auth.middleware");
 
+
 // REGISTER
 router.post("/register-user", registerUser);
 router.post("/register-admin", registerAdmin);
