@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-// ✅ safe fallback
+// IMPORTANT: in production this MUST be your Render URL via Vercel env var.
+// Keep localhost only for local dev.
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 function authHeaders() {
@@ -19,11 +20,12 @@ export default function Home() {
   async function loadMe() {
     try {
       const res = await fetch(`${API}/api/auth/me`, {
-        headers: { ...authHeaders() },
+        headers: authHeaders(),
       });
 
-      // ✅ 401 just means “not logged in”
+      // ✅ If token is missing/invalid, clear it so UI is consistent
       if (res.status === 401) {
+        localStorage.removeItem("token");
         setUser(null);
         return;
       }
@@ -79,15 +81,7 @@ export default function Home() {
   }
 
   async function handleLogout() {
-    try {
-      await fetch(`${API}/api/auth/logout`, {
-        method: "POST",
-        headers: { ...authHeaders() },
-      });
-    } catch {
-      // ignore
-    }
-
+    // Token-based logout = just remove token
     localStorage.removeItem("token");
     setUser(null);
   }
