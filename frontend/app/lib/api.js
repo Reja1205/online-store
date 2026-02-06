@@ -1,17 +1,15 @@
+// frontend/app/lib/api.js
+
 export const API =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
-export function getToken() {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem("token");
-}
-
 export function authHeaders() {
-  const token = getToken();
+  if (typeof window === "undefined") return {};
+  const token = localStorage.getItem("token");
   return token ? { Authorization: "Bearer " + token } : {};
 }
 
-// ✅ generic fetch wrapper (some of your pages import apiFetch)
+// fetch helper (returns Response)
 export async function apiFetch(path, options = {}) {
   const res = await fetch(`${API}${path}`, {
     ...options,
@@ -21,42 +19,22 @@ export async function apiFetch(path, options = {}) {
     },
     cache: "no-store",
   });
-
-  const data = await res.json().catch(() => ({}));
-  return { res, data };
+  return res;
 }
 
-// JSON requests
+// json helper (returns parsed JSON or throws)
 export async function apiJson(path, options = {}) {
-  return apiFetch(path, options);
-}
-
-// FormData requests (for image upload)
-export async function apiForm(path, formData, options = {}) {
-  const res = await fetch(`${API}${path}`, {
-    method: options.method || "POST",
-    headers: {
-      ...(options.headers || {}),
-      ...authHeaders(),
-      // DO NOT set Content-Type for FormData
-    },
-    body: formData,
-    cache: "no-store",
-  });
-
+  const res = await apiFetch(path, options);
   const data = await res.json().catch(() => ({}));
-  return { res, data };
+  if (!res.ok) {
+    throw new Error(data?.message || `Request failed (${res.status})`);
+  }
+  return data;
 }
 
-// Helpers to normalize product fields
-export function productPrice(p) {
-  const v = p?.price ?? p?.priceUSD ?? 0;
-  return Number(v) || 0;
-}
-export function productStock(p) {
-  const v = p?.stock ?? p?.stockQty ?? 0;
-  return Number(v) || 0;
-}
-export function productName(p) {
-  return p?.name ?? p?.title ?? "Product";
-}
+// product helpers (so UI doesn’t break if fields change)
+export const productName = (p) => p?.name ?? p?.title ?? "";
+export const productPrice = (p) =>
+  p?.price ?? p?.priceUSD ?? "";
+export const productStock = (p) =>
+  p?.stock ?? p?.stockQty ?? 0;

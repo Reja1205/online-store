@@ -1,5 +1,6 @@
 "use client";
-
+import { apiFetch, apiJson, productName, productPrice, productStock } from "../../lib/api"; 
+// (or ../../../lib/api depending on the file)
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api";

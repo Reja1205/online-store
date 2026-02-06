@@ -1,4 +1,5 @@
 "use client";
+
 import { apiJson, productName, productPrice, productStock } from "../../../../lib/api";
 import { useEffect, useState } from "react";
 import Link from "next/link";
