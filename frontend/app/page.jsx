@@ -1,24 +1,36 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 function authHeaders() {
-  if (typeof window === "undefined") return {};
-  const token = localStorage.getItem("token");
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
   return token ? { Authorization: "Bearer " + token } : {};
+}
+
+function getStock(p) {
+  // support both naming styles
+  const s =
+    p?.stockQty ?? p?.stock ?? 0;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function getPrice(p) {
+  const v = p?.priceUSD ?? p?.price ?? 0;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
 }
 
 export default function Home() {
   const [user, setUser] = useState(null);
-
   const [products, setProducts] = useState([]);
   const [msg, setMsg] = useState("");
 
-  // ✅ Search + Filter state
-  const [search, setSearch] = useState("");
+  // optional: if you already have search/filter states elsewhere, keep them
+  const [query, setQuery] = useState("");
   const [onlyInStock, setOnlyInStock] = useState(false);
 
   async function loadMe() {
@@ -54,30 +66,20 @@ export default function Home() {
     loadProducts();
   }, []);
 
-  // ✅ Filtered products (search + stock filter)
-  const filteredProducts = useMemo(() => {
-    const q = search.trim().toLowerCase();
-
-    return products.filter((p) => {
-      const name = String(p.name || "").toLowerCase();
-      const desc = String(p.description || "").toLowerCase();
-      const matchesSearch = !q || name.includes(q) || desc.includes(q);
-
-      const stockNum = Number(p.stock ?? 0);
-      const matchesStock = !onlyInStock || stockNum > 0;
-
-      return matchesSearch && matchesStock;
-    });
-  }, [products, search, onlyInStock]);
-
   async function addToCart(productId) {
     setMsg("");
     try {
+      const headers = authHeaders();
+      if (!headers.Authorization) {
+        setMsg("Please login to add items");
+        return;
+      }
+
       const res = await fetch(`${API}/api/cart/add`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...authHeaders(),
+          ...headers,
         },
         body: JSON.stringify({ productId, qty: 1 }),
       });
@@ -97,15 +99,23 @@ export default function Home() {
 
   async function handleLogout() {
     try {
-      await fetch(`${API}/api/auth/logout`, {
-        method: "POST",
-        headers: authHeaders(),
-      });
+      await fetch(`${API}/api/auth/logout`, { method: "POST", headers: authHeaders() });
     } catch {}
 
     localStorage.removeItem("token");
     setUser(null);
   }
+
+  const shownProducts = products
+    .filter((p) => {
+      if (!query.trim()) return true;
+      const q = query.toLowerCase();
+      return (
+        (p.name || "").toLowerCase().includes(q) ||
+        (p.description || "").toLowerCase().includes(q)
+      );
+    })
+    .filter((p) => (onlyInStock ? getStock(p) > 0 : true));
 
   return (
     <div style={{ padding: 20 }}>
@@ -140,13 +150,12 @@ export default function Home() {
 
       <hr style={{ margin: "16px 0" }} />
 
-      {/* ✅ Search + Filter UI (restored) */}
       <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
         <input
           placeholder="Search products..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{ padding: 10, minWidth: 240 }}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          style={{ padding: 10, minWidth: 260 }}
         />
 
         <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -155,28 +164,20 @@ export default function Home() {
             checked={onlyInStock}
             onChange={(e) => setOnlyInStock(e.target.checked)}
           />
-          Only in stock
+          In stock only
         </label>
-
-        <button
-          onClick={() => {
-            setSearch("");
-            setOnlyInStock(false);
-          }}
-          style={{ padding: 10, cursor: "pointer" }}
-        >
-          Clear
-        </button>
       </div>
 
       <h2 style={{ marginTop: 16 }}>Products</h2>
 
-      {filteredProducts.length === 0 && <p>No matching products.</p>}
+      {shownProducts.length === 0 && <p>No products found.</p>}
 
       <div style={{ display: "grid", gap: 12 }}>
-        {filteredProducts.map((p) => {
-          const stockNum = Number(p.stock ?? 0);
-          const outOfStock = stockNum <= 0;
+        {shownProducts.map((p) => {
+          const stock = getStock(p);
+          const price = getPrice(p);
+
+          const canAdd = !!user && stock > 0;
 
           return (
             <div
@@ -184,52 +185,52 @@ export default function Home() {
               style={{ border: "1px solid #ccc", padding: 16, borderRadius: 8 }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-                <div style={{ flex: 1 }}>
-                  <h3 style={{ marginTop: 0 }}>{p.name}</h3>
+                <h3 style={{ margin: 0 }}>{p.name}</h3>
 
-                  {/* ✅ Image */}
-                  {p.imageUrl && (
-                    <img
-                      src={p.imageUrl}
-                      alt={p.name}
-                      width={140}
-                      style={{ borderRadius: 8, display: "block", marginBottom: 10 }}
-                    />
-                  )}
-
-                  <p style={{ margin: 0 }}>Price: ${p.price}</p>
-                  <p style={{ margin: "6px 0" }}>{p.description}</p>
-                  <p style={{ margin: 0 }}>Stock: {stockNum}</p>
-                </div>
-
-                {/* ✅ Stock badge button (restored) */}
-                <div style={{ display: "flex", alignItems: "flex-start" }}>
-                  <button
-                    disabled
-                    style={{
-                      padding: "8px 10px",
-                      borderRadius: 8,
-                      border: "1px solid #aaa",
-                      opacity: 0.9,
-                      cursor: "default",
-                    }}
-                    title={outOfStock ? "Out of stock" : "In stock"}
-                  >
-                    {outOfStock ? "Out of Stock" : "In Stock"}
-                  </button>
-                </div>
+                {/* ✅ Stock badge (NOT disabling anything) */}
+                <span
+                  style={{
+                    padding: "6px 10px",
+                    borderRadius: 999,
+                    border: "1px solid #ddd",
+                    fontSize: 12,
+                    opacity: stock > 0 ? 1 : 0.6,
+                    whiteSpace: "nowrap",
+                  }}
+                  title={stock > 0 ? "In stock" : "Out of stock"}
+                >
+                  Stock: {stock}
+                </span>
               </div>
 
-              <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+              {p.imageUrl && (
+                <img
+                  src={p.imageUrl}
+                  alt={p.name}
+                  width={140}
+                  style={{ marginTop: 10, borderRadius: 8 }}
+                />
+              )}
+
+              <p>Price: ${price}</p>
+              <p>{p.description}</p>
+
+              <div style={{ display: "flex", gap: 10 }}>
                 <Link href={`/products/${p._id}`}>
                   <button style={{ padding: 8, cursor: "pointer" }}>View Details</button>
                 </Link>
 
                 <button
-                  style={{ padding: 8, cursor: outOfStock ? "not-allowed" : "pointer" }}
+                  style={{ padding: 8, cursor: canAdd ? "pointer" : "not-allowed" }}
                   onClick={() => addToCart(p._id)}
-                  disabled={!user || outOfStock}
-                  title={!user ? "Login to add items" : outOfStock ? "Out of stock" : ""}
+                  disabled={!canAdd}
+                  title={
+                    !user
+                      ? "Login to add items"
+                      : stock <= 0
+                      ? "Out of stock"
+                      : ""
+                  }
                 >
                   Add to Cart
                 </button>
