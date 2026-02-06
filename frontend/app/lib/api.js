@@ -11,8 +11,8 @@ export function authHeaders() {
   return token ? { Authorization: "Bearer " + token } : {};
 }
 
-// JSON requests (default)
-export async function apiJson(path, options = {}) {
+// ✅ generic fetch wrapper (some of your pages import apiFetch)
+export async function apiFetch(path, options = {}) {
   const res = await fetch(`${API}${path}`, {
     ...options,
     headers: {
@@ -24,6 +24,11 @@ export async function apiJson(path, options = {}) {
 
   const data = await res.json().catch(() => ({}));
   return { res, data };
+}
+
+// JSON requests
+export async function apiJson(path, options = {}) {
+  return apiFetch(path, options);
 }
 
 // FormData requests (for image upload)
@@ -43,7 +48,7 @@ export async function apiForm(path, formData, options = {}) {
   return { res, data };
 }
 
-// Helpers to normalize product fields (so stock/price never “missing”)
+// Helpers to normalize product fields
 export function productPrice(p) {
   const v = p?.price ?? p?.priceUSD ?? 0;
   return Number(v) || 0;
