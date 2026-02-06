@@ -2,50 +2,46 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Header from "../components/Header";
+import { apiJson } from "../lib/api";
 
 export default function ProfilePage() {
   const router = useRouter();
-  const API = process.env.NEXT_PUBLIC_API_URL;
-
   const [user, setUser] = useState(null);
-  const [error, setError] = useState("");
 
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
+  async function load() {
+    const { res, data } = await apiJson("/api/auth/me");
+    if (res.status === 401) {
       router.push("/login");
       return;
     }
+    setUser(data?.user || null);
+  }
 
-    fetch(`${API}/api/auth/me`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((r) => r.json())
-      .then((data) => {
-        if (!data.user) {
-          router.push("/login");
-          return;
-        }
-        setUser(data.user);
-      })
-      .catch(() => setError("Failed to load profile"));
-  }, [API, router]);
+  useEffect(() => {
+    load();
+  }, []);
 
-  const logout = () => {
+  async function logout() {
     localStorage.removeItem("token");
-    router.push("/login");
-  };
-
-  if (error) return <p style={{ padding: 20, color: "red" }}>{error}</p>;
-  if (!user) return <p style={{ padding: 20 }}>Loading...</p>;
+    setUser(null);
+    router.push("/");
+  }
 
   return (
     <div style={{ padding: 20 }}>
       <h1>Profile</h1>
-      <p>Name: {user.name}</p>
-      <p>Email: {user.email}</p>
-      <p>Role: {user.role}</p>
-      <button onClick={logout} style={{ padding: 10 }}>Logout</button>
+      <Header user={user} onLogout={logout} />
+
+      {!user ? (
+        <p>Loading...</p>
+      ) : (
+        <div style={{ border: "1px solid #ddd", padding: 14, borderRadius: 10 }}>
+          <p><b>Name:</b> {user.name}</p>
+          <p><b>Email:</b> {user.email}</p>
+          <p><b>Role:</b> {user.role}</p>
+        </div>
+      )}
     </div>
   );
 }

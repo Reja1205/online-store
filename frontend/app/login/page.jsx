@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-
-const API = process.env.NEXT_PUBLIC_API_URL;
+import { API } from "../lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -13,58 +12,36 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleSubmit = async (e) => {
+  async function handleSubmit(e) {
     e.preventDefault();
     setError("");
     setLoading(true);
 
     try {
-      // 1) login
       const res = await fetch(`${API}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        // token-based (backend returns token too if you kept it)
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await res.json();
-
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(data?.message || "Login failed");
         return;
       }
 
-      // 2) save token
-      const token = data?.token;
-      if (!token) {
-        setError("No token returned from server");
-        return;
-      }
-      localStorage.setItem("token", token);
+      // ✅ store token if backend returns it
+      if (data?.token) localStorage.setItem("token", data.token);
 
-      // 3) get current user role
-      const meRes = await fetch(`${API}/api/auth/me`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const meData = await meRes.json();
-
-      if (!meRes.ok) {
-        setError(meData?.message || "Could not load user");
-        return;
-      }
-
-      // 4) redirect based on role
-      const role = meData?.user?.role;
-      if (role === "admin") router.push("/admin");
-      else router.push("/profile");
-    } catch (err) {
+      router.push("/profile");
+      router.refresh();
+    } catch {
       setError("Network error");
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   return (
     <div style={{ padding: 20, maxWidth: 420 }}>
@@ -92,7 +69,7 @@ export default function LoginPage() {
 
         {error && <p style={{ color: "red", margin: 0 }}>{error}</p>}
 
-        <button type="submit" disabled={loading} style={{ padding: 10 }}>
+        <button type="submit" disabled={loading} style={{ padding: 10, cursor: "pointer" }}>
           {loading ? "Logging in..." : "Login"}
         </button>
 

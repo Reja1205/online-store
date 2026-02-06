@@ -1,125 +1,52 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
-import { apiFetch } from "../../../../lib/api";
+import Link from "next/link";
+import { apiJson, productName, productPrice, productStock } from "../../lib/api";
 
-export default function EditProductPage() {
-  const router = useRouter();
-  const params = useParams();
-  const id = params.id;
+export default function ProductDetailsPage({ params }) {
+  const [p, setP] = useState(null);
+  const [error, setError] = useState("");
 
-  const [name, setName] = useState("");
-  const [price, setPrice] = useState("");
-  const [description, setDescription] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
-  const [stock, setStock] = useState("");
+  async function load() {
+    setError("");
+    const { res, data } = await apiJson(`/api/products/${params.id}`, { headers: {} });
 
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [err, setErr] = useState("");
-
-  useEffect(() => {
-    (async () => {
-      try {
-        setErr("");
-        const data = await apiFetch(`/api/products/${id}`);
-        const p = data.product;
-        setName(p.name || "");
-        setPrice(String(p.price ?? ""));
-        setDescription(p.description || "");
-        setImageUrl(p.imageUrl || "");
-        setStock(String(p.stock ?? 0));
-      } catch (e) {
-        setErr(e.message);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [id]);
-
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setErr("");
-    setSaving(true);
-
-    try {
-      await apiFetch(`/api/products/${id}`, {
-        method: "PUT",
-        body: JSON.stringify({
-          name,
-          price: Number(price),
-          description,
-          imageUrl,
-          stock: Number(stock),
-        }),
-      });
-
-      router.push("/admin/products");
-      router.refresh();
-    } catch (e) {
-      setErr(e.message);
-    } finally {
-      setSaving(false);
+    if (!res.ok) {
+      setError(data?.message || "Failed to load product");
+      setP(null);a
+      return;
     }
+
+    setP(data.product || null);
   }
 
-  if (loading) return <p style={{ padding: 20 }}>Loading...</p>;
+  useEffect(() => {
+    load();
+  }, [params.id]);
 
   return (
-    <div style={{ padding: 20, maxWidth: 500 }}>
-      <h1>Edit Product</h1>
+    <div style={{ padding: 20 }}>
+      <h1>Product Details</h1>
 
-      {err && <p style={{ color: "red" }}>{err}</p>}
+      {error && <p style={{ color: "red" }}>{error}</p>}
+      {!p && !error && <p>Loading...</p>}
 
-      <form onSubmit={handleSubmit} style={{ display: "grid", gap: 10 }}>
-        <input
-          placeholder="Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          style={{ padding: 10 }}
-        />
+      {p && (
+        <div style={{ border: "1px solid #ddd", padding: 16, borderRadius: 10 }}>
+          <h2 style={{ marginTop: 0 }}>{productName(p)}</h2>
+          {p.imageUrl ? (
+            <img src={p.imageUrl} alt={productName(p)} width={220} style={{ borderRadius: 10 }} />
+          ) : null}
+          <p>Price: ${productPrice(p)}</p>
+          <p>Stock: {productStock(p)}</p>
+          {p.description ? <p>{p.description}</p> : null}
+        </div>
+      )}
 
-        <input
-          placeholder="Price"
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-          style={{ padding: 10 }}
-        />
-
-        <input
-          placeholder="Stock"
-          value={stock}
-          onChange={(e) => setStock(e.target.value)}
-          style={{ padding: 10 }}
-        />
-
-        <input
-          placeholder="Image URL"
-          value={imageUrl}
-          onChange={(e) => setImageUrl(e.target.value)}
-          style={{ padding: 10 }}
-        />
-
-        <textarea
-          placeholder="Description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          style={{ padding: 10, minHeight: 90 }}
-        />
-
-        <button disabled={saving} style={{ padding: 10, cursor: "pointer" }}>
-          {saving ? "Saving..." : "Save"}
-        </button>
-
-        <button
-          type="button"
-          onClick={() => router.push("/admin/products")}
-          style={{ padding: 10, cursor: "pointer" }}
-        >
-          Back
-        </button>
-      </form>
+      <div style={{ marginTop: 14 }}>
+        <Link href="/"><button style={{ padding: 10, cursor: "pointer" }}>Back to Products</button></Link>
+      </div>
     </div>
   );
 }

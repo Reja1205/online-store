@@ -1,50 +1,42 @@
 "use client";
-const API = process.env.NEXT_PUBLIC_API_URL;
-import { useEffect, useState } from "react";
 
-export default function Header() {
-  const [user, setUser] = useState(null);
-  const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+import Link from "next/link";
 
-  useEffect(() => {
-    fetch(`${base}/api/auth/me`, { credentials: "include" })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.user) setUser(data.user);
-      })
-      .catch(() => setUser(null));
-  }, []);
-
-  const logout = async () => {
-    await fetch(`${base}/api/auth/logout`, {
-      method: "POST",
-      credentials: "include",
-    });
-    location.reload();
-  };
-
+export default function Header({ user, onLogout }) {
   return (
-    <div style={{ padding: 15, borderBottom: "1px solid #ccc" }}>
-      <a href="/">Home</a>{" | "}
+    <div
+      style={{
+        display: "flex",
+        gap: 14,
+        alignItems: "center",
+        flexWrap: "wrap",
+        padding: "10px 0",
+      }}
+    >
+      <Link href="/">Home</Link>
 
-      {!user && (
+      {!user ? (
         <>
-          <a href="/login">Login</a>{" | "}
-          <a href="/register">Register</a>
+          <Link href="/login">Login</Link>
+          <Link href="/register">Register</Link>
         </>
-      )}
-
-      {user && (
+      ) : (
         <>
-          <a href="/profile">Profile</a>{" | "}
+          <Link href="/profile">Profile</Link>
+          <Link href="/cart">Cart</Link>
+          <Link href="/checkout">Checkout</Link>
+          <Link href="/orders">My Orders</Link>
 
           {user.role === "admin" && (
             <>
-              <a href="/admin">Admin</a>{" | "}
+              <Link href="/admin">Admin Dashboard</Link>
+              <Link href="/admin/orders">Admin Orders</Link>
             </>
           )}
 
-          <button onClick={logout}>Logout</button>
+          <button onClick={onLogout} style={{ padding: 8, cursor: "pointer" }}>
+            Logout
+          </button>
         </>
       )}
     </div>

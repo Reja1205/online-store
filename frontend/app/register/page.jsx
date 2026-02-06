@@ -2,138 +2,90 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-
-const API = process.env.NEXT_PUBLIC_API_URL;
+import { API } from "../lib/api";
 
 export default function RegisterPage() {
   const router = useRouter();
 
-  const [mode, setMode] = useState("user"); // "user" | "admin"
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [mode, setMode] = useState("user"); // user | admin
+  const [name, setName] = useState("New User");
+  const [email, setEmail] = useState("new@test.com");
+  const [password, setPassword] = useState("123456");
   const [adminSecret, setAdminSecret] = useState("");
 
-  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
 
-  const handleRegister = async (e) => {
+  async function submit(e) {
     e.preventDefault();
+    setMsg("");
     setError("");
-    setLoading(true);
 
-    try {
-      const endpoint =
-        mode === "admin" ? "/api/auth/register-admin" : "/api/auth/register-user";
+    const url = mode === "admin" ? "/api/auth/register-admin" : "/api/auth/register-user";
 
-      const body =
-        mode === "admin"
-          ? { name, email, password, adminSecret }
-          : { name, email, password };
+    const payload =
+      mode === "admin"
+        ? { name, email, password, adminSecret }
+        : { name, email, password };
 
-      const res = await fetch(`${API}${endpoint}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(body),
-      });
+    const res = await fetch(`${API}${url}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
 
-      const data = await res.json();
+    const data = await res.json().catch(() => ({}));
 
-      if (!res.ok) {
-        setError(data?.message || "Registration failed");
-        return;
-      }
-
-      // After register, go login
-      router.push("/login");
-    } catch {
-      setError("Network error");
-    } finally {
-      setLoading(false);
+    if (!res.ok) {
+      setError(data?.message || "Registration failed");
+      return;
     }
-  };
+
+    setMsg("Registered successfully ✅");
+    setTimeout(() => router.push("/login"), 900);
+  }
 
   return (
-    <div style={{ padding: 20, maxWidth: 420 }}>
+    <div style={{ padding: 20, maxWidth: 520 }}>
       <h1>Register</h1>
 
-      <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
+      <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
         <button
-          type="button"
           onClick={() => setMode("user")}
-          style={{
-            padding: 10,
-            cursor: "pointer",
-            border: "1px solid #ccc",
-            background: mode === "user" ? "#eee" : "#fff",
-          }}
+          style={{ padding: 8, cursor: "pointer", opacity: mode === "user" ? 1 : 0.6 }}
         >
           Register as User
         </button>
-
         <button
-          type="button"
           onClick={() => setMode("admin")}
-          style={{
-            padding: 10,
-            cursor: "pointer",
-            border: "1px solid #ccc",
-            background: mode === "admin" ? "#eee" : "#fff",
-          }}
+          style={{ padding: 8, cursor: "pointer", opacity: mode === "admin" ? 1 : 0.6 }}
         >
           Register as Admin
         </button>
       </div>
 
-      <form onSubmit={handleRegister} style={{ display: "grid", gap: 12 }}>
-        <div>
-          <label>Name</label>
-          <input
-            style={{ width: "100%", padding: 10 }}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-        </div>
-
-        <div>
-          <label>Email</label>
-          <input
-            style={{ width: "100%", padding: 10 }}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </div>
-
-        <div>
-          <label>Password</label>
-          <input
-            style={{ width: "100%", padding: 10 }}
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </div>
+      <form onSubmit={submit} style={{ display: "grid", gap: 12 }}>
+        <input style={{ padding: 10 }} value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" />
+        <input style={{ padding: 10 }} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
+        <input style={{ padding: 10 }} type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" />
 
         {mode === "admin" && (
-          <div>
-            <label>Admin Secret</label>
-            <input
-              style={{ width: "100%", padding: 10 }}
-              value={adminSecret}
-              onChange={(e) => setAdminSecret(e.target.value)}
-              placeholder="Enter admin secret"
-            />
-          </div>
+          <input
+            style={{ padding: 10 }}
+            value={adminSecret}
+            onChange={(e) => setAdminSecret(e.target.value)}
+            placeholder="Admin Secret"
+          />
         )}
 
-        {error && <p style={{ color: "red", margin: 0 }}>{error}</p>}
+        {msg && <p style={{ margin: 0 }}>{msg}</p>}
+        {error && <p style={{ margin: 0, color: "red" }}>{error}</p>}
 
-        <button type="submit" disabled={loading} style={{ padding: 10 }}>
-          {loading ? "Creating..." : "Register"}
+        <button style={{ padding: 10, cursor: "pointer" }} type="submit">
+          Register
         </button>
 
-        <button type="button" onClick={() => router.push("/")} style={{ padding: 10 }}>
+        <button style={{ padding: 10 }} type="button" onClick={() => router.push("/")}>
           Back
         </button>
       </form>
