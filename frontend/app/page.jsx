@@ -6,9 +6,29 @@ import Link from "next/link";
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 function authHeaders() {
-  const token =
-    typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
   return token ? { Authorization: "Bearer " + token } : {};
+}
+
+function StockButton({ stock }) {
+  const qty = Number(stock ?? 0);
+  const inStock = qty > 0;
+
+  return (
+    <button
+      disabled
+      style={{
+        padding: "6px 10px",
+        borderRadius: 8,
+        border: "1px solid #ccc",
+        opacity: 1,
+        cursor: "default",
+      }}
+      title={inStock ? "In Stock" : "Out of Stock"}
+    >
+      {inStock ? `In Stock (${qty})` : "Out of Stock"}
+    </button>
+  );
 }
 
 export default function Home() {
@@ -34,7 +54,7 @@ export default function Home() {
 
   async function loadProducts() {
     try {
-      const res = await fetch(`${API}/api/products`);
+      const res = await fetch(`${API}/api/products`, { cache: "no-store" });
       const data = await res.json();
       const list = Array.isArray(data) ? data : data.products;
       setProducts(Array.isArray(list) ? list : []);
@@ -95,13 +115,14 @@ export default function Home() {
           <p>Welcome {user.name}</p>
           <p>Role: {user.role}</p>
 
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
             <Link href="/profile">Profile</Link>
             <Link href="/cart">Cart</Link>
             <Link href="/checkout">Checkout</Link>
             <Link href="/orders">My Orders</Link>
 
             {user.role === "admin" && <Link href="/admin">Admin Dashboard</Link>}
+            {user.role === "admin" && <Link href="/admin/orders">Admin Orders</Link>}
 
             <button onClick={handleLogout}>Logout</button>
           </div>
@@ -116,33 +137,34 @@ export default function Home() {
 
       <div style={{ display: "grid", gap: 12 }}>
         {products.map((p) => (
-          <div
-            key={p._id}
-            style={{ border: "1px solid #ccc", padding: 16, borderRadius: 8 }}
-          >
-            <h3>{p.name}</h3>
+          <div key={p._id} style={{ border: "1px solid #ccc", padding: 16, borderRadius: 8 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+              <h3 style={{ margin: 0 }}>{p.name}</h3>
+              <StockButton stock={p.stock} />
+            </div>
 
-            {/* ⭐ IMAGE ADDED HERE */}
-            {p.imageUrl && (
+            {p.imageUrl ? (
               <img
                 src={p.imageUrl}
-                width={120}
-                style={{ borderRadius: 8 }}
+                alt={p.name}
+                width={140}
+                style={{ borderRadius: 8, display: "block", margin: "10px 0" }}
               />
-            )}
+            ) : null}
 
-            <p>Price: ${p.price}</p>
+            <p style={{ margin: 0 }}>Price: ${p.price}</p>
             <p>{p.description}</p>
-            <p>Stock: {p.stock}</p>
 
             <div style={{ display: "flex", gap: 10 }}>
               <Link href={`/products/${p._id}`}>
-                <button>View Details</button>
+                <button style={{ padding: 8, cursor: "pointer" }}>View Details</button>
               </Link>
 
               <button
+                style={{ padding: 8, cursor: "pointer" }}
                 onClick={() => addToCart(p._id)}
-                disabled={!user}
+                disabled={!user || Number(p.stock ?? 0) <= 0}
+                title={!user ? "Login to add items" : Number(p.stock ?? 0) <= 0 ? "Out of stock" : ""}
               >
                 Add to Cart
               </button>
