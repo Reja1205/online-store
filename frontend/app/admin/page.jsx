@@ -23,7 +23,11 @@ export default function AdminPage() {
   const [price, setPrice] = useState("");
   const [description, setDescription] = useState("");
   const [stock, setStock] = useState("");
-  const [imageUrl, setImageUrl] = useState(""); // ✅ keep image url
+
+  // ✅ Image upload state (this is what you lost)
+  const [imageFile, setImageFile] = useState(null);
+  const [imageUrl, setImageUrl] = useState(""); // stored Cloudinary URL
+  const [uploading, setUploading] = useState(false);
 
   // Edit form
   const [editingId, setEditingId] = useState(null);
@@ -36,9 +40,8 @@ export default function AdminPage() {
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
 
-  function authHeaders() {
-    if (!token) return {};
-    return { Authorization: `Bearer ${token}` };
+  function authHeader() {
+    return token ? { Authorization: `Bearer ${token}` } : {};
   }
 
   async function fetchMe() {
@@ -48,7 +51,7 @@ export default function AdminPage() {
     }
 
     const res = await fetch(`${API}/api/auth/me`, {
-      headers: authHeaders(),
+      headers: { ...authHeader() },
       cache: "no-store",
     });
 
@@ -80,7 +83,7 @@ export default function AdminPage() {
         setLoading(true);
         await fetchMe();
         await fetchProducts();
-      } catch (e) {
+      } catch {
         setError("Failed to load admin data");
       } finally {
         setLoading(false);
@@ -88,6 +91,49 @@ export default function AdminPage() {
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ✅ Upload file -> backend returns { imageUrl }
+  async function uploadImage() {
+    setError("");
+    setMsg("");
+
+    if (!imageFile) {
+      setError("Please choose an image first");
+      return;
+    }
+    if (!token) {
+      setError("No token found. Please login again.");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append("image", imageFile);
+
+      // IMPORTANT: do NOT set Content-Type when using FormData
+      const res = await fetch(`${API}/api/products/upload`, {
+        method: "POST",
+        headers: { ...authHeader() },
+        body: form,
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setError(data?.message || "Upload failed");
+        return;
+      }
+
+      setImageUrl(data.imageUrl || "");
+      setMsg("Image uploaded ✅");
+      setTimeout(() => setMsg(""), 1500);
+    } catch {
+      setError("Network error during upload");
+    } finally {
+      setUploading(false);
+    }
+  }
 
   async function createProduct() {
     setError("");
@@ -102,10 +148,10 @@ export default function AdminPage() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...authHeaders(),
+        ...authHeader(),
       },
       body: JSON.stringify({
-        name: String(name).trim(),
+        name,
         price: Number(price),
         description,
         stock: stock === "" ? 0 : Number(stock),
@@ -120,44 +166,46 @@ export default function AdminPage() {
     }
 
     setMsg("Product created ✅");
+    setTimeout(() => setMsg(""), 1500);
+
+    // reset
     setName("");
     setPrice("");
     setDescription("");
     setStock("");
+    setImageFile(null);
     setImageUrl("");
+
     await fetchProducts();
   }
 
   function startEdit(p) {
     setEditingId(p._id);
     setEditName(p.name || "");
-    setEditPrice(p.price === 0 || p.price ? String(p.price) : "");
+    setEditPrice(
+      p.price === 0 || p.price ? String(p.price) : ""
+    );
     setEditDescription(p.description || "");
-    setEditStock(p.stock === 0 || p.stock ? String(p.stock) : "0");
+    setEditStock(
+      p.stock === 0 || p.stock ? String(p.stock) : "0"
+    );
     setEditImageUrl(p.imageUrl || "");
-    setMsg("");
-    setError("");
   }
 
   async function saveEdit(id) {
     setError("");
     setMsg("");
 
-    if (!editName || editPrice === "") {
-      setError("Name and price are required");
-      return;
-    }
-
     const res = await fetch(`${API}/api/products/${id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
-        ...authHeaders(),
+        ...authHeader(),
       },
       body: JSON.stringify({
-        name: String(editName).trim(),
+        name: editName,
         price: Number(editPrice),
-        description: editDescription || "",
+        description: editDescription,
         stock: editStock === "" ? 0 : Number(editStock),
         imageUrl: editImageUrl || "",
       }),
@@ -169,8 +217,10 @@ export default function AdminPage() {
       return;
     }
 
-    setMsg("Saved ✅");
     setEditingId(null);
+    setMsg("Saved ✅");
+    setTimeout(() => setMsg(""), 1200);
+
     await fetchProducts();
   }
 
@@ -183,9 +233,7 @@ export default function AdminPage() {
 
     const res = await fetch(`${API}/api/products/${id}`, {
       method: "DELETE",
-      headers: {
-        ...authHeaders(),
-      },
+      headers: { ...authHeader() },
     });
 
     const data = await res.json().catch(() => ({}));
@@ -195,6 +243,8 @@ export default function AdminPage() {
     }
 
     setMsg("Deleted ✅");
+    setTimeout(() => setMsg(""), 1200);
+
     await fetchProducts();
   }
 
@@ -206,16 +256,14 @@ export default function AdminPage() {
   if (loading) return <div style={{ padding: 20 }}>Loading admin dashboard...</div>;
 
   return (
-    <div style={{ padding: 20, maxWidth: 960 }}>
+    <div style={{ padding: 20, maxWidth: 950 }}>
       <h1>Admin Dashboard</h1>
 
-      <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
         <button onClick={() => router.push("/")} style={{ padding: 10, cursor: "pointer" }}>
           Back Home
         </button>
-        <button onClick={() => router.push("/admin/orders")} style={{ padding: 10, cursor: "pointer" }}>
-          Admin Orders
-        </button>
+
         <button onClick={logout} style={{ padding: 10, cursor: "pointer" }}>
           Logout
         </button>
@@ -233,37 +281,68 @@ export default function AdminPage() {
       <hr style={{ margin: "18px 0" }} />
 
       <h2>Create Product</h2>
-      <div style={{ display: "grid", gap: 10, maxWidth: 520 }}>
+
+      {/* ✅ This is the missing upload UI */}
+      <div style={{ display: "grid", gap: 10, maxWidth: 540, marginBottom: 16 }}>
+        <label style={{ fontWeight: 600 }}>Product Image</label>
+
+        <input
+          type="file"
+          accept="image/*"
+          onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+        />
+
+        <button
+          type="button"
+          onClick={uploadImage}
+          disabled={uploading || !imageFile}
+          style={{ padding: 10, cursor: "pointer" }}
+        >
+          {uploading ? "Uploading..." : "Upload Image"}
+        </button>
+
+        {imageUrl ? (
+          <div style={{ display: "grid", gap: 8 }}>
+            <small>Uploaded ✅</small>
+            <img src={imageUrl} alt="uploaded" width={160} style={{ borderRadius: 8 }} />
+          </div>
+        ) : null}
+
+        <input
+          placeholder="Or paste Image URL (optional)"
+          value={imageUrl}
+          onChange={(e) => setImageUrl(e.target.value)}
+          style={{ padding: 10 }}
+        />
+
         <input
           placeholder="Name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           style={{ padding: 10 }}
         />
+
         <input
           placeholder="Price"
           value={price}
           onChange={(e) => setPrice(e.target.value)}
           style={{ padding: 10 }}
         />
+
         <input
           placeholder="Stock"
           value={stock}
           onChange={(e) => setStock(e.target.value)}
           style={{ padding: 10 }}
         />
-        <input
-          placeholder="Image URL (optional)"
-          value={imageUrl}
-          onChange={(e) => setImageUrl(e.target.value)}
-          style={{ padding: 10 }}
-        />
+
         <textarea
           placeholder="Description"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           style={{ padding: 10, minHeight: 90 }}
         />
+
         <button onClick={createProduct} style={{ padding: 10, cursor: "pointer" }}>
           Create
         </button>
@@ -303,17 +382,28 @@ export default function AdminPage() {
                     onChange={(e) => setEditStock(e.target.value)}
                     style={{ padding: 10 }}
                   />
-                  <input
-                    value={editImageUrl}
-                    onChange={(e) => setEditImageUrl(e.target.value)}
-                    style={{ padding: 10 }}
-                    placeholder="Image URL"
-                  />
                   <textarea
                     value={editDescription}
                     onChange={(e) => setEditDescription(e.target.value)}
                     style={{ padding: 10, minHeight: 80 }}
                   />
+
+                  <input
+                    placeholder="Image URL"
+                    value={editImageUrl}
+                    onChange={(e) => setEditImageUrl(e.target.value)}
+                    style={{ padding: 10 }}
+                  />
+
+                  {editImageUrl ? (
+                    <img
+                      src={editImageUrl}
+                      alt="preview"
+                      width={160}
+                      style={{ borderRadius: 8 }}
+                    />
+                  ) : null}
+
                   <div style={{ display: "flex", gap: 10 }}>
                     <button
                       onClick={() => saveEdit(p._id)}
@@ -331,23 +421,25 @@ export default function AdminPage() {
                 </div>
               ) : (
                 <>
-                  <h3 style={{ margin: "0 0 6px 0" }}>{p.name}</h3>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                    <h3 style={{ margin: "0 0 6px 0" }}>{p.name}</h3>
+                    <small>Stock: {p.stock}</small>
+                  </div>
 
                   {p.imageUrl ? (
-                    <img
-                      src={p.imageUrl}
-                      alt={p.name}
-                      width={140}
-                      style={{ borderRadius: 8, display: "block", marginBottom: 8 }}
-                    />
+                    <img src={p.imageUrl} alt={p.name} width={160} style={{ borderRadius: 8 }} />
                   ) : null}
 
                   <p style={{ margin: 0 }}>Price: ${p.price}</p>
-                  <p style={{ margin: 0 }}>Stock: {p.stock}</p>
-                  {p.description ? <p style={{ margin: "8px 0 0 0" }}>{p.description}</p> : null}
+                  {p.description ? (
+                    <p style={{ margin: "8px 0 0 0" }}>{p.description}</p>
+                  ) : null}
 
                   <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
-                    <button onClick={() => startEdit(p)} style={{ padding: 10, cursor: "pointer" }}>
+                    <button
+                      onClick={() => startEdit(p)}
+                      style={{ padding: 10, cursor: "pointer" }}
+                    >
                       Edit
                     </button>
                     <button
