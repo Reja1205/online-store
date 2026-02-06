@@ -6,12 +6,8 @@ import { useRouter } from "next/navigation";
 export default function AdminPage() {
   const router = useRouter();
 
-  const API = useMemo(() => {
-    return process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
-  }, []);
-
-  const token =
-    typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const API = useMemo(() => process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000", []);
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
   const [me, setMe] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -24,12 +20,11 @@ export default function AdminPage() {
   const [description, setDescription] = useState("");
   const [stock, setStock] = useState("");
 
-  // ✅ Image upload state (this is what you lost)
+  // ✅ image
   const [imageFile, setImageFile] = useState(null);
-  const [imageUrl, setImageUrl] = useState(""); // stored Cloudinary URL
-  const [uploading, setUploading] = useState(false);
+  const [imageUrl, setImageUrl] = useState("");
 
-  // Edit form
+  // Edit
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState("");
   const [editPrice, setEditPrice] = useState("");
@@ -40,39 +35,28 @@ export default function AdminPage() {
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
 
-  function authHeader() {
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  }
-
   async function fetchMe() {
-    if (!token) {
-      router.push("/login");
-      return;
-    }
+    if (!token) return router.push("/login");
 
     const res = await fetch(`${API}/api/auth/me`, {
-      headers: { ...authHeader() },
+      headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
     });
 
     if (!res.ok) {
       localStorage.removeItem("token");
-      router.push("/login");
-      return;
+      return router.push("/login");
     }
 
-    const data = await res.json().catch(() => ({}));
-    if (!data?.user || data.user.role !== "admin") {
-      router.push("/profile");
-      return;
-    }
+    const data = await res.json();
+    if (!data?.user || data.user.role !== "admin") return router.push("/profile");
 
     setMe(data.user);
   }
 
   async function fetchProducts() {
     const res = await fetch(`${API}/api/products`, { cache: "no-store" });
-    const data = await res.json().catch(() => ({}));
+    const data = await res.json();
     const list = Array.isArray(data) ? data : data.products;
     setProducts(Array.isArray(list) ? list : []);
   }
@@ -92,47 +76,23 @@ export default function AdminPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ✅ Upload file -> backend returns { imageUrl }
-  async function uploadImage() {
-    setError("");
-    setMsg("");
+  // ✅ Upload image to backend -> returns { imageUrl }
+  async function uploadImageIfNeeded() {
+    if (!imageFile) return "";
 
-    if (!imageFile) {
-      setError("Please choose an image first");
-      return;
-    }
-    if (!token) {
-      setError("No token found. Please login again.");
-      return;
-    }
+    const fd = new FormData();
+    fd.append("image", imageFile);
 
-    setUploading(true);
-    try {
-      const form = new FormData();
-      form.append("image", imageFile);
+    const res = await fetch(`${API}/api/products/upload`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: fd,
+    });
 
-      // IMPORTANT: do NOT set Content-Type when using FormData
-      const res = await fetch(`${API}/api/products/upload`, {
-        method: "POST",
-        headers: { ...authHeader() },
-        body: form,
-      });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data?.message || "Image upload failed");
 
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        setError(data?.message || "Upload failed");
-        return;
-      }
-
-      setImageUrl(data.imageUrl || "");
-      setMsg("Image uploaded ✅");
-      setTimeout(() => setMsg(""), 1500);
-    } catch {
-      setError("Network error during upload");
-    } finally {
-      setUploading(false);
-    }
+    return data.imageUrl || "";
   }
 
   async function createProduct() {
@@ -144,63 +104,60 @@ export default function AdminPage() {
       return;
     }
 
-    const res = await fetch(`${API}/api/products`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...authHeader(),
-      },
-      body: JSON.stringify({
-        name,
-        price: Number(price),
-        description,
-        stock: stock === "" ? 0 : Number(stock),
-        imageUrl: imageUrl || "",
-      }),
-    });
+    try {
+      const uploadedUrl = await uploadImageIfNeeded();
 
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      setError(data?.message || "Create failed");
-      return;
+      const res = await fetch(`${API}/api/products`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name,
+          price: Number(price),
+          description,
+          stock: stock === "" ? 0 : Number(stock),
+          imageUrl: uploadedUrl || imageUrl || "",
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data?.message || "Create failed");
+        return;
+      }
+
+      setMsg("Product created ✅");
+      setName("");
+      setPrice("");
+      setDescription("");
+      setStock("");
+      setImageFile(null);
+      setImageUrl("");
+
+      await fetchProducts();
+    } catch (e) {
+      setError(e?.message || "Create failed");
     }
-
-    setMsg("Product created ✅");
-    setTimeout(() => setMsg(""), 1500);
-
-    // reset
-    setName("");
-    setPrice("");
-    setDescription("");
-    setStock("");
-    setImageFile(null);
-    setImageUrl("");
-
-    await fetchProducts();
   }
 
   function startEdit(p) {
     setEditingId(p._id);
     setEditName(p.name || "");
-    setEditPrice(
-      p.price === 0 || p.price ? String(p.price) : ""
-    );
+    setEditPrice(p.price === 0 || p.price ? String(p.price) : "");
     setEditDescription(p.description || "");
-    setEditStock(
-      p.stock === 0 || p.stock ? String(p.stock) : "0"
-    );
+    setEditStock(p.stock === 0 || p.stock ? String(p.stock) : "0");
     setEditImageUrl(p.imageUrl || "");
   }
 
   async function saveEdit(id) {
     setError("");
-    setMsg("");
-
     const res = await fetch(`${API}/api/products/${id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
-        ...authHeader(),
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
         name: editName,
@@ -218,22 +175,16 @@ export default function AdminPage() {
     }
 
     setEditingId(null);
-    setMsg("Saved ✅");
-    setTimeout(() => setMsg(""), 1200);
-
     await fetchProducts();
   }
 
   async function removeProduct(id) {
     setError("");
-    setMsg("");
-
-    const ok = confirm("Delete this product?");
-    if (!ok) return;
+    if (!confirm("Delete this product?")) return;
 
     const res = await fetch(`${API}/api/products/${id}`, {
       method: "DELETE",
-      headers: { ...authHeader() },
+      headers: { Authorization: `Bearer ${token}` },
     });
 
     const data = await res.json().catch(() => ({}));
@@ -242,13 +193,10 @@ export default function AdminPage() {
       return;
     }
 
-    setMsg("Deleted ✅");
-    setTimeout(() => setMsg(""), 1200);
-
     await fetchProducts();
   }
 
-  async function logout() {
+  function logout() {
     localStorage.removeItem("token");
     router.push("/");
   }
@@ -256,14 +204,13 @@ export default function AdminPage() {
   if (loading) return <div style={{ padding: 20 }}>Loading admin dashboard...</div>;
 
   return (
-    <div style={{ padding: 20, maxWidth: 950 }}>
+    <div style={{ padding: 20, maxWidth: 900 }}>
       <h1>Admin Dashboard</h1>
 
       <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
         <button onClick={() => router.push("/")} style={{ padding: 10, cursor: "pointer" }}>
           Back Home
         </button>
-
         <button onClick={logout} style={{ padding: 10, cursor: "pointer" }}>
           Logout
         </button>
@@ -281,67 +228,19 @@ export default function AdminPage() {
       <hr style={{ margin: "18px 0" }} />
 
       <h2>Create Product</h2>
-
-      {/* ✅ This is the missing upload UI */}
-      <div style={{ display: "grid", gap: 10, maxWidth: 540, marginBottom: 16 }}>
-        <label style={{ fontWeight: 600 }}>Product Image</label>
-
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-        />
-
-        <button
-          type="button"
-          onClick={uploadImage}
-          disabled={uploading || !imageFile}
-          style={{ padding: 10, cursor: "pointer" }}
-        >
-          {uploading ? "Uploading..." : "Upload Image"}
-        </button>
-
-        {imageUrl ? (
-          <div style={{ display: "grid", gap: 8 }}>
-            <small>Uploaded ✅</small>
-            <img src={imageUrl} alt="uploaded" width={160} style={{ borderRadius: 8 }} />
-          </div>
-        ) : null}
-
-        <input
-          placeholder="Or paste Image URL (optional)"
-          value={imageUrl}
-          onChange={(e) => setImageUrl(e.target.value)}
-          style={{ padding: 10 }}
-        />
-
-        <input
-          placeholder="Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          style={{ padding: 10 }}
-        />
-
-        <input
-          placeholder="Price"
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-          style={{ padding: 10 }}
-        />
-
-        <input
-          placeholder="Stock"
-          value={stock}
-          onChange={(e) => setStock(e.target.value)}
-          style={{ padding: 10 }}
-        />
-
+      <div style={{ display: "grid", gap: 10, maxWidth: 520 }}>
+        <input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} style={{ padding: 10 }} />
+        <input placeholder="Price" value={price} onChange={(e) => setPrice(e.target.value)} style={{ padding: 10 }} />
+        <input placeholder="Stock" value={stock} onChange={(e) => setStock(e.target.value)} style={{ padding: 10 }} />
         <textarea
           placeholder="Description"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           style={{ padding: 10, minHeight: 90 }}
         />
+
+        {/* ✅ Upload file */}
+        <input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} />
 
         <button onClick={createProduct} style={{ padding: 10, cursor: "pointer" }}>
           Create
@@ -357,95 +256,54 @@ export default function AdminPage() {
       ) : (
         <div style={{ display: "grid", gap: 12 }}>
           {products.map((p) => (
-            <div
-              key={p._id}
-              style={{
-                border: "1px solid #ddd",
-                borderRadius: 8,
-                padding: 14,
-              }}
-            >
+            <div key={p._id} style={{ border: "1px solid #ddd", borderRadius: 8, padding: 14 }}>
               {editingId === p._id ? (
                 <div style={{ display: "grid", gap: 10 }}>
-                  <input
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    style={{ padding: 10 }}
-                  />
-                  <input
-                    value={editPrice}
-                    onChange={(e) => setEditPrice(e.target.value)}
-                    style={{ padding: 10 }}
-                  />
-                  <input
-                    value={editStock}
-                    onChange={(e) => setEditStock(e.target.value)}
-                    style={{ padding: 10 }}
-                  />
+                  <input value={editName} onChange={(e) => setEditName(e.target.value)} style={{ padding: 10 }} />
+                  <input value={editPrice} onChange={(e) => setEditPrice(e.target.value)} style={{ padding: 10 }} />
+                  <input value={editStock} onChange={(e) => setEditStock(e.target.value)} style={{ padding: 10 }} />
                   <textarea
                     value={editDescription}
                     onChange={(e) => setEditDescription(e.target.value)}
                     style={{ padding: 10, minHeight: 80 }}
                   />
-
                   <input
                     placeholder="Image URL"
                     value={editImageUrl}
                     onChange={(e) => setEditImageUrl(e.target.value)}
                     style={{ padding: 10 }}
                   />
-
-                  {editImageUrl ? (
-                    <img
-                      src={editImageUrl}
-                      alt="preview"
-                      width={160}
-                      style={{ borderRadius: 8 }}
-                    />
-                  ) : null}
-
                   <div style={{ display: "flex", gap: 10 }}>
-                    <button
-                      onClick={() => saveEdit(p._id)}
-                      style={{ padding: 10, cursor: "pointer" }}
-                    >
+                    <button onClick={() => saveEdit(p._id)} style={{ padding: 10, cursor: "pointer" }}>
                       Save
                     </button>
-                    <button
-                      onClick={() => setEditingId(null)}
-                      style={{ padding: 10, cursor: "pointer" }}
-                    >
+                    <button onClick={() => setEditingId(null)} style={{ padding: 10, cursor: "pointer" }}>
                       Cancel
                     </button>
                   </div>
                 </div>
               ) : (
                 <>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
-                    <h3 style={{ margin: "0 0 6px 0" }}>{p.name}</h3>
-                    <small>Stock: {p.stock}</small>
-                  </div>
+                  <h3 style={{ margin: "0 0 6px 0" }}>{p.name}</h3>
 
                   {p.imageUrl ? (
-                    <img src={p.imageUrl} alt={p.name} width={160} style={{ borderRadius: 8 }} />
+                    <img
+                      src={p.imageUrl}
+                      alt={p.name}
+                      width={160}
+                      style={{ borderRadius: 8, display: "block", marginBottom: 10 }}
+                    />
                   ) : null}
 
                   <p style={{ margin: 0 }}>Price: ${p.price}</p>
-                  {p.description ? (
-                    <p style={{ margin: "8px 0 0 0" }}>{p.description}</p>
-                  ) : null}
+                  <p style={{ margin: 0 }}>Stock: {p.stock}</p>
+                  {p.description ? <p style={{ margin: "8px 0 0 0" }}>{p.description}</p> : null}
 
                   <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
-                    <button
-                      onClick={() => startEdit(p)}
-                      style={{ padding: 10, cursor: "pointer" }}
-                    >
+                    <button onClick={() => startEdit(p)} style={{ padding: 10, cursor: "pointer" }}>
                       Edit
                     </button>
-                    <button
-                      onClick={() => removeProduct(p._id)}
-                      style={{ padding: 10, cursor: "pointer" }}
-                    >
+                    <button onClick={() => removeProduct(p._id)} style={{ padding: 10, cursor: "pointer" }}>
                       Delete
                     </button>
                   </div>

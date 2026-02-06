@@ -1,6 +1,5 @@
 const multer = require("multer");
 
-// store file in memory (best for Cloudinary)
 const storage = multer.memoryStorage();
 
 function fileFilter(req, file, cb) {
