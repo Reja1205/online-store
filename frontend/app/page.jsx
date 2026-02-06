@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -10,30 +10,15 @@ function authHeaders() {
   return token ? { Authorization: "Bearer " + token } : {};
 }
 
-function toNum(v, fallback = 0) {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : fallback;
-}
-
 export default function Home() {
   const [user, setUser] = useState(null);
   const [products, setProducts] = useState([]);
   const [msg, setMsg] = useState("");
 
-  // ✅ Search + Filters
-  const [q, setQ] = useState("");
-  const [inStockOnly, setInStockOnly] = useState(false);
-  const [sort, setSort] = useState("new"); // new | price_asc | price_desc
-
   async function loadMe() {
     try {
       const res = await fetch(`${API}/api/auth/me`, { headers: authHeaders() });
-
-      if (res.status === 401) {
-        setUser(null);
-        return;
-      }
-
+      if (res.status === 401) return setUser(null);
       const data = await res.json();
       setUser(data?.user || null);
     } catch {
@@ -62,18 +47,12 @@ export default function Home() {
     try {
       const res = await fetch(`${API}/api/cart/add`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...authHeaders(),
-        },
+        headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({ productId, qty: 1 }),
       });
 
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setMsg(data?.message || "Failed to add to cart");
-        return;
-      }
+      if (!res.ok) return setMsg(data?.message || "Failed to add to cart");
 
       setMsg("Added to cart ✅");
       setTimeout(() => setMsg(""), 1500);
@@ -83,43 +62,12 @@ export default function Home() {
   }
 
   async function handleLogout() {
+    try {
+      await fetch(`${API}/api/auth/logout`, { method: "POST", headers: authHeaders() });
+    } catch {}
     localStorage.removeItem("token");
     setUser(null);
   }
-
-  // ✅ Apply search/filter/sort client-side
-  const filteredProducts = useMemo(() => {
-    const query = q.trim().toLowerCase();
-
-    let list = [...products];
-
-    if (query) {
-      list = list.filter((p) => {
-        const name = String(p.name || "").toLowerCase();
-        const desc = String(p.description || "").toLowerCase();
-        return name.includes(query) || desc.includes(query);
-      });
-    }
-
-    if (inStockOnly) {
-      list = list.filter((p) => toNum(p.stock, 0) > 0);
-    }
-
-    if (sort === "price_asc") {
-      list.sort((a, b) => toNum(a.price) - toNum(b.price));
-    } else if (sort === "price_desc") {
-      list.sort((a, b) => toNum(b.price) - toNum(a.price));
-    } else {
-      // "new" = newest first (createdAt if present)
-      list.sort((a, b) => {
-        const da = new Date(a.createdAt || 0).getTime();
-        const db = new Date(b.createdAt || 0).getTime();
-        return db - da;
-      });
-    }
-
-    return list;
-  }, [products, q, inStockOnly, sort]);
 
   return (
     <div style={{ padding: 20 }}>
@@ -144,8 +92,8 @@ export default function Home() {
             <Link href="/checkout">Checkout</Link>
             <Link href="/orders">My Orders</Link>
 
-            {user.role === "admin" && <Link href="/admin">Admin Dashboard</Link>}
             {user.role === "admin" && <Link href="/admin/orders">Admin Orders</Link>}
+            {user.role === "admin" && <Link href="/admin">Admin Dashboard</Link>}
 
             <button onClick={handleLogout}>Logout</button>
           </div>
@@ -156,97 +104,42 @@ export default function Home() {
 
       <h2>Products</h2>
 
-      {/* ✅ Search + Filter Controls */}
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search products..."
-          style={{ padding: 10, minWidth: 240 }}
-        />
-
-        <button
-          onClick={() => setInStockOnly((v) => !v)}
-          style={{ padding: 10, cursor: "pointer" }}
-          title="Toggle in-stock only"
-        >
-          {inStockOnly ? "In Stock Only ✅" : "In Stock Only"}
-        </button>
-
-        <select value={sort} onChange={(e) => setSort(e.target.value)} style={{ padding: 10 }}>
-          <option value="new">Newest</option>
-          <option value="price_asc">Price: Low → High</option>
-          <option value="price_desc">Price: High → Low</option>
-        </select>
-
-        <button
-          onClick={() => {
-            setQ("");
-            setInStockOnly(false);
-            setSort("new");
-          }}
-          style={{ padding: 10, cursor: "pointer" }}
-        >
-          Clear
-        </button>
-      </div>
-
-      {filteredProducts.length === 0 && <p>No products found.</p>}
+      {products.length === 0 && <p>No products yet.</p>}
 
       <div style={{ display: "grid", gap: 12 }}>
-        {filteredProducts.map((p) => {
-          const stockNum = toNum(p.stock, 0);
-          const outOfStock = stockNum <= 0;
+        {products.map((p) => (
+          <div key={p._id} style={{ border: "1px solid #ccc", padding: 16, borderRadius: 8 }}>
+            <h3 style={{ marginTop: 0 }}>{p.name}</h3>
 
-          return (
-            <div key={p._id} style={{ border: "1px solid #ccc", padding: 16, borderRadius: 8 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-                <h3 style={{ margin: 0 }}>{p.name}</h3>
+            {p.imageUrl ? (
+              <img
+                src={p.imageUrl}
+                alt={p.name}
+                width={160}
+                style={{ borderRadius: 8, display: "block", marginBottom: 10 }}
+              />
+            ) : null}
 
-                {/* ✅ ACTIVE Stock button (toggles In Stock filter) */}
-                <button
-                  onClick={() => setInStockOnly(true)}
-                  style={{
-                    padding: "6px 10px",
-                    borderRadius: 8,
-                    border: "1px solid #ccc",
-                    cursor: "pointer",
-                  }}
-                  title="Click to show in-stock products only"
-                >
-                  {outOfStock ? "Out of Stock" : `Stock (${stockNum})`}
-                </button>
-              </div>
+            <p>Price: ${p.price}</p>
+            <p>{p.description}</p>
+            <p>Stock: {p.stock}</p>
 
-              {p.imageUrl ? (
-                <img
-                  src={p.imageUrl}
-                  alt={p.name}
-                  width={140}
-                  style={{ borderRadius: 8, display: "block", margin: "10px 0" }}
-                />
-              ) : null}
+            <div style={{ display: "flex", gap: 10 }}>
+              <Link href={`/products/${p._id}`}>
+                <button style={{ padding: 8, cursor: "pointer" }}>View Details</button>
+              </Link>
 
-              <p style={{ margin: 0 }}>Price: ${p.price}</p>
-              <p>{p.description}</p>
-
-              <div style={{ display: "flex", gap: 10 }}>
-                <Link href={`/products/${p._id}`}>
-                  <button style={{ padding: 8, cursor: "pointer" }}>View Details</button>
-                </Link>
-
-                <button
-                  style={{ padding: 8, cursor: "pointer" }}
-                  onClick={() => addToCart(p._id)}
-                  disabled={!user || outOfStock}
-                  title={!user ? "Login to add items" : outOfStock ? "Out of stock" : ""}
-                >
-                  Add to Cart
-                </button>
-              </div>
+              <button
+                style={{ padding: 8, cursor: "pointer" }}
+                onClick={() => addToCart(p._id)}
+                disabled={!user}
+                title={!user ? "Login to add items" : ""}
+              >
+                Add to Cart
+              </button>
             </div>
-          );
-        })}
+          </div>
+        ))}
       </div>
     </div>
   );
