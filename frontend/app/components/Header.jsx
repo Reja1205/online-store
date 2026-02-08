@@ -1,32 +1,61 @@
+
+
 "use client";
 
 import Link from "next/link";
 
 export default function Header({ user, onLogout }) {
   return (
-    <header className="bg-white shadow-md">
-      <div className="max-w-5xl mx-auto px-4 py-4 flex justify-between items-center">
-        <Link href="/" className="text-xl font-bold">
+    <header className="mb-5 rounded-xl border bg-white px-4 py-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <Link href="/" className="text-lg font-semibold">
           Online Store
         </Link>
 
-        <nav className="flex gap-4 items-center text-sm">
-          <Link href="/products">Products</Link>
-          <Link href="/cart">Cart</Link>
-          <Link href="/orders">My Orders</Link>
-
-          {user && <Link href="/profile">Profile</Link>}
-          {user?.role === "admin" && <Link href="/admin">Admin</Link>}
+        <nav className="flex flex-wrap items-center gap-3 text-sm">
+          <Link className="hover:underline" href="/products">
+            Products
+          </Link>
 
           {user ? (
-            <button
-              onClick={onLogout}
-              className="bg-gray-200 px-3 py-1 rounded-lg hover:bg-gray-300"
-            >
-              Logout
-            </button>
+            <>
+              <Link className="hover:underline" href="/cart">
+                Cart
+              </Link>
+              <Link className="hover:underline" href="/orders">
+                My Orders
+              </Link>
+              <Link className="hover:underline" href="/profile">
+                Profile
+              </Link>
+
+              {user.role === "admin" && (
+                <>
+                  <Link className="hover:underline" href="/admin">
+                    Admin
+                  </Link>
+                  <Link className="hover:underline" href="/admin/orders">
+                    Admin Orders
+                  </Link>
+                </>
+              )}
+
+              <button
+                onClick={onLogout}
+                className="rounded-lg bg-gray-900 px-3 py-2 text-white hover:bg-black"
+              >
+                Logout
+              </button>
+            </>
           ) : (
-            <Link href="/login">Login</Link>
+            <>
+              <Link className="hover:underline" href="/login">
+                Login
+              </Link>
+              <Link className="hover:underline" href="/register">
+                Register
+              </Link>
+            </>
           )}
         </nav>
       </div>

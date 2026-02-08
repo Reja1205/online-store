@@ -1,3 +1,17 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -11,7 +25,6 @@ export default function Home() {
   const [products, setProducts] = useState([]);
   const [msg, setMsg] = useState("");
 
-  // ✅ Search + Filter
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState("all"); // all | in | out
 
@@ -25,8 +38,7 @@ export default function Home() {
   }
 
   async function loadProducts() {
-    // ✅ FIX: don't override headers
-    const { res, data } = await apiJson("/api/products");
+    const { res, data } = await apiJson("/api/products", { headers: {} });
     if (!res.ok) {
       setProducts([]);
       return;
@@ -71,8 +83,7 @@ export default function Home() {
       .filter((p) => {
         const name = String(p?.name ?? p?.title ?? "").toLowerCase();
         const desc = String(p?.description ?? "").toLowerCase();
-        const matches = !query || name.includes(query) || desc.includes(query);
-        return matches;
+        return !query || name.includes(query) || desc.includes(query);
       })
       .filter((p) => {
         const stock = Number(p?.stock ?? p?.stockQty ?? 0) || 0;
@@ -84,45 +95,55 @@ export default function Home() {
 
   return (
     <div>
-      <h1 style={{ margin: 0 }}>Online Store</h1>
-      <div className="bg-red-500 text-white p-4 rounded-xl">TAILWIND WORKS</div>
       <Header user={user} onLogout={handleLogout} />
+<div className="bg-red-500 text-white p-4 rounded-xl">TAILWIND WORKS</div>
+      {msg && (
+        <div className="mb-4 rounded-lg border bg-white px-4 py-3 text-sm">
+          {msg}
+        </div>
+      )}
 
-      {msg && <p>{msg}</p>}
+      <section className="mb-4 rounded-xl border bg-white p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-1 gap-3">
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search products..."
+              className="w-full rounded-lg border px-3 py-2"
+            />
 
-      <hr style={{ margin: "14px 0" }} />
+            <select
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="rounded-lg border px-3 py-2"
+            >
+              <option value="all">All</option>
+              <option value="in">In stock</option>
+              <option value="out">Out of stock</option>
+            </select>
+          </div>
 
-      {/* ✅ Search + Filter UI */}
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search products..."
-          style={{ padding: 10, minWidth: 260 }}
-        />
+          <button
+            onClick={loadProducts}
+            className="rounded-lg bg-gray-900 px-4 py-2 text-white hover:bg-black"
+          >
+            Refresh
+          </button>
+        </div>
+      </section>
 
-        <select value={filter} onChange={(e) => setFilter(e.target.value)} style={{ padding: 10 }}>
-          <option value="all">All</option>
-          <option value="in">In stock</option>
-          <option value="out">Out of stock</option>
-        </select>
+      <h2 className="mb-3 text-xl font-semibold">Products</h2>
 
-        <button onClick={loadProducts} style={{ padding: 10, cursor: "pointer" }}>
-          Refresh
-        </button>
-      </div>
-
-      <hr style={{ margin: "14px 0" }} />
-
-      <h2 style={{ marginTop: 0 }}>Products</h2>
-
-      {shown.length === 0 ? <p>No products found.</p> : null}
-
-      <div style={{ display: "grid", gap: 12 }}>
-        {shown.map((p) => (
-          <ProductCard key={p._id} p={p} user={user} onAddToCart={addToCart} />
-        ))}
-      </div>
+      {shown.length === 0 ? (
+        <p className="text-sm text-gray-600">No products found.</p>
+      ) : (
+        <div className="grid gap-4">
+          {shown.map((p) => (
+            <ProductCard key={p._id} p={p} user={user} onAddToCart={addToCart} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
