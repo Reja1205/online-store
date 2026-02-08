@@ -1,47 +1,41 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import Header from "../components/Header";
-import { apiJson } from "../lib/api";
+import Link from "next/link";
+import { isAuthenticated } from "../lib/auth";
 
 export default function ProfilePage() {
-  const router = useRouter();
   const [user, setUser] = useState(null);
 
-  async function load() {
-    const { res, data } = await apiJson("/api/auth/me");
-    if (res.status === 401) {
-      router.push("/login");
-      return;
-    }
-    setUser(data?.user || null);
-  }
-
   useEffect(() => {
-    load();
+    (async () => {
+      const me = await isAuthenticated();
+      setUser(me);
+    })();
   }, []);
 
-  async function logout() {
-    localStorage.removeItem("token");
-    setUser(null);
-    router.push("/");
+  if (!user) {
+    return (
+      <div style={{ padding: 20 }}>
+        <p>You are not logged in.</p>
+        <Link href="/login">Go to Login</Link>
+      </div>
+    );
   }
 
   return (
     <div style={{ padding: 20 }}>
       <h1>Profile</h1>
-      <Header user={user} onLogout={logout} />
+      <p><b>Name:</b> {user.name}</p>
+      <p><b>Email:</b> {user.email}</p>
+      <p><b>Role:</b> {user.role}</p>
 
-      {!user ? (
-        <p>Loading...</p>
-      ) : (
-        <div style={{ border: "1px solid #ddd", padding: 14, borderRadius: 10 }}>
-          <p><b>Name:</b> {user.name}</p>
-          <p><b>Email:</b> {user.email}</p>
-          <p><b>Role:</b> {user.role}</p>
-        </div>
-      )}
+      <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+        <Link href="/"><button style={{ padding: 8 }}>Home</button></Link>
+        {user.role === "admin" && (
+          <Link href="/admin"><button style={{ padding: 8 }}>Admin Dashboard</button></Link>
+        )}
+      </div>
     </div>
   );
 }

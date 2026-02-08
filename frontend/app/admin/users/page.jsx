@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { isAuthenticated } from "../../lib/auth";
 
-export default function AdminProductsPage() {
+export default function AdminUsersPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -26,8 +26,8 @@ export default function AdminProductsPage() {
 
   return (
     <div style={{ padding: 20 }}>
-      <h1>Admin Products</h1>
-      <p>Your main product management is already in your Admin Dashboard page.</p>
+      <h1>Admin Users</h1>
+      <p>(Coming next) We can add an endpoint to list users safely.</p>
       <div style={{ display: "flex", gap: 10 }}>
         <Link href="/admin"><button style={{ padding: 8 }}>Back Admin</button></Link>
         <Link href="/"><button style={{ padding: 8 }}>Home</button></Link>

@@ -1,52 +1,65 @@
 "use client";
 
-import { apiJson, productName, productPrice, productStock } from "../../../../lib/api";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { apiJson, productName, productPrice, productStock } from "../../lib/api";
+
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 export default function ProductDetailsPage({ params }) {
+  const id = params?.id;
   const [p, setP] = useState(null);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
 
   async function load() {
     setError("");
-    const { res, data } = await apiJson(`/api/products/${params.id}`, { headers: {} });
+    setLoading(true);
+    try {
+      const res = await fetch(`${API}/api/products/${id}`, { cache: "no-store" });
+      const data = await res.json().catch(() => ({}));
 
-    if (!res.ok) {
-      setError(data?.message || "Failed to load product");
-      setP(null);a
-      return;
+      if (!res.ok) {
+        setError(data?.message || "Failed to load product");
+        setP(null);
+        return;
+      }
+
+      setP(data.product || null);
+    } catch {
+      setError("Network error");
+      setP(null);
+    } finally {
+      setLoading(false);
     }
-
-    setP(data.product || null);
   }
 
   useEffect(() => {
     load();
-  }, [params.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  if (loading) return <div style={{ padding: 20 }}>Loading...</div>;
 
   return (
     <div style={{ padding: 20 }}>
       <h1>Product Details</h1>
 
       {error && <p style={{ color: "red" }}>{error}</p>}
-      {!p && !error && <p>Loading...</p>}
 
-      {p && (
-        <div style={{ border: "1px solid #ddd", padding: 16, borderRadius: 10 }}>
-          <h2 style={{ marginTop: 0 }}>{productName(p)}</h2>
+      {!p ? null : (
+        <div style={{ border: "1px solid #ccc", padding: 16, borderRadius: 8 }}>
+          <h2>{p.name}</h2>
           {p.imageUrl ? (
-            <img src={p.imageUrl} alt={productName(p)} width={220} style={{ borderRadius: 10 }} />
+            <img src={p.imageUrl} width={220} style={{ borderRadius: 8 }} alt={p.name} />
           ) : null}
-          <p>Price: ${productPrice(p)}</p>
-          <p>Stock: {productStock(p)}</p>
-          {p.description ? <p>{p.description}</p> : null}
+          <p><b>Price:</b> ${p.price}</p>
+          <p><b>Stock:</b> {p.stock}</p>
+          <p>{p.description}</p>
         </div>
       )}
 
-      <div style={{ marginTop: 14 }}>
-        <Link href="/"><button style={{ padding: 10, cursor: "pointer" }}>Back to Products</button></Link>
+      <div style={{ marginTop: 12 }}>
+        <Link href="/"><button style={{ padding: 8 }}>Back</button></Link>
       </div>
     </div>
   );
