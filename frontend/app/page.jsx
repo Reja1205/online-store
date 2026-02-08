@@ -137,7 +137,7 @@ export default function Home() {
       {shown.length === 0 ? (
         <p className="text-sm text-gray-600">No products found.</p>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {shown.map((p) => (
             <ProductCard key={p._id} p={p} user={user} onAddToCart={addToCart} />
           ))}
