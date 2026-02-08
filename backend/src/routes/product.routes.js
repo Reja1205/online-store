@@ -3,8 +3,8 @@ const router = require("express").Router();
 const requireAuth = require("../middleware/auth.middleware");
 const requireAdmin = require("../middleware/admin.middleware");
 
-// ✅ IMPORTANT: this must match your real file name/path
-// if your file is: backend/src/middleware/upload.js
+// ✅ THIS MUST MATCH YOUR FILE NAME
+// since you said your file is upload.middleware.js
 const upload = require("../middleware/upload.middleware");
 
 const {
@@ -15,16 +15,35 @@ const {
   deleteProduct,
 } = require("../controllers/product.controller");
 
-// Public
+// ---------------- PUBLIC ----------------
 router.get("/", listProducts);
 router.get("/:id", getProduct);
 
-// Admin only
-// ✅ this enables FormData + file upload
-router.post("/", requireAuth, requireAdmin, upload.single("image"), createProduct);
+// ---------------- ADMIN ----------------
 
-// keep JSON update/delete
-router.put("/:id", requireAuth, requireAdmin, updateProduct);
-router.delete("/:id", requireAuth, requireAdmin, deleteProduct);
+// CREATE PRODUCT (with image upload)
+router.post(
+  "/",
+  requireAuth,
+  requireAdmin,
+  upload.single("image"), // <-- very important
+  createProduct
+);
+
+// UPDATE PRODUCT
+router.put(
+  "/:id",
+  requireAuth,
+  requireAdmin,
+  updateProduct
+);
+
+// DELETE PRODUCT
+router.delete(
+  "/:id",
+  requireAuth,
+  requireAdmin,
+  deleteProduct
+);
 
 module.exports = router;
