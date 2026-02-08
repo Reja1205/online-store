@@ -2,17 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Safe defaults */
-html, body {
-  height: 100%;
-}
-
+html,
 body {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-}
-
-/* Remove ugly purple links */
-a {
-  text-decoration: none;
-  color: inherit;
+  height: 100%;
 }
