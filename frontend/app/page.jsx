@@ -85,9 +85,7 @@ export default function Home() {
   return (
     <div>
       <h1 style={{ margin: 0 }}>Online Store</h1>
-      <div className="bg-red-500 text-white p-4 rounded-xl">
-  Tailwind Test
-</div>
+      
       <Header user={user} onLogout={handleLogout} />
 
       {msg && <p>{msg}</p>}
