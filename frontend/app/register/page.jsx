@@ -1,94 +1,139 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { API } from "../lib/api";
+import { apiJson } from "../lib/api";
 
 export default function RegisterPage() {
   const router = useRouter();
 
-  const [mode, setMode] = useState("user"); // user | admin
-  const [name, setName] = useState("New User");
-  const [email, setEmail] = useState("new@test.com");
-  const [password, setPassword] = useState("123456");
-  const [adminSecret, setAdminSecret] = useState("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
-  const [msg, setMsg] = useState("");
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  async function submit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-    setMsg("");
     setError("");
+    setSuccess("");
 
-    const url = mode === "admin" ? "/api/auth/register-admin" : "/api/auth/register-user";
-
-    const payload =
-      mode === "admin"
-        ? { name, email, password, adminSecret }
-        : { name, email, password };
-
-    const res = await fetch(`${API}${url}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    const data = await res.json().catch(() => ({}));
-
-    if (!res.ok) {
-      setError(data?.message || "Registration failed");
+    if (!name.trim() || !email.trim() || !password) {
+      setError("Please fill out name, email, and password.");
       return;
     }
 
-    setMsg("Registered successfully ✅");
+    setLoading(true);
+
+    const { res, data } = await apiJson("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: name.trim(),
+        email: email.trim(),
+        password,
+      }),
+    });
+
+    if (!res.ok) {
+      setError(data?.message || "Registration failed");
+      setLoading(false);
+      return;
+    }
+
+    setSuccess("Registered successfully ✅ You can login now.");
+    setLoading(false);
+
+    // optional: go to login automatically after a moment
     setTimeout(() => router.push("/login"), 900);
   }
 
   return (
-    <div style={{ padding: 20, maxWidth: 520 }}>
-      <h1>Register</h1>
+    <div className="min-h-[70vh] flex items-center justify-center px-4 py-10">
+      <div className="w-full max-w-md bg-white border border-gray-100 shadow-md rounded-2xl p-6">
+        <div className="mb-5">
+          <h1 className="text-2xl font-bold text-gray-900">Create your account</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Register to add items to cart and place orders.
+          </p>
+        </div>
 
-      <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
-        <button
-          onClick={() => setMode("user")}
-          style={{ padding: 8, cursor: "pointer", opacity: mode === "user" ? 1 : 0.6 }}
-        >
-          Register as User
-        </button>
-        <button
-          onClick={() => setMode("admin")}
-          style={{ padding: 8, cursor: "pointer", opacity: mode === "admin" ? 1 : 0.6 }}
-        >
-          Register as Admin
-        </button>
+        {error ? (
+          <div className="mb-4 rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-red-700 text-sm">
+            {error}
+          </div>
+        ) : null}
+
+        {success ? (
+          <div className="mb-4 rounded-xl bg-green-50 border border-green-100 px-4 py-3 text-green-700 text-sm">
+            {success}
+          </div>
+        ) : null}
+
+        <form onSubmit={handleSubmit} className="grid gap-4">
+          <div>
+            <label className="text-sm font-medium text-gray-700">Name</label>
+            <input
+              className="mt-1 w-full px-4 py-2 rounded-xl border focus:outline-none focus:ring-2 focus:ring-indigo-200"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Your name"
+              autoComplete="name"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-gray-700">Email</label>
+            <input
+              className="mt-1 w-full px-4 py-2 rounded-xl border focus:outline-none focus:ring-2 focus:ring-indigo-200"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              type="email"
+              autoComplete="email"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-gray-700">Password</label>
+            <input
+              className="mt-1 w-full px-4 py-2 rounded-xl border focus:outline-none focus:ring-2 focus:ring-indigo-200"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Create a password"
+              type="password"
+              autoComplete="new-password"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Minimum 6 characters is a good idea.
+            </p>
+          </div>
+
+          <button
+            disabled={loading}
+            className={`mt-2 w-full py-2 rounded-xl font-medium transition ${
+              loading
+                ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                : "bg-indigo-600 text-white hover:bg-indigo-700 shadow"
+            }`}
+          >
+            {loading ? "Creating account..." : "Register"}
+          </button>
+
+          <div className="flex items-center justify-between text-sm mt-2">
+            <Link href="/" className="text-gray-600 hover:text-gray-900">
+              ← Back home
+            </Link>
+
+            <Link href="/login" className="text-indigo-600 hover:text-indigo-700 font-medium">
+              Already have an account? Login
+            </Link>
+          </div>
+        </form>
       </div>
-
-      <form onSubmit={submit} style={{ display: "grid", gap: 12 }}>
-        <input style={{ padding: 10 }} value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" />
-        <input style={{ padding: 10 }} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
-        <input style={{ padding: 10 }} type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" />
-
-        {mode === "admin" && (
-          <input
-            style={{ padding: 10 }}
-            value={adminSecret}
-            onChange={(e) => setAdminSecret(e.target.value)}
-            placeholder="Admin Secret"
-          />
-        )}
-
-        {msg && <p style={{ margin: 0 }}>{msg}</p>}
-        {error && <p style={{ margin: 0, color: "red" }}>{error}</p>}
-
-        <button style={{ padding: 10, cursor: "pointer" }} type="submit">
-          Register
-        </button>
-
-        <button style={{ padding: 10 }} type="button" onClick={() => router.push("/")}>
-          Back
-        </button>
-      </form>
     </div>
   );
 }
