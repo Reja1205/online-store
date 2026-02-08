@@ -1,15 +1,29 @@
+
+import "./globals.css";
+import Header from "./components/Header";
+
 export const metadata = {
   title: "Online Store",
-  description: "Ecommerce app",
+  description: "Ecommerce store",
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body style={{ fontFamily: "system-ui, Arial", margin: 0 }}>
-        <div style={{ maxWidth: 980, margin: "0 auto", padding: 16 }}>
+      <body className="min-h-screen bg-gray-50 text-gray-900">
+        {/* Global header on every page */}
+        <Header />
+
+        {/* Page container */}
+        <main className="mx-auto w-full max-w-6xl px-4 py-6">
           {children}
-        </div>
+        </main>
+
+        <footer className="border-t bg-white">
+          <div className="mx-auto max-w-6xl px-4 py-6 text-sm text-gray-500">
+            © {new Date().getFullYear()} Online Store
+          </div>
+        </footer>
       </body>
     </html>
   );
