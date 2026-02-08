@@ -2,48 +2,48 @@
 
 export const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
-export function authHeaders() {
-  if (typeof window === "undefined") return {};
+function authHeaders(extra = {}) {
+  if (typeof window === "undefined") return extra;
   const token = localStorage.getItem("token");
-  return token ? { Authorization: "Bearer " + token } : {};
+  return token ? { ...extra, Authorization: "Bearer " + token } : extra;
 }
 
-// ✅ Some files import apiFetch, so we provide it
-export async function apiFetch(path, options = {}) {
-  const url = path.startsWith("http") ? path : `${API}${path}`;
-
-  const headers = {
-    ...(options.headers || {}),
-    ...authHeaders(),
-  };
-
-  return fetch(url, {
-    ...options,
-    headers,
-    cache: options.cache || "no-store",
-  });
-}
-
-// ✅ Most of our code uses apiJson
+// ✅ JSON requests (GET/POST/PUT/DELETE)
 export async function apiJson(path, options = {}) {
-  const res = await apiFetch(path, options);
+  const res = await fetch(API + path, {
+    ...options,
+    headers: authHeaders(options.headers || {}),
+    cache: "no-store",
+  });
+
   const data = await res.json().catch(() => ({}));
   return { res, data };
 }
 
-// ✅ Product helpers (used by ProductCard / admin pages)
+// ✅ FormData requests (image upload etc.)
+export async function apiForm(path, formData, options = {}) {
+  const res = await fetch(API + path, {
+    method: options.method || "POST",
+    headers: authHeaders(options.headers || {}), // IMPORTANT: don't set Content-Type
+    body: formData,
+    cache: "no-store",
+  });
+
+  const data = await res.json().catch(() => ({}));
+  return { res, data };
+}
+
+// Helpers so UI works with both old/new product shapes
 export function productName(p) {
-  return String(p?.name ?? p?.title ?? "");
+  return p?.name ?? p?.title ?? "";
 }
 
 export function productPrice(p) {
   const v = p?.price ?? p?.priceUSD ?? 0;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : 0;
+  return Number(v) || 0;
 }
 
 export function productStock(p) {
   const v = p?.stock ?? p?.stockQty ?? 0;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : 0;
+  return Number(v) || 0;
 }
