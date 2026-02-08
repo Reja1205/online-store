@@ -5,7 +5,7 @@ const requireAdmin = require("../middleware/admin.middleware");
 
 // ✅ THIS MUST MATCH YOUR FILE NAME
 // since you said your file is upload.middleware.js
-const upload = require("../middleware/upload.middleware");
+const upload = require("../middleware/upload");
 
 const {
   listProducts,
