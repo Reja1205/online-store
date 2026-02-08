@@ -9,6 +9,7 @@ export default function ProductCard({ p, user, onAddToCart }) {
   const stock = productStock(p);
 
   const canAdd = !!user && stock > 0;
+  console.log("PRODUCT ID:", p?._id, p);
 
   return (
     <div className="bg-white rounded-2xl shadow-md hover:shadow-xl transition p-4 flex flex-col gap-3 border border-gray-100">
