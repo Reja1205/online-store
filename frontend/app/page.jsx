@@ -96,7 +96,6 @@ export default function Home() {
   return (
     <div>
       <Header user={user} onLogout={handleLogout} />
-<div className="bg-red-500 text-white p-4 rounded-xl">TAILWIND WORKS</div>
       {msg && (
         <div className="mb-4 rounded-lg border bg-white px-4 py-3 text-sm">
           {msg}

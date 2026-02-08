@@ -11,19 +11,15 @@ export default function ProductCard({ p, user, onAddToCart }) {
   const canAdd = !!user && stock > 0;
 
   return (
-    <div style={{ border: "1px solid #ccc", padding: 16, borderRadius: 10 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-        <h3 style={{ margin: 0 }}>{name}</h3>
+    <div className="rounded-xl border bg-white p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <h3 className="text-lg font-semibold leading-snug">{name}</h3>
 
-        {/* ✅ Stock badge/button */}
         <span
-          style={{
-            padding: "6px 10px",
-            borderRadius: 999,
-            border: "1px solid #ddd",
-            fontSize: 12,
-            opacity: stock > 0 ? 1 : 0.6,
-          }}
+          className={[
+            "shrink-0 rounded-full border px-3 py-1 text-xs",
+            stock > 0 ? "bg-green-50 text-green-700 border-green-200" : "bg-gray-50 text-gray-500",
+          ].join(" ")}
         >
           {stock > 0 ? `In Stock: ${stock}` : "Out of Stock"}
         </span>
@@ -33,21 +29,34 @@ export default function ProductCard({ p, user, onAddToCart }) {
         <img
           src={p.imageUrl}
           alt={name}
-          width={160}
-          style={{ marginTop: 10, borderRadius: 10, display: "block" }}
+          className="mt-3 h-40 w-full rounded-lg object-cover sm:h-44"
         />
+      ) : (
+        <div className="mt-3 flex h-40 w-full items-center justify-center rounded-lg bg-gray-100 text-sm text-gray-500 sm:h-44">
+          No image
+        </div>
+      )}
+
+      <p className="mt-3 text-sm">
+        <span className="font-medium">Price:</span> ${price}
+      </p>
+
+      {p.description ? (
+        <p className="mt-2 text-sm text-gray-600">{p.description}</p>
       ) : null}
 
-      <p style={{ margin: "10px 0 0 0" }}>Price: ${price}</p>
-      {p.description ? <p style={{ margin: "8px 0 0 0" }}>{p.description}</p> : null}
-
-      <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
-        <Link href={`/products/${p._id}`}>
-          <button style={{ padding: 8, cursor: "pointer" }}>View Details</button>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Link href={`/products/${p._id}`} className="inline-flex">
+          <button className="rounded-lg border px-4 py-2 text-sm hover:bg-gray-50">
+            View Details
+          </button>
         </Link>
 
         <button
-          style={{ padding: 8, cursor: canAdd ? "pointer" : "not-allowed", opacity: canAdd ? 1 : 0.6 }}
+          className={[
+            "rounded-lg px-4 py-2 text-sm text-white",
+            canAdd ? "bg-gray-900 hover:bg-black" : "bg-gray-300 cursor-not-allowed",
+          ].join(" ")}
           onClick={() => onAddToCart(p._id)}
           disabled={!canAdd}
           title={!user ? "Login to add items" : stock <= 0 ? "Out of stock" : ""}
