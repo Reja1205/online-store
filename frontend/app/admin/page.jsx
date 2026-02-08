@@ -250,7 +250,7 @@ export default function AdminPage() {
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Short description..."
-                    className="min-h-[96px] w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-200"
+                    className="min-h-24 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-200"
                   />
                 </div>
 
@@ -323,7 +323,7 @@ export default function AdminPage() {
                           <textarea
                             value={editDescription}
                             onChange={(e) => setEditDescription(e.target.value)}
-                            className="min-h-[80px] w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-200"
+                            className="min-h-20 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-200"
                           />
 
                           <div className="flex gap-2">
