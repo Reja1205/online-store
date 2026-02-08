@@ -97,7 +97,7 @@ export default function ProfilePage() {
     <div className="max-w-3xl mx-auto">
       <div className="bg-white border border-gray-100 rounded-2xl shadow overflow-hidden">
         {/* Top Banner */}
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-6">
+        <div className="bg-linear-to-r from-indigo-600 to-purple-600 px-6 py-6">
           <p className="text-white/80 text-sm">Welcome back</p>
           <h1 className="text-white text-2xl font-bold">{user.name}</h1>
           <p className="text-white/90 text-sm mt-1">{user.email}</p>
