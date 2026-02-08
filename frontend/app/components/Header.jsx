@@ -1,125 +1,65 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
-
-function authHeaders() {
-  if (typeof window === "undefined") return {};
-  const token = localStorage.getItem("token");
-  return token ? { Authorization: "Bearer " + token } : {};
-}
-
-export default function Header({ user: userProp, onLogout: onLogoutProp }) {
-  const [user, setUser] = useState(userProp || null);
-
-  // If parent passed user, use it. Otherwise fetch /me.
-  useEffect(() => {
-    if (userProp !== undefined) {
-      setUser(userProp);
-      return;
-    }
-
-    (async () => {
-      try {
-        const res = await fetch(`${API}/api/auth/me`, { headers: authHeaders() });
-        if (res.status === 401) {
-          setUser(null);
-          return;
-        }
-        const data = await res.json();
-        setUser(data?.user || null);
-      } catch {
-        setUser(null);
-      }
-    })();
-  }, [userProp]);
-
-  async function logout() {
-    try {
-      await fetch(`${API}/api/auth/logout`, { method: "POST", headers: authHeaders() });
-    } catch {}
-    localStorage.removeItem("token");
-    setUser(null);
-    if (onLogoutProp) onLogoutProp();
-  }
-
+export default function Header({ user, onLogout }) {
   return (
-    <header className="sticky top-0 z-20 border-b bg-white/90 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-        <Link href="/" className="text-lg font-semibold">
+    <header className="border-b bg-white shadow-sm">
+      <div className="max-w-6xl mx-auto px-4 py-3 flex flex-wrap gap-3 justify-between items-center">
+        <Link href="/" className="font-bold text-lg">
           Online Store
         </Link>
 
-        <nav className="flex items-center gap-3 text-sm">
-          <Link href="/products" className="rounded px-3 py-2 hover:bg-gray-100">
+        <nav className="flex gap-4 items-center text-sm">
+          <Link href="/products" className="hover:underline">
             Products
           </Link>
 
-          {user ? (
+          {user && (
             <>
-              <Link href="/cart" className="rounded px-3 py-2 hover:bg-gray-100">
+              <Link href="/cart" className="hover:underline">
                 Cart
               </Link>
-              <Link href="/orders" className="rounded px-3 py-2 hover:bg-gray-100">
+
+              <Link href="/orders" className="hover:underline">
                 My Orders
               </Link>
-              <Link href="/profile" className="rounded px-3 py-2 hover:bg-gray-100">
-                {user.name || "Profile"}
+
+              <Link href="/profile" className="hover:underline">
+                Profile
               </Link>
-
-              {user.role === "admin" && (
-                <>
-                  <Link href="/admin" className="rounded px-3 py-2 hover:bg-gray-100">
-                    Admin
-                  </Link>
-                  <Link href="/admin/orders" className="rounded px-3 py-2 hover:bg-gray-100">
-                    Admin Orders
-                  </Link>
-                </>
-              )}
-
-              <button
-                onClick={logout}
-                className="rounded bg-gray-900 px-3 py-2 text-white hover:bg-black"
-              >
-                Logout
-              </button>
             </>
-          ) : (
+          )}
+
+          {user?.role === "admin" && (
             <>
-              <Link href="/login" className="rounded px-3 py-2 hover:bg-gray-100">
-                Login
+              <Link href="/admin" className="hover:underline">
+                Admin
               </Link>
-              <Link
-                href="/register"
-                className="rounded bg-gray-900 px-3 py-2 text-white hover:bg-black"
-              >
-                Register
+
+              <Link href="/admin/orders" className="hover:underline">
+                Orders
               </Link>
             </>
+          )}
+
+          {user ? (
+            <button
+              onClick={onLogout}
+              className="bg-gray-200 px-3 py-1 rounded hover:bg-gray-300"
+            >
+              Logout
+            </button>
+          ) : (
+            <Link
+              href="/login"
+              className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+            >
+              Login
+            </Link>
           )}
         </nav>
       </div>
     </header>
   );
 }
-
-
-
