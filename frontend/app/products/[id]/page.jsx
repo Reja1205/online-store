@@ -7,7 +7,7 @@ import { apiJson, productName, productPrice, productStock } from "../../lib/api"
 
 export default function ProductDetailsPage() {
   const params = useParams();
-  const id = params?.id; // ✅ always read from URL
+  const id = params?.id; // ✅ read from URL
 
   const [p, setP] = useState(null);
   const [error, setError] = useState("");
@@ -55,9 +55,10 @@ export default function ProductDetailsPage() {
     return (
       <div className="max-w-3xl mx-auto p-6">
         <p className="text-red-600 font-medium">{error || "Product not found"}</p>
+
         <Link href="/products">
-          <button className="mt-4 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition">
-            Back to Products
+          <button className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 text-white font-medium shadow hover:bg-indigo-700 active:scale-[0.99] transition">
+            ← Back to Products
           </button>
         </Link>
       </div>
@@ -71,7 +72,7 @@ export default function ProductDetailsPage() {
   return (
     <div className="max-w-3xl mx-auto p-6">
       <Link href="/products">
-        <button className="mb-5 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition">
+        <button className="mb-5 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 text-white font-medium shadow hover:bg-indigo-700 active:scale-[0.99] transition">
           ← Back to Products
         </button>
       </Link>
@@ -108,19 +109,19 @@ export default function ProductDetailsPage() {
 
           <div className="flex gap-3 mt-4 flex-wrap">
             <Link href="/cart">
-              <button className="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium transition">
+              <button className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow transition">
                 Go to Cart
               </button>
             </Link>
 
             <Link href="/products">
-              <button className="px-5 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-900 font-medium transition">
+              <button className="px-5 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-900 font-medium transition">
                 Continue Shopping
               </button>
             </Link>
           </div>
 
-          <p className="text-xs text-gray-400 mt-2">Product ID: {p._id}</p>
+          {/* ❌ Removed: Product ID display */}
         </div>
       </div>
     </div>
