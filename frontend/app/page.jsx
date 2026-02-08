@@ -25,7 +25,8 @@ export default function Home() {
   }
 
   async function loadProducts() {
-    const { res, data } = await apiJson("/api/products", { headers: {} });
+    // ✅ FIX: don't override headers
+    const { res, data } = await apiJson("/api/products");
     if (!res.ok) {
       setProducts([]);
       return;
