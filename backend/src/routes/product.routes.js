@@ -2,10 +2,7 @@ const router = require("express").Router();
 
 const requireAuth = require("../middleware/auth.middleware");
 const requireAdmin = require("../middleware/admin.middleware");
-
-// ✅ THIS MUST MATCH YOUR FILE NAME
-// since you said your file is upload.middleware.js
-const upload = require("../middleware/upload");
+const upload = require("../middleware/upload"); // ✅ your upload.js
 
 const {
   listProducts,
@@ -15,35 +12,13 @@ const {
   deleteProduct,
 } = require("../controllers/product.controller");
 
-// ---------------- PUBLIC ----------------
+// Public
 router.get("/", listProducts);
 router.get("/:id", getProduct);
 
-// ---------------- ADMIN ----------------
-
-// CREATE PRODUCT (with image upload)
-router.post(
-  "/",
-  requireAuth,
-  requireAdmin,
-  upload.single("image"), // <-- very important
-  createProduct
-);
-
-// UPDATE PRODUCT
-router.put(
-  "/:id",
-  requireAuth,
-  requireAdmin,
-  updateProduct
-);
-
-// DELETE PRODUCT
-router.delete(
-  "/:id",
-  requireAuth,
-  requireAdmin,
-  deleteProduct
-);
+// Admin only (accept image file)
+router.post("/", requireAuth, requireAdmin, upload.single("image"), createProduct);
+router.put("/:id", requireAuth, requireAdmin, upload.single("image"), updateProduct);
+router.delete("/:id", requireAuth, requireAdmin, deleteProduct);
 
 module.exports = router;
