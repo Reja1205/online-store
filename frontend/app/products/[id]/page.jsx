@@ -2,64 +2,39 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
 import { apiJson, productName, productPrice, productStock } from "../../lib/api";
 
-export default function ProductDetailsPage() {
-  const params = useParams();
-  const id = params?.id; // ✅ always read from URL
-
+export default function ProductDetailsPage({ params }) {
   const [p, setP] = useState(null);
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
 
-  async function loadProduct(productId) {
-    setError("");
-    setLoading(true);
-
-    // ✅ guard: prevents calling /api/products/undefined
-    if (!productId || typeof productId !== "string") {
-      setError("Invalid product id");
-      setP(null);
-      setLoading(false);
-      return;
-    }
-
-    const { res, data } = await apiJson(`/api/products/${productId}`, { headers: {} });
+  async function loadProduct() {
+    const { res, data } = await apiJson(`/api/products/${params.id}`);
 
     if (!res.ok) {
       setError(data?.message || "Failed to load product");
-      setP(null);
-      setLoading(false);
       return;
     }
 
-    setP(data?.product || null);
-    setLoading(false);
+    setP(data.product || data);
   }
 
   useEffect(() => {
-    loadProduct(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+    loadProduct();
+  }, []);
 
-  if (loading) {
+  if (error) {
     return (
-      <div className="max-w-3xl mx-auto p-6">
-        <p className="text-gray-600">Loading product...</p>
+      <div className="p-6 text-red-600 font-medium">
+        {error}
       </div>
     );
   }
 
-  if (error || !p) {
+  if (!p) {
     return (
-      <div className="max-w-3xl mx-auto p-6">
-        <p className="text-red-600 font-medium">{error || "Product not found"}</p>
-        <Link href="/products">
-          <button className="mt-4 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition">
-            Back to Products
-          </button>
-        </Link>
+      <div className="p-6 text-gray-600">
+        Loading product...
       </div>
     );
   }
@@ -69,59 +44,51 @@ export default function ProductDetailsPage() {
   const stock = productStock(p);
 
   return (
-    <div className="max-w-3xl mx-auto p-6">
-      <Link href="/products">
-        <button className="mb-5 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition">
+    <div className="max-w-3xl mx-auto p-4">
+      {/* Back Button */}
+      <Link href="/" className="inline-block mb-6">
+        <button className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg shadow transition">
           ← Back to Products
         </button>
       </Link>
 
-      <div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
-        {p.imageUrl ? (
-          <img src={p.imageUrl} alt={name} className="w-full h-72 object-cover" />
-        ) : (
-          <div className="w-full h-72 bg-gray-100 flex items-center justify-center text-gray-400">
-            No image
-          </div>
+      <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+        {/* Title */}
+        <h1 className="text-2xl font-bold text-gray-800 mb-3">
+          {name}
+        </h1>
+
+        {/* Stock Badge */}
+        <span
+          className={`inline-block text-xs px-3 py-1 rounded-full font-medium mb-4 ${
+            stock > 0
+              ? "bg-green-100 text-green-700"
+              : "bg-red-100 text-red-600"
+          }`}
+        >
+          {stock > 0 ? `In Stock: ${stock}` : "Out of Stock"}
+        </span>
+
+        {/* Image */}
+        {p.imageUrl && (
+          <img
+            src={p.imageUrl}
+            alt={name}
+            className="w-full max-h-96 object-cover rounded-xl border mb-4"
+          />
         )}
 
-        <div className="p-6 flex flex-col gap-3">
-          <div className="flex items-start justify-between gap-3">
-            <h1 className="text-2xl font-bold text-gray-900">{name}</h1>
+        {/* Price */}
+        <p className="text-indigo-600 font-semibold text-lg">
+          ${price}
+        </p>
 
-            <span
-              className={`text-sm px-3 py-1 rounded-full font-medium ${
-                stock > 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"
-              }`}
-            >
-              {stock > 0 ? `In Stock: ${stock}` : "Out of Stock"}
-            </span>
-          </div>
-
-          <p className="text-xl font-semibold text-indigo-600">${price}</p>
-
-          {p.description ? (
-            <p className="text-gray-600 leading-relaxed">{p.description}</p>
-          ) : (
-            <p className="text-gray-400">No description.</p>
-          )}
-
-          <div className="flex gap-3 mt-4 flex-wrap">
-            <Link href="/cart">
-              <button className="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium transition">
-                Go to Cart
-              </button>
-            </Link>
-
-            <Link href="/products">
-              <button className="px-5 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-900 font-medium transition">
-                Continue Shopping
-              </button>
-            </Link>
-          </div>
-
-          <p className="text-xs text-gray-400 mt-2">Product ID: {p._id}</p>
-        </div>
+        {/* Description */}
+        {p.description && (
+          <p className="text-gray-600 mt-3 leading-relaxed">
+            {p.description}
+          </p>
+        )}
       </div>
     </div>
   );
