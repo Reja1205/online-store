@@ -1,8 +1,50 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { apiJson } from "../lib/api";
 
-export default function Header({ user, onLogout, cartCount = 0 }) {
+export default function Header({ user, onLogout }) {
+  const [cartCount, setCartCount] = useState(0);
+
+  async function loadCartCount() {
+    if (!user) {
+      setCartCount(0);
+      return;
+    }
+
+    const { res, data } = await apiJson("/api/cart");
+    if (!res.ok) {
+      setCartCount(0);
+      return;
+    }
+
+    // supports: {cart:{items:[...]}} or {items:[...]} or {cartItems:[...]}
+    const items =
+      data?.cart?.items ||
+      data?.items ||
+      data?.cartItems ||
+      [];
+
+    const count = Array.isArray(items)
+      ? items.reduce((sum, it) => sum + Number(it.qty || 0), 0)
+      : 0;
+
+    setCartCount(count);
+  }
+
+  useEffect(() => {
+    loadCartCount();
+
+    function onCartUpdated() {
+      loadCartCount();
+    }
+
+    window.addEventListener("cart:updated", onCartUpdated);
+    return () => window.removeEventListener("cart:updated", onCartUpdated);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
   return (
     <header className="mt-4 bg-white border border-gray-200 rounded-2xl shadow-sm px-4 py-3 flex flex-wrap items-center justify-between gap-3">
       <div className="flex items-center gap-3">
@@ -33,12 +75,8 @@ export default function Header({ user, onLogout, cartCount = 0 }) {
           )}
         </Link>
 
-        {user ? (
+        {user && (
           <>
-            <Link href="/checkout" className="text-sm font-medium text-gray-700 hover:text-indigo-700">
-              Checkout
-            </Link>
-
             <Link href="/orders" className="text-sm font-medium text-gray-700 hover:text-indigo-700">
               My Orders
             </Link>
@@ -52,7 +90,10 @@ export default function Header({ user, onLogout, cartCount = 0 }) {
                 <Link href="/admin" className="text-sm font-medium text-gray-700 hover:text-indigo-700">
                   Admin
                 </Link>
-                <Link href="/admin/orders" className="text-sm font-medium text-gray-700 hover:text-indigo-700">
+                <Link
+                  href="/admin/orders"
+                  className="text-sm font-medium text-gray-700 hover:text-indigo-700"
+                >
                   Admin Orders
                 </Link>
               </>
@@ -65,7 +106,9 @@ export default function Header({ user, onLogout, cartCount = 0 }) {
               Logout
             </button>
           </>
-        ) : (
+        )}
+
+        {!user && (
           <>
             <Link href="/login" className="text-sm font-medium text-gray-700 hover:text-indigo-700">
               Login
