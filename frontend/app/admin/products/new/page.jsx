@@ -3,8 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
-
 export default function NewProductPage() {
   const router = useRouter();
 
@@ -14,58 +12,44 @@ export default function NewProductPage() {
   const [description, setDescription] = useState("");
   const [imageFile, setImageFile] = useState(null);
 
-  // AI inputs (optional)
-  const [category, setCategory] = useState("");
-  const [keyFeatures, setKeyFeatures] = useState(""); // comma separated
-
-  const [loadingAI, setLoadingAI] = useState(false);
-
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
 
+  // AI
+  const [loadingAI, setLoadingAI] = useState(false);
+
   async function generateDescription() {
+    if (!name) {
+      setError("Enter product name first");
+      return;
+    }
+
     setError("");
-    setMsg("");
-
-    if (!name.trim()) {
-      setError("Please enter product name first");
-      return;
-    }
-
-    const token = localStorage.getItem("token");
-    if (!token) {
-      setError("No token found. Please login again as admin.");
-      return;
-    }
-
     setLoadingAI(true);
 
     try {
-      const res = await fetch(`${API}/api/ai/product-description`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: "Bearer " + token,
-        },
-        body: JSON.stringify({
-          name,
-          category,
-          keyFeatures, // backend supports string or array
-          tone: "friendly and professional",
-          length: "80-120 words",
-        }),
-      });
+      const token = localStorage.getItem("token");
+
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/ai/product-description`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + token,
+          },
+          body: JSON.stringify({ name }),
+        }
+      );
 
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        setError(data?.message || "AI generation failed");
+        setError(data?.message || "AI failed");
         return;
       }
 
-      setDescription(data?.description || "");
-      setMsg("Description generated ✅");
-      setTimeout(() => setMsg(""), 1200);
+      setDescription(data.description || "");
     } catch {
       setError("Network error");
     } finally {
@@ -82,32 +66,28 @@ export default function NewProductPage() {
       return;
     }
 
-    const token = localStorage.getItem("token");
-    if (!token) {
-      setError("No token found. Please login again as admin.");
-      return;
-    }
-
-    // ✅ FORM DATA
     const fd = new FormData();
     fd.append("name", name);
     fd.append("price", String(Number(price)));
     fd.append("stock", String(stock === "" ? 0 : Number(stock)));
     fd.append("description", description || "");
 
-    // ✅ IMAGE
     if (imageFile) {
       fd.append("image", imageFile);
     }
 
-    const res = await fetch(`${API}/api/products`, {
-      method: "POST",
-      headers: {
-        Authorization: "Bearer " + token,
-        // DON'T set Content-Type for FormData
-      },
-      body: fd,
-    });
+    const token = localStorage.getItem("token");
+
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/api/products`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer " + token,
+        },
+        body: fd,
+      }
+    );
 
     const data = await res.json().catch(() => ({}));
 
@@ -123,76 +103,77 @@ export default function NewProductPage() {
     setStock("");
     setDescription("");
     setImageFile(null);
-    setCategory("");
-    setKeyFeatures("");
 
-    setTimeout(() => {
-      router.push("/admin/products");
-    }, 800);
+    setTimeout(() => router.push("/admin/products"), 800);
   }
 
   return (
-    <div style={{ padding: 20, maxWidth: 600 }}>
-      <h1>New Product</h1>
+    <div className="max-w-xl mx-auto p-6">
+      <h1 className="text-2xl font-bold mb-4">Create New Product</h1>
 
-      {msg && <p>{msg}</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
+      {msg && <p className="text-green-700 mb-2">{msg}</p>}
+      {error && <p className="text-red-600 mb-2">{error}</p>}
 
-      <div style={{ display: "grid", gap: 10 }}>
+      <div className="grid gap-3">
         <input
-          placeholder="Name"
+          className="border rounded-lg px-3 py-2"
+          placeholder="Product Name"
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
 
         <input
+          className="border rounded-lg px-3 py-2"
           placeholder="Price"
           value={price}
           onChange={(e) => setPrice(e.target.value)}
         />
 
         <input
+          className="border rounded-lg px-3 py-2"
           placeholder="Stock"
           value={stock}
           onChange={(e) => setStock(e.target.value)}
         />
 
-        {/* Optional AI helpers */}
-        <input
-          placeholder="Category (optional)"
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-        />
-
-        <input
-          placeholder="Key features (comma separated, optional)"
-          value={keyFeatures}
-          onChange={(e) => setKeyFeatures(e.target.value)}
-        />
-
         <textarea
+          className="border rounded-lg px-3 py-2 min-h-28"
           placeholder="Description"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
 
+        {/* AI BUTTON */}
         <button
           type="button"
           onClick={generateDescription}
           disabled={loadingAI}
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700 mt-2 disabled:opacity-60"
+          className={`w-full rounded-xl px-4 py-3 font-semibold text-white transition
+            ${
+              loadingAI
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-indigo-600 hover:bg-indigo-700 shadow-md"
+            }`}
         >
-          {loadingAI ? "Generating..." : "Generate with AI"}
+          {loadingAI
+            ? "Generating..."
+            : "✨ Generate Description with AI"}
         </button>
 
         {/* IMAGE INPUT */}
         <input
           type="file"
           accept="image/*"
+          className="border rounded-lg px-3 py-2"
           onChange={(e) => setImageFile(e.target.files?.[0] || null)}
         />
 
-        <button onClick={createProduct}>Create Product</button>
+        <button
+          onClick={createProduct}
+          className="bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl px-4 py-3"
+        >
+          Create Product
+        </button>
       </div>
     </div>
   );
