@@ -57,9 +57,6 @@ export default function Home() {
       return;
     }
 
-    // supports:
-    // { cart: { items: [...] } }
-    // { items: [...] }
     const items = Array.isArray(data?.items)
       ? data.items
       : Array.isArray(data?.cart?.items)
@@ -74,6 +71,14 @@ export default function Home() {
     loadMe();
     loadProducts();
     loadCartCount();
+
+    // ✅ listen to cart updates from anywhere (cart page, product page, etc.)
+    function onCartUpdated() {
+      loadCartCount();
+    }
+
+    window.addEventListener("cart:updated", onCartUpdated);
+    return () => window.removeEventListener("cart:updated", onCartUpdated);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -96,6 +101,9 @@ export default function Home() {
 
     // ✅ refresh cart badge immediately
     await loadCartCount();
+
+    // ✅ notify Header + other pages instantly
+    window.dispatchEvent(new Event("cart:updated"));
   }
 
   async function handleLogout() {
@@ -106,6 +114,9 @@ export default function Home() {
     localStorage.removeItem("token");
     setUser(null);
     setCartCount(0);
+
+    // optional: update listeners too
+    window.dispatchEvent(new Event("cart:updated"));
   }
 
   const shown = useMemo(() => {
