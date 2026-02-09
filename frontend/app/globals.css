@@ -1,20 +1,19 @@
 @import "tailwindcss";
 
-/* nice defaults */
+/* stable layout */
 html,
 body {
   height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  overflow-y: scroll; /* prevents jump */
 }
 
 body {
-  margin: 0;
-}
-html {
-  overflow-y: scroll; /* keeps scrollbar space so layout doesn’t jump */
-}
-
-html, body {
   width: 100%;
   max-width: 100%;
-  overflow-x: hidden; /* prevents sideways shifting */
+  overflow-x: hidden; /* prevents sideways shift */
 }

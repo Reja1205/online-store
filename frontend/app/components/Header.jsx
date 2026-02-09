@@ -40,7 +40,6 @@ export default function Header({ user, onLogout }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  // close menu when user changes (login/logout)
   useEffect(() => {
     setMenuOpen(false);
   }, [user]);
@@ -51,11 +50,15 @@ export default function Header({ user, onLogout }) {
   const adminPill =
     "inline-flex items-center justify-center rounded-xl bg-black/30 px-4 py-2 text-sm font-semibold text-white hover:bg-black/40 transition whitespace-nowrap";
 
+  const whiteBtn =
+    "rounded-xl bg-white px-4 py-2 text-sm font-semibold text-gray-900 hover:bg-gray-100 transition whitespace-nowrap";
+
   return (
-    <header className="mt-4 rounded-2xl bg-linear-to-r from-indigo-600 via-purple-600 to-pink-600 p-px shadow">
+    <header className="rounded-2xl bg-linear-to-r from-indigo-600 via-purple-600 to-pink-600 p-px shadow">
       <div className="rounded-2xl bg-white/10 backdrop-blur px-4 py-4">
         {/* Top row */}
         <div className="flex items-start justify-between gap-4">
+          {/* Brand */}
           <div className="min-w-0">
             <div className="flex items-center gap-3">
               <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 text-white font-bold">
@@ -63,10 +66,12 @@ export default function Header({ user, onLogout }) {
               </span>
 
               <div className="min-w-0">
-                <p className="text-lg font-semibold text-white leading-tight">
+                <p className="truncate text-lg font-semibold text-white leading-tight">
                   Western Culture
                 </p>
-                <p className="text-xs text-white/80">Americans Like Buying</p>
+                <p className="truncate text-xs text-white/80">
+                  Americans Like Buying
+                </p>
               </div>
             </div>
 
@@ -84,9 +89,9 @@ export default function Header({ user, onLogout }) {
             )}
           </div>
 
-          {/* Right actions */}
+          {/* Right */}
           <div className="shrink-0 flex items-center gap-2">
-            {/* Desktop nav (shows on md+) */}
+            {/* Desktop nav */}
             <div className="hidden md:flex items-center gap-2">
               <Link href="/" className={pill}>
                 Home
@@ -127,19 +132,13 @@ export default function Header({ user, onLogout }) {
                     </>
                   ) : null}
 
-                  <button
-                    onClick={onLogout}
-                    className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-gray-900 hover:bg-gray-100 transition whitespace-nowrap"
-                  >
+                  <button onClick={onLogout} className={whiteBtn}>
                     Logout
                   </button>
                 </>
               ) : (
                 <>
-                  <Link
-                    href="/login"
-                    className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-gray-900 hover:bg-gray-100 transition whitespace-nowrap"
-                  >
+                  <Link href="/login" className={whiteBtn}>
                     Login
                   </Link>
                   <Link href="/register" className={adminPill}>
@@ -149,7 +148,7 @@ export default function Header({ user, onLogout }) {
               )}
             </div>
 
-            {/* Mobile menu button (shows below md) */}
+            {/* Mobile menu button */}
             <button
               type="button"
               onClick={() => setMenuOpen((v) => !v)}
@@ -164,8 +163,8 @@ export default function Header({ user, onLogout }) {
 
         {/* Mobile dropdown */}
         <div
-          className={`md:hidden overflow-hidden transition-all ${
-            menuOpen ? "max-h-130mt-4" : "max-h-0"
+          className={`md:hidden overflow-hidden transition-[max-height] duration-300 ease-in-out ${
+            menuOpen ? "max-h-130 mt-4" : "max-h-0"
           }`}
         >
           <div className="h-px w-full bg-white/20 mb-4" />
@@ -175,6 +174,7 @@ export default function Header({ user, onLogout }) {
               <Link href="/" className={pill} onClick={() => setMenuOpen(false)}>
                 Home
               </Link>
+
               <Link
                 href="/products"
                 className={pill}
@@ -184,26 +184,26 @@ export default function Header({ user, onLogout }) {
               </Link>
 
               {user ? (
-                <Link
-                  href="/cart"
-                  className={pill}
-                  onClick={() => setMenuOpen(false)}
-                >
-                  <span>Cart</span>
-                  <span className="ml-2 inline-flex items-center justify-center min-w-7 h-6 px-2 rounded-full bg-white text-gray-900 text-xs font-bold">
-                    {cartCount}
-                  </span>
-                </Link>
-              ) : null}
+                <>
+                  <Link
+                    href="/cart"
+                    className={pill}
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    <span>Cart</span>
+                    <span className="ml-2 inline-flex items-center justify-center min-w-7 h-6 px-2 rounded-full bg-white text-gray-900 text-xs font-bold">
+                      {cartCount}
+                    </span>
+                  </Link>
 
-              {user ? (
-                <Link
-                  href="/checkout"
-                  className={pill}
-                  onClick={() => setMenuOpen(false)}
-                >
-                  Checkout
-                </Link>
+                  <Link
+                    href="/checkout"
+                    className={pill}
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    Checkout
+                  </Link>
+                </>
               ) : null}
             </div>
 
@@ -216,6 +216,7 @@ export default function Header({ user, onLogout }) {
                 >
                   My Orders
                 </Link>
+
                 <Link
                   href="/profile"
                   className={pill}
@@ -248,7 +249,7 @@ export default function Header({ user, onLogout }) {
                     setMenuOpen(false);
                     onLogout();
                   }}
-                  className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-gray-900 hover:bg-gray-100 transition whitespace-nowrap"
+                  className={whiteBtn}
                 >
                   Logout
                 </button>
@@ -257,11 +258,12 @@ export default function Header({ user, onLogout }) {
               <div className="flex flex-wrap gap-2">
                 <Link
                   href="/login"
-                  className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-gray-900 hover:bg-gray-100 transition whitespace-nowrap"
+                  className={whiteBtn}
                   onClick={() => setMenuOpen(false)}
                 >
                   Login
                 </Link>
+
                 <Link
                   href="/register"
                   className={adminPill}
