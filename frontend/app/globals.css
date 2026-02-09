@@ -9,3 +9,12 @@ body {
 body {
   margin: 0;
 }
+html {
+  overflow-y: scroll; /* keeps scrollbar space so layout doesn’t jump */
+}
+
+html, body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden; /* prevents sideways shifting */
+}
