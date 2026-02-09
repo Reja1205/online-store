@@ -59,7 +59,7 @@ export default function Header({ user, onLogout }) {
           <div className="min-w-0">
             <div className="flex items-center gap-3">
               <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 text-white font-bold">
-                OS
+                WC
               </span>
 
               <div className="min-w-0">
