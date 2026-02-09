@@ -40,7 +40,7 @@ export default function Header({ user, onLogout }) {
   }, [user]);
 
   return (
-    <header className="mt-4 rounded-2xl bg-linear-to-r from-indigo-600 via-purple-600 to-pink-600 p-[1px] shadow">
+    <header className="mt-4 rounded-2xl bg-linear-to-r from-indigo-600 via-purple-600 to-pink-600 p-px shadow">
       <div className="rounded-2xl bg-white/10 backdrop-blur px-4 py-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           {/* Left: Brand + tagline */}
