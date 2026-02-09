@@ -18,6 +18,9 @@ export default function Home() {
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState("all"); // all | in | out
 
+  // Optional: show loading state for products
+  const [loadingProducts, setLoadingProducts] = useState(false);
+
   async function loadMe() {
     const { res, data } = await apiJson("/api/auth/me");
 
@@ -31,15 +34,19 @@ export default function Home() {
   }
 
   async function loadProducts() {
+    setLoadingProducts(true);
+
     const { res, data } = await apiJson("/api/products", { headers: {} });
 
     if (!res.ok) {
       setProducts([]);
+      setLoadingProducts(false);
       return;
     }
 
     const list = Array.isArray(data) ? data : data.products;
     setProducts(Array.isArray(list) ? list : []);
+    setLoadingProducts(false);
   }
 
   // ✅ Load cart count (for badge in header)
@@ -115,7 +122,6 @@ export default function Home() {
     setUser(null);
     setCartCount(0);
 
-    // optional: update listeners too
     window.dispatchEvent(new Event("cart:updated"));
   }
 
@@ -137,60 +143,75 @@ export default function Home() {
   }, [products, q, filter]);
 
   return (
-    <div>
-      {/* ✅ pass cartCount so Header can show Cart badge/count */}
-      <Header user={user} onLogout={handleLogout} cartCount={cartCount} />
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-6xl mx-auto px-4 pb-10">
+        <Header user={user} onLogout={handleLogout} cartCount={cartCount} />
 
-      {msg && (
-        <div className="mb-4 rounded-lg border bg-white px-4 py-3 text-sm">
-          {msg}
-        </div>
-      )}
+        {/* Toast / message */}
+        {msg ? (
+          <div className="mt-4 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm shadow-sm">
+            {msg}
+          </div>
+        ) : null}
 
-      <section className="mb-4 rounded-xl border bg-white p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-1 gap-3">
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Search products..."
-              className="w-full rounded-lg border px-3 py-2"
-            />
+        {/* Search + Filter */}
+        <section className="mt-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col sm:flex-row flex-1 gap-3">
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Search products..."
+                className="w-full rounded-xl border border-gray-200 px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-300"
+              />
 
-            <select
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              className="rounded-lg border px-3 py-2"
+              <select
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                className="w-full sm:w-48 rounded-xl border border-gray-200 px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-300"
+              >
+                <option value="all">All</option>
+                <option value="in">In stock</option>
+                <option value="out">Out of stock</option>
+              </select>
+            </div>
+
+            <button
+              onClick={() => {
+                loadProducts();
+                loadCartCount();
+              }}
+              className="w-full sm:w-auto rounded-xl bg-gray-900 px-5 py-2.5 text-white font-semibold hover:bg-black transition"
             >
-              <option value="all">All</option>
-              <option value="in">In stock</option>
-              <option value="out">Out of stock</option>
-            </select>
+              Refresh
+            </button>
           </div>
 
-          <button
-            onClick={() => {
-              loadProducts();
-              loadCartCount();
-            }}
-            className="rounded-lg bg-gray-900 px-4 py-2 text-white hover:bg-black"
-          >
-            Refresh
-          </button>
-        </div>
-      </section>
+          <div className="mt-3 text-xs text-gray-500">
+            Showing <span className="font-semibold text-gray-700">{shown.length}</span> products
+          </div>
+        </section>
 
-      <h2 className="mb-3 text-xl font-semibold">Products</h2>
-
-      {shown.length === 0 ? (
-        <p className="text-sm text-gray-600">No products found.</p>
-      ) : (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {shown.map((p) => (
-            <ProductCard key={p._id} p={p} user={user} onAddToCart={addToCart} />
-          ))}
+        {/* Products */}
+        <div className="mt-6 flex items-end justify-between gap-3">
+          <h2 className="text-xl font-bold text-gray-900">Products</h2>
+          {loadingProducts ? (
+            <span className="text-sm text-gray-500">Loading…</span>
+          ) : null}
         </div>
-      )}
+
+        {shown.length === 0 ? (
+          <div className="mt-4 rounded-2xl border border-gray-200 bg-white p-6 text-sm text-gray-600 shadow-sm">
+            No products found.
+          </div>
+        ) : (
+          <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+            {shown.map((p) => (
+              <ProductCard key={p._id} p={p} user={user} onAddToCart={addToCart} />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
