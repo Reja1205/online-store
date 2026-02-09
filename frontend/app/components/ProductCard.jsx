@@ -7,68 +7,75 @@ export default function ProductCard({ p, user, onAddToCart }) {
   const name = productName(p);
   const price = productPrice(p);
   const stock = productStock(p);
-
   const canAdd = !!user && stock > 0;
-  console.log("PRODUCT ID:", p?._id, p);
 
   return (
-    <div className="bg-white rounded-2xl shadow-md hover:shadow-xl transition p-4 flex flex-col gap-3 border border-gray-100">
-      {/* Title + Stock */}
-      <div className="flex justify-between items-start gap-3">
-        <h3 className="text-lg font-semibold text-gray-800">{name}</h3>
+    <div className="group flex h-full flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:shadow-md">
+      {/* Image */}
+      <div className="relative aspect-4/3 w-full bg-gray-50">
+        {p.imageUrl ? (
+          <img
+            src={p.imageUrl}
+            alt={name}
+            className="h-full w-full object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-sm text-gray-400">
+            No image
+          </div>
+        )}
 
-        <span
-          className={`text-xs px-3 py-1 rounded-full font-medium ${
-            stock > 0
-              ? "bg-green-100 text-green-700"
-              : "bg-red-100 text-red-600"
-          }`}
-        >
-          {stock > 0 ? `In Stock: ${stock}` : "Out of Stock"}
-        </span>
+        {/* Stock badge */}
+        <div className="absolute right-3 top-3">
+          <span
+            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold shadow-sm ${
+              stock > 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"
+            }`}
+          >
+            {stock > 0 ? `In Stock: ${stock}` : "Out of Stock"}
+          </span>
+        </div>
       </div>
 
-      {/* Image */}
-      {p.imageUrl && (
-        <img
-          src={p.imageUrl}
-          alt={name}
-          className="w-full h-44 object-cover rounded-xl border"
-        />
-      )}
+      {/* Content */}
+      <div className="flex flex-1 flex-col p-4">
+        {/* Title + Price */}
+        <div className="flex items-start justify-between gap-3">
+          <h3 className="line-clamp-1 text-base font-semibold text-gray-900">
+            {name}
+          </h3>
+          <p className="shrink-0 text-base font-bold text-indigo-600">
+            ${price}
+          </p>
+        </div>
 
-      {/* Price */}
-      <p className="text-indigo-600 font-semibold text-base">
-        ${price}
-      </p>
-
-      {/* Description */}
-      {p.description && (
-        <p className="text-sm text-gray-500 line-clamp-2">
-          {p.description}
+        {/* Description (keeps height consistent) */}
+        <p className="mt-2 line-clamp-2 min-h-11 text-sm text-gray-600">
+          {p.description ? p.description : " "}
         </p>
-      )}
 
-      {/* Buttons */}
-      <div className="flex gap-2 mt-2">
-        <Link href={`/products/${p._id}`} className="flex-1">
-          <button className="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 rounded-lg transition">
-            View
+        {/* Buttons pinned to bottom */}
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <Link href={`/products/${p._id}`} className="w-full">
+            <button className="w-full rounded-xl bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-900 transition hover:bg-gray-200">
+              View
+            </button>
+          </Link>
+
+          <button
+            onClick={() => onAddToCart(p._id)}
+            disabled={!canAdd}
+            className={`w-full rounded-xl px-4 py-2 text-sm font-semibold transition ${
+              canAdd
+                ? "bg-indigo-600 text-white hover:bg-indigo-700"
+                : "bg-gray-200 text-gray-500 cursor-not-allowed"
+            }`}
+            title={!user ? "Login to add items" : stock <= 0 ? "Out of stock" : ""}
+          >
+            Add
           </button>
-        </Link>
-
-        <button
-          onClick={() => onAddToCart(p._id)}
-          disabled={!canAdd}
-          className={`flex-1 font-medium py-2 rounded-lg transition ${
-            canAdd
-              ? "bg-indigo-600 hover:bg-indigo-700 text-white"
-              : "bg-gray-200 text-gray-500 cursor-not-allowed"
-          }`}
-          title={!user ? "Login to add items" : stock <= 0 ? "Out of stock" : ""}
-        >
-          Add
-        </button>
+        </div>
       </div>
     </div>
   );
