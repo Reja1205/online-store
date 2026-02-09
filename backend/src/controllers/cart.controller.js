@@ -14,14 +14,16 @@ function toId(v) {
 // GET /api/cart
 async function getCart(req, res) {
   try {
-    const cart = await Cart.findOne({ user: req.user.id })
-      .populate("items.product", "name price stock imageUrl");
+    const cart = await Cart.findOne({ user: req.user.id }).populate(
+      "items.product",
+      "name price stock imageUrl"
+    );
 
     if (!cart) return res.json({ cart: { items: [] } });
 
     // ✅ Always include productId even if product was deleted (product becomes null)
     const items = (cart.items || []).map((it) => {
-      const productId = toId(it.product?._id || it.product); // if populated, _id exists; if not, keep raw id
+      const productId = toId(it.product?._id || it.product); // populated -> _id, otherwise raw
       const p = it.product; // may be null
 
       return {
@@ -101,8 +103,25 @@ async function removeFromCart(req, res) {
   }
 }
 
+// POST /api/cart/clear
+async function clearCart(req, res) {
+  try {
+    const cart = await Cart.findOne({ user: req.user.id });
+    if (!cart) return res.json({ message: "Cleared", cart: { items: [] } });
+
+    cart.items = [];
+    await cart.save();
+
+    return res.json({ message: "Cleared", cart });
+  } catch (err) {
+    console.error("CLEAR_CART_ERROR:", err);
+    return res.status(500).json({ message: "Server error", error: err.message });
+  }
+}
+
 module.exports = {
   getCart,
   addToCart,
   removeFromCart,
+  clearCart, // ✅ IMPORTANT
 };

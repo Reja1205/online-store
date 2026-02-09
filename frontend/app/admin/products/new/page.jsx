@@ -103,6 +103,14 @@ export default function NewProductPage() {
           onChange={(e) => setDescription(e.target.value)}
         />
 
+        <button
+  type="button"
+  onClick={generateDescription}
+  className="rounded-lg bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700 mt-2"
+>
+  Generate with AI
+</button>
+
         {/* IMAGE INPUT */}
         <input
           type="file"
