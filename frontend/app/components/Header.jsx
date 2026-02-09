@@ -43,7 +43,7 @@ export default function Header({ user, onLogout }) {
     <header className="mt-4 rounded-2xl bg-linear-to-r from-indigo-600 via-purple-600 to-pink-600 p-px shadow">
       <div className="rounded-2xl bg-white/10 backdrop-blur px-4 py-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          {/* Left: Brand + tagline */}
+          {/* Left */}
           <div>
             <div className="flex items-center gap-2">
               <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white/20 text-white font-bold">
@@ -58,7 +58,6 @@ export default function Header({ user, onLogout }) {
               </div>
             </div>
 
-            {/* Logged in user line */}
             {user ? (
               <p className="mt-2 text-sm text-white/90">
                 Hi, <span className="font-semibold">{user.name}</span>
@@ -73,7 +72,7 @@ export default function Header({ user, onLogout }) {
             )}
           </div>
 
-          {/* Right: Nav */}
+          {/* Right */}
           <nav className="flex flex-wrap items-center gap-2">
             <Link
               href="/"
@@ -96,11 +95,9 @@ export default function Header({ user, onLogout }) {
                   className="relative rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white hover:bg-white/25"
                 >
                   Cart
-                  {cartCount > 0 && (
-                    <span className="ml-2 inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full bg-white text-gray-900 text-xs font-bold">
-                      {cartCount}
-                    </span>
-                  )}
+                  <span className="ml-2 inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full bg-white text-gray-900 text-xs font-bold">
+                    {cartCount}
+                  </span>
                 </Link>
 
                 <Link

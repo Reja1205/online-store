@@ -11,7 +11,6 @@ export default function CartPage() {
   const [loading, setLoading] = useState(true);
 
   function normalizeCartItems(data) {
-    // supports {cart:{items:[...]}} or {items:[...]} or {cartItems:[...]}
     const list = data?.cart?.items || data?.items || data?.cartItems || [];
     return Array.isArray(list) ? list : [];
   }
@@ -32,6 +31,11 @@ export default function CartPage() {
     const cartItems = normalizeCartItems(data);
     setItems(cartItems);
     setLoading(false);
+
+    // ✅ update header badge
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("cart:updated"));
+    }
   }
 
   async function removeItem(productId) {
@@ -53,8 +57,12 @@ export default function CartPage() {
     }
 
     setMsg("Removed ✅");
+
+    // ✅ refresh cart + update header badge immediately
     await loadCart();
-    window.dispatchEvent(new Event("cart:updated"));
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("cart:updated"));
+    }
   }
 
   useEffect(() => {
@@ -101,8 +109,16 @@ export default function CartPage() {
         </Link>
       </div>
 
-      {msg && <p className="mt-3 text-green-700 bg-green-50 border border-green-200 rounded-xl px-4 py-2">{msg}</p>}
-      {error && <p className="mt-3 text-red-700 bg-red-50 border border-red-200 rounded-xl px-4 py-2">{error}</p>}
+      {msg && (
+        <p className="mt-3 text-green-700 bg-green-50 border border-green-200 rounded-xl px-4 py-2">
+          {msg}
+        </p>
+      )}
+      {error && (
+        <p className="mt-3 text-red-700 bg-red-50 border border-red-200 rounded-xl px-4 py-2">
+          {error}
+        </p>
+      )}
 
       <div className="mt-5">
         {rows.length === 0 ? (
@@ -124,7 +140,11 @@ export default function CartPage() {
                 >
                   <div className="w-24 h-24 rounded-xl bg-gray-100 overflow-hidden flex items-center justify-center border">
                     {r.imageUrl ? (
-                      <img src={r.imageUrl} alt={r.name} className="w-full h-full object-cover" />
+                      <img
+                        src={r.imageUrl}
+                        alt={r.name}
+                        className="w-full h-full object-cover"
+                      />
                     ) : (
                       <span className="text-xs text-gray-400">No image</span>
                     )}
@@ -135,13 +155,18 @@ export default function CartPage() {
                       <div>
                         <p className="font-semibold text-gray-900">{r.name}</p>
                         <p className="text-sm text-gray-600 mt-1">
-                          Price: <span className="font-medium text-indigo-700">${r.price}</span>
+                          Price:{" "}
+                          <span className="font-medium text-indigo-700">
+                            ${r.price}
+                          </span>
                         </p>
                       </div>
 
                       <span
                         className={`text-xs px-3 py-1 rounded-full font-medium ${
-                          r.stock > 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"
+                          r.stock > 0
+                            ? "bg-green-100 text-green-700"
+                            : "bg-red-100 text-red-600"
                         }`}
                       >
                         {r.stock > 0 ? `In Stock: ${r.stock}` : "Out of Stock"}
