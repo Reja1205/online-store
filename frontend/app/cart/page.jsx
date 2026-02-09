@@ -11,6 +11,7 @@ export default function CartPage() {
   const [loading, setLoading] = useState(true);
 
   function normalizeCartItems(data) {
+    // supports {cart:{items:[...]}} or {items:[...]} or {cartItems:[...]}
     const list = data?.cart?.items || data?.items || data?.cartItems || [];
     return Array.isArray(list) ? list : [];
   }
@@ -32,15 +33,18 @@ export default function CartPage() {
     setItems(cartItems);
     setLoading(false);
 
-    // ✅ update header badge
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new Event("cart:updated"));
-    }
+    // update header badge
+    window.dispatchEvent(new Event("cart:updated"));
   }
 
   async function removeItem(productId) {
     setError("");
     setMsg("");
+
+    if (!productId) {
+      setError("Missing productId for this cart item (deleted product).");
+      return;
+    }
 
     const ok = confirm("Remove this item from cart?");
     if (!ok) return;
@@ -57,30 +61,38 @@ export default function CartPage() {
     }
 
     setMsg("Removed ✅");
-
-    // ✅ refresh cart + update header badge immediately
     await loadCart();
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new Event("cart:updated"));
-    }
   }
 
   useEffect(() => {
     loadCart();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const rows = useMemo(() => {
     return items.map((it) => {
-      const p = it.product || it.productId || it;
-      const id = (p?._id || it.product || it.productId || "").toString();
+      // ✅ new backend returns: { productId, qty, product: null|{...} }
+      const productId = String(it.productId || it.product || it.product?._id || "");
+      const p = it.product || null;
+
+      // If product was deleted, show friendly placeholders
+      const safeProduct = p || {
+        _id: productId,
+        name: "Deleted product",
+        price: 0,
+        stock: 0,
+        imageUrl: "",
+        description: "",
+      };
 
       return {
-        id,
-        name: productName(p),
-        price: productPrice(p),
-        stock: productStock(p),
+        id: productId,
+        name: productName(safeProduct),
+        price: productPrice(safeProduct),
+        stock: productStock(safeProduct),
         qty: Number(it.qty || 1),
-        imageUrl: p?.imageUrl || "",
+        imageUrl: safeProduct.imageUrl || "",
+        deleted: !p,
       };
     });
   }, [items]);
@@ -140,11 +152,7 @@ export default function CartPage() {
                 >
                   <div className="w-24 h-24 rounded-xl bg-gray-100 overflow-hidden flex items-center justify-center border">
                     {r.imageUrl ? (
-                      <img
-                        src={r.imageUrl}
-                        alt={r.name}
-                        className="w-full h-full object-cover"
-                      />
+                      <img src={r.imageUrl} alt={r.name} className="w-full h-full object-cover" />
                     ) : (
                       <span className="text-xs text-gray-400">No image</span>
                     )}
@@ -154,7 +162,14 @@ export default function CartPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="font-semibold text-gray-900">{r.name}</p>
-                        <p className="text-sm text-gray-600 mt-1">
+
+                        {r.deleted && (
+                          <p className="text-xs mt-1 text-red-600">
+                            This product was deleted by admin. You can remove it from cart.
+                          </p>
+                        )}
+
+                        <p className="text-sm text-gray-600 mt-2">
                           Price:{" "}
                           <span className="font-medium text-indigo-700">
                             ${r.price}
