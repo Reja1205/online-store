@@ -1,170 +1,165 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
-import { apiJson } from "../lib/api";
+import Link from "next/link";
 
-export default function Header({ user, onLogout }) {
-  const [cartCount, setCartCount] = useState(0);
+export default function Header({ user, onLogout, cartCount = 0 }) {
+  const [open, setOpen] = useState(false);
 
-  async function loadCartCount() {
-    if (!user) {
-      setCartCount(0);
-      return;
-    }
-
-    const { res, data } = await apiJson("/api/cart");
-    if (!res.ok) {
-      setCartCount(0);
-      return;
-    }
-
-    const items = data?.cart?.items || data?.items || data?.cartItems || [];
-    const count = Array.isArray(items)
-      ? items.reduce((sum, it) => sum + Number(it.qty || 0), 0)
-      : 0;
-
-    setCartCount(count);
-  }
-
+  // close menu when user changes (login/logout) or route changes feel
   useEffect(() => {
-    loadCartCount();
-
-    function onCartUpdated() {
-      loadCartCount();
-    }
-
-    window.addEventListener("cart:updated", onCartUpdated);
-    return () => window.removeEventListener("cart:updated", onCartUpdated);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setOpen(false);
   }, [user]);
 
-  return (
-    <header className="mt-4 rounded-2xl bg-linear-to-r from-indigo-600 via-purple-600 to-pink-600 p-px shadow">
-      <div className="rounded-2xl bg-white/10 backdrop-blur px-4 py-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          {/* Left */}
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white/20 text-white font-bold">
-                OS
-              </span>
+  const NavLink = ({ href, children }) => (
+    <Link
+      href={href}
+      onClick={() => setOpen(false)}
+      className="rounded-xl px-3 py-2 text-sm font-medium text-white/90 hover:bg-white/15 hover:text-white transition"
+    >
+      {children}
+    </Link>
+  );
 
-              <div>
-                <p className="text-lg font-semibold text-white leading-tight">
-                  Online Store
-                </p>
-                <p className="text-xs text-white/80">Buy with confidence</p>
+  return (
+    <header className="mt-4 rounded-2xl bg-lonear-to-r from-indigo-600 via-purple-600 to-pink-600 p-px shadow-lg">
+      <div className="rounded-2xl bg-black/10 backdrop-blur px-4 py-4">
+        {/* Top row */}
+        <div className="flex items-center justify-between gap-3">
+          {/* Brand */}
+          <Link href="/" className="flex items-center gap-3">
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-white/20 text-white font-bold">
+              OS
+            </span>
+            <div className="leading-tight">
+              <div className="text-lg font-semibold text-white">Online Store</div>
+              <div className="text-xs text-white/80">
+                {user ? (
+                  <>
+                    Buy with confidence, <span className="font-semibold">{user.name}</span>
+                    <span className="ml-2 rounded-full bg-white/20 px-2 py-0.5 text-[11px]">
+                      {user.role}
+                    </span>
+                  </>
+                ) : (
+                  "Buy with confidence"
+                )}
               </div>
             </div>
+          </Link>
 
+          {/* Right actions */}
+          <div className="flex items-center gap-2">
+            {/* Cart badge (always visible when logged in) */}
             {user ? (
-              <p className="mt-2 text-sm text-white/90">
-                Hi, <span className="font-semibold">{user.name}</span>
-                <span className="ml-2 rounded-full bg-white/20 px-2 py-0.5 text-xs">
-                  {user.role}
+              <Link
+                href="/cart"
+                className="relative rounded-xl bg-white/15 px-3 py-2 text-sm font-semibold text-white hover:bg-white/25 transition"
+              >
+                Cart
+                <span className="ml-2 inline-flex min-w-6 h-6 items-center justify-center rounded-full bg-white text-gray-900 text-xs font-bold px-2">
+                  {cartCount}
                 </span>
-              </p>
-            ) : (
-              <p className="mt-2 text-sm text-white/90">
-                Fast checkout • Secure orders • Simple shopping
-              </p>
-            )}
-          </div>
+              </Link>
+            ) : null}
 
-          {/* Right */}
-          <nav className="flex flex-wrap items-center gap-2">
-            <Link
-              href="/"
-              className="rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white hover:bg-white/25"
+            {/* Mobile menu button */}
+            <button
+              onClick={() => setOpen((v) => !v)}
+              className="sm:hidden rounded-xl bg-white/15 px-3 py-2 text-sm font-semibold text-white hover:bg-white/25 transition"
+              aria-expanded={open}
+              aria-label="Toggle menu"
             >
-              Home
-            </Link>
+              {open ? "Close" : "Menu"}
+            </button>
 
-            <Link
-              href="/products"
-              className="rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white hover:bg-white/25"
-            >
-              Products
-            </Link>
-
+            {/* Desktop logout */}
             {user ? (
-              <>
-                <Link
-                  href="/cart"
-                  className="relative rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white hover:bg-white/25"
-                >
-                  Cart
-                  <span className="ml-2 inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full bg-white text-gray-900 text-xs font-bold">
-                    {cartCount}
-                  </span>
-                </Link>
-
-                <Link
-                  href="/checkout"
-                  className="rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white hover:bg-white/25"
-                >
-                  Checkout
-                </Link>
-
-                <Link
-                  href="/orders"
-                  className="rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white hover:bg-white/25"
-                >
-                  My Orders
-                </Link>
-
-                <Link
-                  href="/profile"
-                  className="rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white hover:bg-white/25"
-                >
-                  Profile
-                </Link>
-
-                {user.role === "admin" ? (
-                  <>
-                    <Link
-                      href="/admin"
-                      className="rounded-xl bg-black/30 px-4 py-2 text-sm font-semibold text-white hover:bg-black/40"
-                    >
-                      Admin Dashboard
-                    </Link>
-
-                    <Link
-                      href="/admin/orders"
-                      className="rounded-xl bg-black/30 px-4 py-2 text-sm font-semibold text-white hover:bg-black/40"
-                    >
-                      Admin Orders
-                    </Link>
-                  </>
-                ) : null}
-
-                <button
-                  onClick={onLogout}
-                  className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-gray-900 hover:bg-gray-100"
-                >
-                  Logout
-                </button>
-              </>
+              <button
+                onClick={onLogout}
+                className="hidden sm:inline-flex rounded-xl bg-white px-4 py-2 text-sm font-semibold text-gray-900 hover:bg-gray-100 transition"
+              >
+                Logout
+              </button>
             ) : (
-              <>
+              <div className="hidden sm:flex items-center gap-2">
                 <Link
                   href="/login"
-                  className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-gray-900 hover:bg-gray-100"
+                  className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-gray-900 hover:bg-gray-100 transition"
                 >
                   Login
                 </Link>
-
                 <Link
                   href="/register"
-                  className="rounded-xl bg-black/30 px-4 py-2 text-sm font-semibold text-white hover:bg-black/40"
+                  className="rounded-xl bg-black/30 px-4 py-2 text-sm font-semibold text-white hover:bg-black/40 transition"
                 >
                   Register
                 </Link>
-              </>
+              </div>
             )}
-          </nav>
+          </div>
         </div>
+
+        {/* Desktop nav */}
+        <div className="hidden sm:flex flex-wrap items-center gap-2 mt-4">
+          <NavLink href="/">Home</NavLink>
+          <NavLink href="/products">Products</NavLink>
+
+          {user ? (
+            <>
+              <NavLink href="/checkout">Checkout</NavLink>
+              <NavLink href="/orders">My Orders</NavLink>
+              <NavLink href="/profile">Profile</NavLink>
+
+              {user.role === "admin" ? (
+                <>
+                  <NavLink href="/admin">Admin Dashboard</NavLink>
+                  <NavLink href="/admin/orders">Admin Orders</NavLink>
+                </>
+              ) : null}
+            </>
+          ) : null}
+        </div>
+
+        {/* Mobile dropdown */}
+        {open ? (
+          <div className="sm:hidden mt-4 rounded-2xl bg-white/10 border border-white/15 p-3">
+            <div className="grid grid-cols-2 gap-2">
+              <NavLink href="/">Home</NavLink>
+              <NavLink href="/products">Products</NavLink>
+
+              {user ? (
+                <>
+                  <NavLink href="/checkout">Checkout</NavLink>
+                  <NavLink href="/orders">My Orders</NavLink>
+                  <NavLink href="/profile">Profile</NavLink>
+
+                  {user.role === "admin" ? (
+                    <>
+                      <NavLink href="/admin">Admin Dashboard</NavLink>
+                      <NavLink href="/admin/orders">Admin Orders</NavLink>
+                    </>
+                  ) : null}
+
+                  <button
+                    onClick={() => {
+                      setOpen(false);
+                      onLogout();
+                    }}
+                    className="col-span-2 rounded-xl bg-white px-4 py-2 text-sm font-semibold text-gray-900 hover:bg-gray-100 transition"
+                  >
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <>
+                  <NavLink href="/login">Login</NavLink>
+                  <NavLink href="/register">Register</NavLink>
+                </>
+              )}
+            </div>
+          </div>
+        ) : null}
       </div>
     </header>
   );
