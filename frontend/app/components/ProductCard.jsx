@@ -16,7 +16,7 @@ export default function ProductCard({ p, user, onAddToCart }) {
       {/* IMAGE + STOCK BADGE */}
       <div className="relative w-full overflow-hidden bg-gray-50">
         {/* Fixed height mobile, ratio desktop */}
-        <div className="h-44 sm:aspect-[4/3] sm:h-auto">
+        <div className="h-44 sm:aspect-4/3 sm:h-auto">
           {p.imageUrl ? (
             <img
               src={p.imageUrl}
