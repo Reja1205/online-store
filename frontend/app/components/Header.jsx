@@ -64,9 +64,9 @@ export default function Header({ user, onLogout }) {
 
               <div className="min-w-0">
                 <p className="text-lg font-semibold text-white leading-tight">
-                  Online Store
+                  Western Culture
                 </p>
-                <p className="text-xs text-white/80">Buy with confidence</p>
+                <p className="text-xs text-white/80">Americans Like Buying</p>
               </div>
             </div>
 
