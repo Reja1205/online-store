@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -57,7 +57,6 @@ export default function CheckoutPage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(data?.message || "Failed to load checkout preview");
-        setLoading(false);
         return;
       }
 
@@ -101,8 +100,8 @@ export default function CheckoutPage() {
       }
 
       setMsg("Payment successful ✅ Order created!");
-      // go to orders page
-      setTimeout(() => router.push("/orders"), 600);
+      window.dispatchEvent(new Event("cart:updated")); // ✅ cart badge updates
+      setTimeout(() => router.push("/orders"), 650);
     } catch {
       setError("Network error");
     } finally {
@@ -115,102 +114,223 @@ export default function CheckoutPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const formFields = useMemo(
+    () => [
+      ["fullName", "Full Name", "text"],
+      ["email", "Email", "email"],
+      ["phone", "Phone", "tel"],
+      ["address1", "Address Line 1", "text"],
+      ["address2", "Address Line 2 (optional)", "text"],
+      ["city", "City", "text"],
+      ["state", "State", "text"],
+      ["postalCode", "Postal Code", "text"],
+      ["country", "Country", "text"],
+    ],
+    []
+  );
+
+  const canPay =
+    items.length > 0 &&
+    shippingAddress.fullName.trim() &&
+    shippingAddress.email.trim() &&
+    shippingAddress.phone.trim() &&
+    shippingAddress.address1.trim() &&
+    shippingAddress.city.trim() &&
+    shippingAddress.postalCode.trim() &&
+    shippingAddress.country.trim();
+
   if (loading) {
-    return <div style={{ padding: 20 }}>Loading checkout...</div>;
+    return (
+      <div className="max-w-5xl mx-auto px-4 py-10">
+        <div className="rounded-2xl border bg-white p-6 shadow-sm">
+          <p className="text-gray-700">Loading checkout...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div style={{ padding: 20, maxWidth: 900 }}>
-      <h1>Checkout</h1>
+    <div className="max-w-5xl mx-auto px-4 py-8">
+      {/* Top bar */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Checkout</h1>
+          <p className="text-sm text-gray-600 mt-1">
+            Confirm your items and add shipping details.
+          </p>
+        </div>
 
-      <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
-        <Link href="/cart">
-          <button style={{ padding: 8, cursor: "pointer" }}>Back to Cart</button>
-        </Link>
-        <Link href="/">
-          <button style={{ padding: 8, cursor: "pointer" }}>Home</button>
-        </Link>
-        <button onClick={loadPreview} style={{ padding: 8, cursor: "pointer" }}>
-          Refresh
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/cart">
+            <button className="rounded-xl bg-white border px-4 py-2 text-sm font-medium hover:bg-gray-50">
+              ← Back to Cart
+            </button>
+          </Link>
+
+          <Link href="/">
+            <button className="rounded-xl bg-white border px-4 py-2 text-sm font-medium hover:bg-gray-50">
+              Home
+            </button>
+          </Link>
+
+          <button
+            onClick={loadPreview}
+            className="rounded-xl bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-black"
+          >
+            Refresh
+          </button>
+        </div>
       </div>
 
-      {msg && <p>{msg}</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
+      {/* Alerts */}
+      {msg && (
+        <div className="mt-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+          {msg}
+        </div>
+      )}
+
+      {error && (
+        <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          {error}
+        </div>
+      )}
 
       {items.length === 0 ? (
-        <p>Your cart is empty.</p>
-      ) : (
-        <>
-          <h2>Order Summary</h2>
+        <div className="mt-6 rounded-2xl border bg-white p-6 shadow-sm">
+          <p className="text-gray-700 font-medium">Your cart is empty.</p>
+          <p className="text-sm text-gray-600 mt-1">
+            Add items to your cart to continue checkout.
+          </p>
 
-          <div style={{ display: "grid", gap: 10 }}>
-            {items.map((it, idx) => (
-              <div
-                key={idx}
-                style={{ border: "1px solid #ccc", padding: 12, borderRadius: 8 }}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <b>{it.name}</b>
-                  <span>
-                    ${Number(it.price || 0).toFixed(2)} x {it.qty}
+          <Link href="/products">
+            <button className="mt-4 rounded-xl bg-indigo-600 px-5 py-2.5 text-white font-semibold hover:bg-indigo-700">
+              Browse Products
+            </button>
+          </Link>
+        </div>
+      ) : (
+        <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left: Address */}
+          <div className="lg:col-span-2">
+            <div className="rounded-2xl border bg-white p-5 shadow-sm">
+              <h2 className="text-lg font-semibold text-gray-900">Shipping Address</h2>
+              <p className="text-sm text-gray-600 mt-1">
+                This is a mock checkout, but the order will be saved.
+              </p>
+
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {formFields.map(([key, label, type]) => (
+                  <div
+                    key={key}
+                    className={
+                      key === "address1" || key === "address2"
+                        ? "sm:col-span-2"
+                        : ""
+                    }
+                  >
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">
+                      {label}
+                    </label>
+                    <input
+                      type={type}
+                      value={shippingAddress[key]}
+                      onChange={(e) =>
+                        setShippingAddress((prev) => ({
+                          ...prev,
+                          [key]: e.target.value,
+                        }))
+                      }
+                      placeholder={label}
+                      className="w-full rounded-xl border px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-5 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+                <div className="text-xs text-gray-500">
+                  Required fields: name, email, phone, address, city, postal code, country.
+                </div>
+
+                <button
+                  onClick={payNow}
+                  disabled={!canPay || paying}
+                  className={`rounded-xl px-5 py-3 text-sm font-semibold transition ${
+                    !canPay || paying
+                      ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                      : "bg-indigo-600 text-white hover:bg-indigo-700"
+                  }`}
+                >
+                  {paying ? "Processing..." : "Pay Now (Mock)"}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Summary */}
+          <div>
+            <div className="rounded-2xl border bg-white p-5 shadow-sm">
+              <h2 className="text-lg font-semibold text-gray-900">Order Summary</h2>
+
+              <div className="mt-4 space-y-3">
+                {items.map((it, idx) => (
+                  <div key={idx} className="rounded-xl border bg-gray-50 p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-gray-900">{it.name}</p>
+                        <p className="text-xs text-gray-600 mt-0.5">
+                          ${Number(it.price || 0).toFixed(2)} × {it.qty}
+                        </p>
+                      </div>
+                      <p className="text-sm font-semibold text-gray-900">
+                        ${Number(it.lineTotal || 0).toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-5 border-t pt-4 space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600">Items total</span>
+                  <span className="font-semibold text-gray-900">
+                    ${itemsTotal.toFixed(2)}
                   </span>
                 </div>
-                <div style={{ opacity: 0.85, marginTop: 6 }}>
-                  Line total: ${Number(it.lineTotal || 0).toFixed(2)}
+
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600">Shipping</span>
+                  <span className="font-semibold text-gray-900">
+                    ${shippingFee.toFixed(2)}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between text-base">
+                  <span className="font-semibold text-gray-900">Total</span>
+                  <span className="font-extrabold text-indigo-700">
+                    ${totalUSD.toFixed(2)}
+                  </span>
                 </div>
               </div>
-            ))}
+
+              <div className="mt-4 text-xs text-gray-500">
+                By clicking “Pay Now (Mock)”, you create an order and mark it paid in your system.
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-2xl border bg-white p-5 shadow-sm">
+              <h3 className="font-semibold text-gray-900">Need to edit your cart?</h3>
+              <p className="text-sm text-gray-600 mt-1">
+                You can adjust items in the cart before checkout.
+              </p>
+              <Link href="/cart">
+                <button className="mt-3 rounded-xl bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-black">
+                  Go to Cart
+                </button>
+              </Link>
+            </div>
           </div>
-
-          <div style={{ marginTop: 14 }}>
-            <p style={{ margin: 0 }}>
-              Items total: <b>${itemsTotal.toFixed(2)}</b>
-            </p>
-            <p style={{ margin: 0 }}>
-              Shipping fee: <b>${shippingFee.toFixed(2)}</b>
-            </p>
-            <p style={{ margin: "8px 0 0 0" }}>
-              Total: <b>${totalUSD.toFixed(2)}</b>
-            </p>
-          </div>
-
-          <hr style={{ margin: "18px 0" }} />
-
-          <h2>Shipping Address</h2>
-
-          <div style={{ display: "grid", gap: 10, maxWidth: 520 }}>
-            {[
-              ["fullName", "Full Name"],
-              ["email", "Email"],
-              ["phone", "Phone"],
-              ["address1", "Address Line 1"],
-              ["address2", "Address Line 2 (optional)"],
-              ["city", "City"],
-              ["state", "State"],
-              ["postalCode", "Postal Code"],
-              ["country", "Country"],
-            ].map(([key, label]) => (
-              <input
-                key={key}
-                placeholder={label}
-                value={shippingAddress[key]}
-                onChange={(e) =>
-                  setShippingAddress((prev) => ({ ...prev, [key]: e.target.value }))
-                }
-                style={{ padding: 10 }}
-              />
-            ))}
-
-            <button
-              onClick={payNow}
-              disabled={paying}
-              style={{ padding: 10, cursor: "pointer" }}
-            >
-              {paying ? "Processing..." : "Pay Now (Mock)"}
-            </button>
-          </div>
-        </>
+        </div>
       )}
     </div>
   );
