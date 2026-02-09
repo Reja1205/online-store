@@ -1,10 +1,46 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { apiJson } from "../lib/api";
 
 export default function Header({ user, onLogout }) {
+  const [cartCount, setCartCount] = useState(0);
+
+  async function loadCartCount() {
+    if (!user) {
+      setCartCount(0);
+      return;
+    }
+
+    const { res, data } = await apiJson("/api/cart");
+    if (!res.ok) {
+      setCartCount(0);
+      return;
+    }
+
+    const items = data?.cart?.items || data?.items || data?.cartItems || [];
+    const count = Array.isArray(items)
+      ? items.reduce((sum, it) => sum + Number(it.qty || 0), 0)
+      : 0;
+
+    setCartCount(count);
+  }
+
+  useEffect(() => {
+    loadCartCount();
+
+    function onCartUpdated() {
+      loadCartCount();
+    }
+
+    window.addEventListener("cart:updated", onCartUpdated);
+    return () => window.removeEventListener("cart:updated", onCartUpdated);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
   return (
-    <header className="mt-4 rounded-2xl bg-linear-to-r from-indigo-600 via-purple-600 to-pink-600 p-[1px shadow">
+    <header className="mt-4 rounded-2xl bg-linear-to-r from-indigo-600 via-purple-600 to-pink-600 p-[1px] shadow">
       <div className="rounded-2xl bg-white/10 backdrop-blur px-4 py-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           {/* Left: Brand + tagline */}
@@ -18,9 +54,7 @@ export default function Header({ user, onLogout }) {
                 <p className="text-lg font-semibold text-white leading-tight">
                   Online Store
                 </p>
-                <p className="text-xs text-white/80">
-                  Buy with confidence
-                </p>
+                <p className="text-xs text-white/80">Buy with confidence</p>
               </div>
             </div>
 
@@ -59,9 +93,14 @@ export default function Header({ user, onLogout }) {
               <>
                 <Link
                   href="/cart"
-                  className="rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white hover:bg-white/25"
+                  className="relative rounded-xl bg-white/15 px-4 py-2 text-sm font-medium text-white hover:bg-white/25"
                 >
                   Cart
+                  {cartCount > 0 && (
+                    <span className="ml-2 inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full bg-white text-gray-900 text-xs font-bold">
+                      {cartCount}
+                    </span>
+                  )}
                 </Link>
 
                 <Link
