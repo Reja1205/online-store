@@ -6,6 +6,7 @@ A full-stack e-commerce web application with complete user and admin functionali
 https://online-store-six-gules.vercel.app
 
 ---
+![image](https://github.com/user-attachments/assets/3ccdbd2a-233c-451e-b137-6f17542ea494)
 
 ## Key Features
 
