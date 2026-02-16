@@ -2,12 +2,8 @@
 
 A full-stack e-commerce web application with complete user and admin functionality. The platform supports real-world shopping behavior, product lifecycle management, order processing, and role-based dashboards with a responsive UI.
 
-## Live Demo
+## Live Demo[
 https://online-store-six-gules.vercel.app
-
----
-##screenshots
-![image](https://github.com/user-attachments/assets/3ccdbd2a-233c-451e-b137-6f17542ea494)
 
 ## Key Features
 
