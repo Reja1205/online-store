@@ -4,7 +4,6 @@ const cookieParser = require("cookie-parser");
 const mongoose = require("mongoose");
 const aiRoutes = require("./routes/ai.routes");
 
-
 const authRoutes = require("./routes/auth.routes");
 const productRoutes = require("./routes/product.routes");
 const cartRoutes = require("./routes/cart.routes");
@@ -19,37 +18,51 @@ app.set("trust proxy", 1);
 app.use(express.json());
 app.use(cookieParser());
 
-// ✅ Allow ONLY your Vercel site (and localhost for dev)
-const allowList = [
-  "http://localhost:3000",
-  "https://online-store-six-gules.vercel.app",
-];
+// ✅ Final CORS Configuration
+const corsOptions = {
+  origin: function (origin, cb) {
+    if (!origin) return cb(null, true); // Postman / curl
 
-app.use(
-  cors({
-    origin: function (origin, cb) {
-      // allow Postman/curl (no Origin header)
-      if (!origin) return cb(null, true);
+    // Local development
+    if (origin === "http://localhost:3000") return cb(null, true);
 
-      if (allowList.includes(origin)) return cb(null, true);
+    // Production frontend
+    if (origin === "https://online-store-six-gules.vercel.app")
+      return cb(null, true);
 
-      return cb(new Error("CORS blocked: " + origin));
-    },
-    credentials: true,
-  })
-);
+    // ✅ Allow ALL Vercel deployments (preview + production)
+    try {
+      const { hostname } = new URL(origin);
+      if (hostname.endsWith(".vercel.app")) return cb(null, true);
+    } catch (e) {
+      // ignore invalid origin format
+    }
+
+    return cb(new Error("CORS blocked: " + origin));
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+
+app.use(cors(corsOptions));
+
+// ✅ Safe preflight handler (Express/router compatible)
+app.options(/.*/, cors(corsOptions));
 
 // Health check
 app.get("/health", (req, res) => {
   res.json({
     status: "OK",
     message: "Server is running",
-    db: mongoose.connection.readyState === 1 ? "connected" : "not_connected",
+    db:
+      mongoose.connection.readyState === 1
+        ? "connected"
+        : "not_connected",
   });
 });
 
 // Routes
-
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/cart", cartRoutes);
@@ -58,7 +71,9 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/ai", aiRoutes);
 
 // 404
-app.use((req, res) => res.status(404).json({ message: "Route not found" }));
+app.use((req, res) =>
+  res.status(404).json({ message: "Route not found" })
+);
 
 // Global error handler
 app.use((err, req, res, next) => {

@@ -2,18 +2,19 @@ const bcrypt = require("bcrypt");
 const User = require("../models/User");
 const { signToken } = require("../utils/jwt");
 
-function buildCookieOptions() {
-  const frontend = process.env.FRONTEND_ORIGIN || "";
-  const isHttpsFrontend = frontend.startsWith("https://");
+function buildCookieOptions(req) {
+  const origin = req.headers.origin || "";
 
+  // If the frontend is https (Vercel preview/prod), we must use SameSite=None + Secure
+  const isHttpsFrontend = origin.startsWith("https://");
   const isProd = process.env.NODE_ENV === "production" || isHttpsFrontend;
 
   return {
     httpOnly: true,
-    secure: isProd, // ✅ must be true for SameSite=None
+    secure: isProd,                 // ✅ required for SameSite=None
     sameSite: isProd ? "none" : "lax",
     maxAge: 7 * 24 * 60 * 60 * 1000,
-    path: "/", // ✅ important
+    path: "/",
   };
 }
 
@@ -107,11 +108,10 @@ async function login(req, res) {
 
     const token = signToken({ id: user._id.toString(), role: user.role });
 
-    // ✅ cookie (works in many browsers, but can be blocked cross-site on Safari)
     const cookieName = process.env.COOKIE_NAME || "token";
-    res.cookie(cookieName, token, buildCookieOptions());
+    res.cookie(cookieName, token, buildCookieOptions(req));
 
-    // ✅ IMPORTANT: return token for frontend Bearer auth (most reliable)
+    // Return token too (useful if you switch to Authorization header later)
     return res.json({
       message: "Login successful",
       token,
@@ -126,7 +126,7 @@ async function login(req, res) {
 // POST /api/auth/logout
 function logout(req, res) {
   const cookieName = process.env.COOKIE_NAME || "token";
-  res.clearCookie(cookieName, buildCookieOptions());
+  res.clearCookie(cookieName, buildCookieOptions(req));
   return res.json({ message: "Logged out" });
 }
 
