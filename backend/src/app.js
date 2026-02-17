@@ -18,29 +18,30 @@ app.set("trust proxy", 1);
 app.use(express.json());
 app.use(cookieParser());
 
-// ✅ CORS: allow localhost, your production domain, and ALL Vercel preview domains
-app.use(
-  cors({
-    origin: function (origin, cb) {
-      // allow Postman/curl (no Origin header)
-      if (!origin) return cb(null, true);
+// ✅ Final CORS Configuration (Production + Preview + Dev)
+const corsOptions = {
+  origin: function (origin, cb) {
+    if (!origin) return cb(null, true); // Postman / curl
 
-      // allow localhost (dev)
-      if (origin === "http://localhost:3000") return cb(null, true);
+    if (origin === "http://localhost:3000") return cb(null, true);
 
-      // allow production frontend
-      if (origin === "https://online-store-six-gules.vercel.app")
-        return cb(null, true);
+    if (origin === "https://online-store-six-gules.vercel.app")
+      return cb(null, true);
 
-      // ✅ allow all Vercel deployments (preview + production)
-      // Example: https://online-store-git-admin-dashboard-xxxx.vercel.app
-      if (origin.includes("vercel.app")) return cb(null, true);
+    // ✅ Allow all Vercel deployments (preview + prod)
+    if (origin.includes("vercel.app")) return cb(null, true);
 
-      return cb(new Error("CORS blocked: " + origin));
-    },
-    credentials: true,
-  })
-);
+    return cb(new Error("CORS blocked: " + origin));
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+
+app.use(cors(corsOptions));
+
+// ✅ Handle preflight requests properly
+app.options("*", cors(corsOptions));
 
 // Health check
 app.get("/health", (req, res) => {
