@@ -33,7 +33,7 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-gray-100">
+    <div className="min-h-screen bg-linear-to-b from-slate-50 to-gray-100">
       <div className="mx-auto max-w-5xl px-4 py-8">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
