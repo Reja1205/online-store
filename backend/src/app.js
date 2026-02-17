@@ -18,24 +18,23 @@ app.set("trust proxy", 1);
 app.use(express.json());
 app.use(cookieParser());
 
-// ✅ Allow production, preview, and localhost for dev
-const allowList = [
-  "http://localhost:3000",
-  "https://online-store-six-gules.vercel.app",
-];
-
+// ✅ CORS: allow localhost, your production domain, and ALL Vercel preview domains
 app.use(
   cors({
     origin: function (origin, cb) {
       // allow Postman/curl (no Origin header)
       if (!origin) return cb(null, true);
 
-      // allow exact matches
-      if (allowList.includes(origin)) return cb(null, true);
+      // allow localhost (dev)
+      if (origin === "http://localhost:3000") return cb(null, true);
 
-      // ✅ allow all Vercel preview deployments
-      // Example: https://online-store-git-branchname-hash-username.vercel.app
-      if (origin.endsWith(".vercel.app")) return cb(null, true);
+      // allow production frontend
+      if (origin === "https://online-store-six-gules.vercel.app")
+        return cb(null, true);
+
+      // ✅ allow all Vercel deployments (preview + production)
+      // Example: https://online-store-git-admin-dashboard-xxxx.vercel.app
+      if (origin.includes("vercel.app")) return cb(null, true);
 
       return cb(new Error("CORS blocked: " + origin));
     },
