@@ -4,7 +4,6 @@ const cookieParser = require("cookie-parser");
 const mongoose = require("mongoose");
 const aiRoutes = require("./routes/ai.routes");
 
-
 const authRoutes = require("./routes/auth.routes");
 const productRoutes = require("./routes/product.routes");
 const cartRoutes = require("./routes/cart.routes");
@@ -19,7 +18,7 @@ app.set("trust proxy", 1);
 app.use(express.json());
 app.use(cookieParser());
 
-// ✅ Allow ONLY your Vercel site (and localhost for dev)
+// ✅ Allow production, preview, and localhost for dev
 const allowList = [
   "http://localhost:3000",
   "https://online-store-six-gules.vercel.app",
@@ -31,7 +30,12 @@ app.use(
       // allow Postman/curl (no Origin header)
       if (!origin) return cb(null, true);
 
+      // allow exact matches
       if (allowList.includes(origin)) return cb(null, true);
+
+      // ✅ allow all Vercel preview deployments
+      // Example: https://online-store-git-branchname-hash-username.vercel.app
+      if (origin.endsWith(".vercel.app")) return cb(null, true);
 
       return cb(new Error("CORS blocked: " + origin));
     },
@@ -49,7 +53,6 @@ app.get("/health", (req, res) => {
 });
 
 // Routes
-
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/cart", cartRoutes);
