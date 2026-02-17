@@ -33,7 +33,7 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-gray-100">
       <div className="mx-auto max-w-5xl px-4 py-8">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -48,13 +48,13 @@ export default function AdminPage() {
           <div className="flex gap-2">
             <Link
               href="/"
-              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-100"
+              className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-800 shadow-sm hover:bg-gray-50 hover:shadow transition"
             >
               Home
             </Link>
             <button
               onClick={logout}
-              className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-black"
+              className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 hover:shadow transition"
             >
               Logout
             </button>
@@ -62,7 +62,7 @@ export default function AdminPage() {
         </div>
 
         {error ? (
-          <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
             {error}
           </div>
         ) : null}
@@ -70,33 +70,53 @@ export default function AdminPage() {
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
           <Link
             href="/admin/products"
-            className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm hover:shadow-md transition"
+            className="group rounded-2xl border border-gray-200 bg-white p-5 shadow-sm hover:shadow-lg transition"
           >
-            <p className="text-lg font-semibold text-gray-900">Manage Products</p>
+            <div className="mb-3 inline-flex rounded-xl bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
+              Products
+            </div>
+            <p className="text-lg font-semibold text-gray-900 group-hover:text-indigo-700 transition">
+              Manage Products
+            </p>
             <p className="mt-1 text-sm text-gray-600">View, edit, delete products</p>
           </Link>
 
           <Link
             href="/admin/products/new"
-            className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm hover:shadow-md transition"
+            className="group rounded-2xl border border-gray-200 bg-white p-5 shadow-sm hover:shadow-lg transition"
           >
-            <p className="text-lg font-semibold text-gray-900">Create Product</p>
+            <div className="mb-3 inline-flex rounded-xl bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+              Create
+            </div>
+            <p className="text-lg font-semibold text-gray-900 group-hover:text-emerald-700 transition">
+              Create Product
+            </p>
             <p className="mt-1 text-sm text-gray-600">Add product + upload image</p>
           </Link>
 
           <Link
             href="/admin/orders"
-            className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm hover:shadow-md transition"
+            className="group rounded-2xl border border-gray-200 bg-white p-5 shadow-sm hover:shadow-lg transition"
           >
-            <p className="text-lg font-semibold text-gray-900">All Orders</p>
+            <div className="mb-3 inline-flex rounded-xl bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+              Orders
+            </div>
+            <p className="text-lg font-semibold text-gray-900 group-hover:text-amber-700 transition">
+              All Orders
+            </p>
             <p className="mt-1 text-sm text-gray-600">Update order status</p>
           </Link>
 
           <Link
             href="/admin/users"
-            className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm hover:shadow-md transition"
+            className="group rounded-2xl border border-gray-200 bg-white p-5 shadow-sm hover:shadow-lg transition"
           >
-            <p className="text-lg font-semibold text-gray-900">Users</p>
+            <div className="mb-3 inline-flex rounded-xl bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700">
+              Users
+            </div>
+            <p className="text-lg font-semibold text-gray-900 group-hover:text-sky-700 transition">
+              Users
+            </p>
             <p className="mt-1 text-sm text-gray-600">Admin users page</p>
           </Link>
         </div>
