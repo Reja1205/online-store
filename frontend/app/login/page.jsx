@@ -16,8 +16,10 @@ export default function LoginPage() {
 
   // If already logged in → go profile
   useEffect(() => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    if (token) router.replace("/profile");
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("token");
+      if (token) router.replace("/profile");
+    }
   }, [router]);
 
   async function submit(e) {
@@ -28,7 +30,10 @@ export default function LoginPage() {
     try {
       const res = await fetch(`${API}/api/auth/login`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include", // ✅ IMPORTANT for cookies
         body: JSON.stringify({ email, password }),
       });
 
@@ -40,7 +45,7 @@ export default function LoginPage() {
         return;
       }
 
-      // Save token
+      // Save token (optional but useful)
       if (data?.token) {
         localStorage.setItem("token", data.token);
       }
@@ -55,6 +60,7 @@ export default function LoginPage() {
 
       router.refresh();
     } catch (err) {
+      console.error("LOGIN_FRONTEND_ERROR:", err);
       setError("Network error");
     } finally {
       setLoading(false);
@@ -74,6 +80,7 @@ export default function LoginPage() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Email"
+          required
         />
 
         <input
@@ -82,6 +89,7 @@ export default function LoginPage() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Password"
+          required
         />
 
         {error && <p className="text-sm text-red-600">{error}</p>}
