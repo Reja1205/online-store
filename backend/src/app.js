@@ -18,18 +18,25 @@ app.set("trust proxy", 1);
 app.use(express.json());
 app.use(cookieParser());
 
-// ✅ Final CORS Configuration (Production + Preview + Dev)
+// ✅ Final CORS Configuration
 const corsOptions = {
   origin: function (origin, cb) {
     if (!origin) return cb(null, true); // Postman / curl
 
+    // Local development
     if (origin === "http://localhost:3000") return cb(null, true);
 
+    // Production frontend
     if (origin === "https://online-store-six-gules.vercel.app")
       return cb(null, true);
 
-    // ✅ Allow all Vercel deployments (preview + prod)
-    if (origin.includes("vercel.app")) return cb(null, true);
+    // ✅ Allow ALL Vercel deployments (preview + production)
+    try {
+      const { hostname } = new URL(origin);
+      if (hostname.endsWith(".vercel.app")) return cb(null, true);
+    } catch (e) {
+      // ignore invalid origin format
+    }
 
     return cb(new Error("CORS blocked: " + origin));
   },
@@ -40,15 +47,18 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// ✅ Handle preflight requests properly
-app.options("*", cors(corsOptions));
+// ✅ Safe preflight handler (Express/router compatible)
+app.options(/.*/, cors(corsOptions));
 
 // Health check
 app.get("/health", (req, res) => {
   res.json({
     status: "OK",
     message: "Server is running",
-    db: mongoose.connection.readyState === 1 ? "connected" : "not_connected",
+    db:
+      mongoose.connection.readyState === 1
+        ? "connected"
+        : "not_connected",
   });
 });
 
@@ -61,7 +71,9 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/ai", aiRoutes);
 
 // 404
-app.use((req, res) => res.status(404).json({ message: "Route not found" }));
+app.use((req, res) =>
+  res.status(404).json({ message: "Route not found" })
+);
 
 // Global error handler
 app.use((err, req, res, next) => {
