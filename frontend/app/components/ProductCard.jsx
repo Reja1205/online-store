@@ -1,95 +1,109 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
+import { memo } from "react";
 import { productName, productPrice, productStock } from "../lib/api";
 
-export default function ProductCard({ p, user, onAddToCart }) {
+function isAllowedImageHost(src) {
+  try {
+    const u = new URL(src);
+    if (u.protocol !== "https:") return false;
+    const allowed = ["res.cloudinary.com", "images.unsplash.com", "placehold.co"];
+    return allowed.includes(u.hostname);
+  } catch {
+    return false;
+  }
+}
+
+function ProductCard({ p, user, onAddToCart }) {
   const name = productName(p);
   const price = productPrice(p);
   const stock = productStock(p);
 
   const canAdd = !!user && stock > 0;
+  const useNextImage = p.imageUrl && isAllowedImageHost(p.imageUrl);
+
+  const stockBadgeClass =
+    stock > 0
+      ? "bg-emerald-500/95 text-white ring-1 ring-emerald-600/20"
+      : "bg-rose-500/95 text-white ring-1 ring-rose-700/20";
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm hover:shadow-lg transition border border-gray-100 flex flex-col overflow-hidden">
-      
-      {/* IMAGE + STOCK BADGE */}
-      <div className="relative w-full overflow-hidden bg-gray-50">
-        {/* Fixed height mobile, ratio desktop */}
-        <div className="h-44 sm:aspect-4/3 sm:h-auto">
+    <article className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[var(--shadow-sm)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)]">
+      <div className="relative w-full overflow-hidden bg-slate-50">
+        <div className="relative aspect-[4/3] w-full sm:aspect-[4/3]">
           {p.imageUrl ? (
-            <img
-              src={p.imageUrl}
-              alt={name}
-              className="h-full w-full object-cover"
-              loading="lazy"
-            />
+            useNextImage ? (
+              <Image
+                src={p.imageUrl}
+                alt={name}
+                fill
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                className="object-cover transition duration-300 group-hover:scale-[1.02]"
+                loading="lazy"
+              />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element -- arbitrary merchant image hosts
+              <img
+                src={p.imageUrl}
+                alt={name}
+                className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+                loading="lazy"
+                decoding="async"
+              />
+            )
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-sm text-gray-400">
+            <div className="flex h-full w-full items-center justify-center bg-slate-100 text-sm text-slate-400">
               No image
             </div>
           )}
         </div>
 
-        {/* STOCK BADGE */}
         <span
-          className={`absolute right-3 top-3 z-10 inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold shadow-sm ${
-            stock > 0
-              ? "bg-green-100 text-green-700"
-              : "bg-red-100 text-red-600"
-          }`}
+          className={`absolute right-3 top-3 z-10 inline-flex max-w-[calc(100%-1.5rem)] items-center truncate rounded-full px-3 py-1 text-xs font-semibold shadow-sm backdrop-blur-[2px] ${stockBadgeClass}`}
         >
-          {stock > 0 ? `In Stock: ${stock}` : "Out of Stock"}
+          {stock > 0 ? `In stock · ${stock}` : "Out of stock"}
         </span>
       </div>
 
-      {/* CONTENT */}
-      <div className="p-4 flex flex-col gap-2 flex-1">
-        {/* TITLE */}
-        <h3 className="text-base font-semibold text-gray-900 line-clamp-1">
-          {name}
-        </h3>
+      <div className="flex flex-1 flex-col gap-2 p-4">
+        <h3 className="line-clamp-2 text-base font-semibold leading-snug text-slate-900">{name}</h3>
 
-        {/* PRICE */}
-        <p className="text-indigo-600 font-semibold text-sm">
-          ${price}
-        </p>
+        <p className="text-lg font-semibold tracking-tight text-indigo-600">${price}</p>
 
-        {/* DESCRIPTION */}
-        {p.description && (
-          <p className="text-xs text-gray-500 line-clamp-2">
-            {p.description}
-          </p>
-        )}
+        {p.description ? (
+          <p className="line-clamp-2 text-xs leading-relaxed text-slate-600">{p.description}</p>
+        ) : null}
 
-        {/* BUTTONS */}
-        <div className="flex gap-2 mt-auto">
-          <Link href={`/products/${p._id}`} className="flex-1">
-            <button className="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 text-sm font-medium py-2 rounded-lg transition">
-              View
-            </button>
+        <div className="mt-auto flex gap-2 pt-2">
+          <Link
+            href={`/products/${p._id}`}
+            className="inline-flex flex-1 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 py-2.5 text-center text-sm font-medium text-slate-800 transition hover:bg-slate-100 min-h-[2.75rem]"
+          >
+            Details
           </Link>
 
           <button
+            type="button"
             onClick={() => onAddToCart(p._id)}
             disabled={!canAdd}
-            className={`flex-1 text-sm font-medium py-2 rounded-lg transition ${
+            className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition min-h-[2.75rem] ${
               canAdd
-                ? "bg-indigo-600 hover:bg-indigo-700 text-white"
-                : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                ? "bg-indigo-600 text-white hover:bg-indigo-700"
+                : "cursor-not-allowed bg-slate-200 text-slate-500"
             }`}
             title={
-              !user
-                ? "Login to add items"
-                : stock <= 0
-                ? "Out of stock"
-                : ""
+              !user ? "Sign in to add items" : stock <= 0 ? "Out of stock" : "Add to cart"
             }
+            aria-label={canAdd ? `Add ${name} to cart` : undefined}
           >
             Add
           </button>
         </div>
       </div>
-    </div>
+    </article>
   );
 }
+
+export default memo(ProductCard);

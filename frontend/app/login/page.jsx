@@ -1,24 +1,26 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { API } from "../lib/api";
+import { useRouter } from "next/navigation";
+import Button from "../components/ui/Button";
+import Card from "../components/ui/Card";
+import Input from "../components/ui/Input";
+import Label from "../components/ui/Label";
+import { apiJson } from "../lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
 
-  const [email, setEmail] = useState("user@test.com");
-  const [password, setPassword] = useState("123456");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // If already logged in → go profile
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("token");
-      if (token) router.replace("/profile");
+    if (typeof window !== "undefined" && localStorage.getItem("token")) {
+      router.replace("/profile");
     }
   }, [router]);
 
@@ -28,16 +30,10 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const res = await fetch(`${API}/api/auth/login`, {
+      const { res, data } = await apiJson("/api/auth/login", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include", // ✅ IMPORTANT for cookies
         body: JSON.stringify({ email, password }),
       });
-
-      const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
         setError(data?.message || "Login failed");
@@ -45,22 +41,18 @@ export default function LoginPage() {
         return;
       }
 
-      // Save token (optional but useful)
       if (data?.token) {
         localStorage.setItem("token", data.token);
       }
-
-      // Redirect by role
+      window.dispatchEvent(new Event("auth:changed"));
       const role = data?.user?.role;
       if (role === "admin") {
         router.replace("/admin");
       } else {
         router.replace("/profile");
       }
-
       router.refresh();
-    } catch (err) {
-      console.error("LOGIN_FRONTEND_ERROR:", err);
+    } catch {
       setError("Network error");
     } finally {
       setLoading(false);
@@ -68,57 +60,59 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="max-w-md mx-auto bg-white border border-gray-100 rounded-2xl shadow-md p-6">
-      <h1 className="text-2xl font-bold text-gray-900">Login</h1>
-      <p className="text-sm text-gray-500 mt-1">
-        Welcome back. Enter your credentials.
-      </p>
+    <div className="mx-auto max-w-md animate-fade-up">
+      <Card padding="p-6 sm:p-8">
+        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Sign in</h1>
+        <p className="mt-1 text-sm text-slate-600">Welcome back. Use your account email and password.</p>
 
-      <form onSubmit={submit} className="grid gap-3 mt-5">
-        <input
-          className="w-full border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-200"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Email"
-          required
-        />
+        <form onSubmit={submit} className="mt-6 grid gap-4">
+          <div>
+            <Label htmlFor="login-email">Email</Label>
+            <Input
+              id="login-email"
+              className="mt-1.5"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              autoComplete="email"
+              required
+            />
+          </div>
 
-        <input
-          className="w-full border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-200"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Password"
-          required
-        />
+          <div>
+            <Label htmlFor="login-password">Password</Label>
+            <Input
+              id="login-password"
+              className="mt-1.5"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              autoComplete="current-password"
+              required
+            />
+          </div>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+          {error ? (
+            <p role="alert" className="text-sm text-red-600">
+              {error}
+            </p>
+          ) : null}
 
-        <button
-          type="submit"
-          disabled={loading}
-          className={`w-full py-2 rounded-lg font-medium transition ${
-            loading
-              ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-              : "bg-indigo-600 hover:bg-indigo-700 text-white"
-          }`}
-        >
-          {loading ? "Logging in..." : "Login"}
-        </button>
+          <Button type="submit" variant="primary" size="lg" disabled={loading} className="w-full">
+            {loading ? "Signing in…" : "Sign in"}
+          </Button>
 
-        <div className="flex justify-between text-sm mt-2">
-          <Link className="text-gray-600 hover:text-gray-900" href="/">
-            Back Home
-          </Link>
-
-          <Link
-            className="text-indigo-600 hover:text-indigo-700 font-medium"
-            href="/register"
-          >
-            Create Account
-          </Link>
-        </div>
-      </form>
+          <div className="flex justify-between text-sm">
+            <Link className="text-slate-600 underline-offset-4 hover:text-slate-900 hover:underline" href="/">
+              Home
+            </Link>
+            <Link className="font-medium text-indigo-600 underline-offset-4 hover:text-indigo-700 hover:underline" href="/register">
+              Create account
+            </Link>
+          </div>
+        </form>
+      </Card>
     </div>
   );
 }
