@@ -3,14 +3,32 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import Button from "../components/ui/Button";
+import Card from "../components/ui/Card";
+import Input from "../components/ui/Input";
+import Label from "../components/ui/Label";
+import { apiJson } from "../lib/api";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+const linkBtnSecondary =
+  "inline-flex min-h-[2.75rem] items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 shadow-sm transition-all duration-200 hover:bg-slate-50 hover:shadow-md active:scale-[0.99]";
 
-function authHeaders() {
-  if (typeof window === "undefined") return {};
-  const token = localStorage.getItem("token");
-  return token ? { Authorization: "Bearer " + token } : {};
-}
+const linkBtnPrimary =
+  "inline-flex min-h-[2.75rem] items-center justify-center gap-2 rounded-xl bg-[var(--color-brand)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-[var(--color-brand-hover)] hover:shadow-md active:scale-[0.99]";
+
+const linkBtnDark =
+  "inline-flex min-h-[2.75rem] items-center justify-center gap-2 rounded-xl border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-all duration-200 hover:bg-slate-800 active:scale-[0.99]";
+
+const autoByKey = {
+  fullName: "name",
+  email: "email",
+  phone: "tel",
+  address1: "address-line1",
+  address2: "address-line2",
+  city: "address-level2",
+  state: "address-level1",
+  postalCode: "postal-code",
+  country: "country-name",
+};
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -42,33 +60,31 @@ export default function CheckoutPage() {
     setMsg("");
     setLoading(true);
 
-    try {
-      const headers = authHeaders();
-      if (!headers.Authorization) {
-        router.push("/login");
-        return;
-      }
-
-      const res = await fetch(`${API}/api/checkout/preview`, {
-        headers,
-        cache: "no-store",
-      });
-
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(data?.message || "Failed to load checkout preview");
-        return;
-      }
-
-      setItems(Array.isArray(data.items) ? data.items : []);
-      setItemsTotal(Number(data.itemsTotal || 0));
-      setShippingFee(Number(data.shippingFee || 0));
-      setTotalUSD(Number(data.totalUSD || 0));
-    } catch {
-      setError("Network error");
-    } finally {
+    if (typeof window !== "undefined" && !localStorage.getItem("token")) {
+      router.push("/login");
       setLoading(false);
+      return;
     }
+
+    const { res, data } = await apiJson("/api/checkout/preview");
+
+    if (res.status === 401) {
+      router.push("/login");
+      setLoading(false);
+      return;
+    }
+
+    if (!res.ok) {
+      setError(data?.message || "Failed to load checkout preview");
+      setLoading(false);
+      return;
+    }
+
+    setItems(Array.isArray(data.items) ? data.items : []);
+    setItemsTotal(Number(data.itemsTotal || 0));
+    setShippingFee(Number(data.shippingFee || 0));
+    setTotalUSD(Number(data.totalUSD || 0));
+    setLoading(false);
   }
 
   async function payNow() {
@@ -76,37 +92,33 @@ export default function CheckoutPage() {
     setMsg("");
     setPaying(true);
 
-    try {
-      const headers = authHeaders();
-      if (!headers.Authorization) {
-        router.push("/login");
-        return;
-      }
-
-      const res = await fetch(`${API}/api/checkout/pay`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...headers,
-        },
-        body: JSON.stringify({ shippingAddress }),
-      });
-
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok) {
-        setError(data?.message || "Payment failed");
-        return;
-      }
-
-      setMsg("Payment successful ✅ Order created!");
-      window.dispatchEvent(new Event("cart:updated")); // ✅ cart badge updates
-      setTimeout(() => router.push("/orders"), 650);
-    } catch {
-      setError("Network error");
-    } finally {
+    if (typeof window !== "undefined" && !localStorage.getItem("token")) {
+      router.push("/login");
       setPaying(false);
+      return;
     }
+
+    const { res, data } = await apiJson("/api/checkout/pay", {
+      method: "POST",
+      body: JSON.stringify({ shippingAddress }),
+    });
+
+    if (res.status === 401) {
+      router.push("/login");
+      setPaying(false);
+      return;
+    }
+
+    if (!res.ok) {
+      setError(data?.message || "Payment failed");
+      setPaying(false);
+      return;
+    }
+
+    setMsg("Payment successful. Order created.");
+    window.dispatchEvent(new Event("cart:updated"));
+    setTimeout(() => router.push("/orders"), 650);
+    setPaying(false);
   }
 
   useEffect(() => {
@@ -116,14 +128,14 @@ export default function CheckoutPage() {
 
   const formFields = useMemo(
     () => [
-      ["fullName", "Full Name", "text"],
+      ["fullName", "Full name", "text"],
       ["email", "Email", "email"],
       ["phone", "Phone", "tel"],
-      ["address1", "Address Line 1", "text"],
-      ["address2", "Address Line 2 (optional)", "text"],
+      ["address1", "Address line 1", "text"],
+      ["address2", "Address line 2 (optional)", "text"],
       ["city", "City", "text"],
-      ["state", "State", "text"],
-      ["postalCode", "Postal Code", "text"],
+      ["state", "State / region", "text"],
+      ["postalCode", "Postal code", "text"],
       ["country", "Country", "text"],
     ],
     []
@@ -141,97 +153,75 @@ export default function CheckoutPage() {
 
   if (loading) {
     return (
-      <div className="max-w-5xl mx-auto px-4 py-10">
-        <div className="rounded-2xl border bg-white p-6 shadow-sm">
-          <p className="text-gray-700">Loading checkout...</p>
-        </div>
+      <div className="mx-auto max-w-5xl space-y-4 py-6 sm:py-10">
+        <div className="h-10 w-48 animate-pulse rounded-xl bg-slate-200" aria-hidden />
+        <div className="h-64 animate-pulse rounded-2xl bg-slate-200/80" aria-hidden />
+        <p className="sr-only">Loading checkout</p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
-      {/* Top bar */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="mx-auto max-w-5xl space-y-6 py-6 sm:py-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Checkout</h1>
-          <p className="text-sm text-gray-600 mt-1">
-            Confirm your items and add shipping details.
-          </p>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">Checkout</h1>
+          <p className="mt-1 text-sm text-slate-600">Review items and enter shipping details.</p>
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Link href="/cart">
-            <button className="rounded-xl bg-white border px-4 py-2 text-sm font-medium hover:bg-gray-50">
-              ← Back to Cart
-            </button>
+          <Link href="/cart" className={linkBtnSecondary}>
+            Back to cart
           </Link>
-
-          <Link href="/">
-            <button className="rounded-xl bg-white border px-4 py-2 text-sm font-medium hover:bg-gray-50">
-              Home
-            </button>
+          <Link href="/" className={linkBtnSecondary}>
+            Home
           </Link>
-
-          <button
-            onClick={loadPreview}
-            className="rounded-xl bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-black"
-          >
+          <Button type="button" variant="outlineDark" size="md" onClick={loadPreview}>
             Refresh
-          </button>
+          </Button>
         </div>
       </div>
 
-      {/* Alerts */}
-      {msg && (
-        <div className="mt-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+      {msg ? (
+        <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
           {msg}
         </div>
-      )}
+      ) : null}
 
-      {error && (
-        <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+      {error ? (
+        <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
           {error}
         </div>
-      )}
+      ) : null}
 
       {items.length === 0 ? (
-        <div className="mt-6 rounded-2xl border bg-white p-6 shadow-sm">
-          <p className="text-gray-700 font-medium">Your cart is empty.</p>
-          <p className="text-sm text-gray-600 mt-1">
-            Add items to your cart to continue checkout.
-          </p>
-
-          <Link href="/products">
-            <button className="mt-4 rounded-xl bg-indigo-600 px-5 py-2.5 text-white font-semibold hover:bg-indigo-700">
-              Browse Products
-            </button>
+        <Card>
+          <p className="font-medium text-slate-900">Your cart is empty.</p>
+          <p className="mt-1 text-sm text-slate-600">Add items before checking out.</p>
+          <Link href="/products" className={`${linkBtnPrimary} mt-4 inline-flex`}>
+            Browse products
           </Link>
-        </div>
+        </Card>
       ) : (
-        <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left: Address */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2">
-            <div className="rounded-2xl border bg-white p-5 shadow-sm">
-              <h2 className="text-lg font-semibold text-gray-900">Shipping Address</h2>
-              <p className="text-sm text-gray-600 mt-1">
-                This is a mock checkout, but the order will be saved.
+            <Card>
+              <h2 className="text-lg font-semibold text-slate-900">Shipping address</h2>
+              <p className="mt-1 text-sm text-slate-600">
+                Demo checkout — order is persisted on the server when you pay.
               </p>
 
-              <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {formFields.map(([key, label, type]) => (
                   <div
                     key={key}
                     className={
-                      key === "address1" || key === "address2"
-                        ? "sm:col-span-2"
-                        : ""
+                      key === "address1" || key === "address2" ? "sm:col-span-2" : ""
                     }
                   >
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">
-                      {label}
-                    </label>
-                    <input
+                    <Label htmlFor={`ship-${key}`}>{label}</Label>
+                    <Input
+                      id={`ship-${key}`}
                       type={type}
                       value={shippingAddress[key]}
                       onChange={(e) =>
@@ -241,94 +231,68 @@ export default function CheckoutPage() {
                         }))
                       }
                       placeholder={label}
-                      className="w-full rounded-xl border px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="mt-1.5"
+                      autoComplete={autoByKey[key] || "on"}
                     />
                   </div>
                 ))}
               </div>
 
-              <div className="mt-5 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-                <div className="text-xs text-gray-500">
-                  Required fields: name, email, phone, address, city, postal code, country.
-                </div>
-
-                <button
-                  onClick={payNow}
-                  disabled={!canPay || paying}
-                  className={`rounded-xl px-5 py-3 text-sm font-semibold transition ${
-                    !canPay || paying
-                      ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                      : "bg-indigo-600 text-white hover:bg-indigo-700"
-                  }`}
-                >
-                  {paying ? "Processing..." : "Pay Now (Mock)"}
-                </button>
+              <div className="mt-6 flex flex-col gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-xs text-slate-500">
+                  Required: name, email, phone, address, city, postal code, country.
+                </p>
+                <Button type="button" variant="primary" size="lg" disabled={!canPay || paying} onClick={payNow}>
+                  {paying ? "Processing…" : "Pay now (mock)"}
+                </Button>
               </div>
-            </div>
+            </Card>
           </div>
 
-          {/* Right: Summary */}
-          <div>
-            <div className="rounded-2xl border bg-white p-5 shadow-sm">
-              <h2 className="text-lg font-semibold text-gray-900">Order Summary</h2>
-
-              <div className="mt-4 space-y-3">
+          <div className="space-y-4">
+            <Card>
+              <h2 className="text-lg font-semibold text-slate-900">Order summary</h2>
+              <ul className="mt-4 space-y-3">
                 {items.map((it, idx) => (
-                  <div key={idx} className="rounded-xl border bg-gray-50 p-3">
+                  <li key={idx} className="rounded-xl border border-slate-100 bg-slate-50/80 p-3">
                     <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-semibold text-gray-900">{it.name}</p>
-                        <p className="text-xs text-gray-600 mt-0.5">
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-slate-900">{it.name}</p>
+                        <p className="mt-0.5 text-xs text-slate-600">
                           ${Number(it.price || 0).toFixed(2)} × {it.qty}
                         </p>
                       </div>
-                      <p className="text-sm font-semibold text-gray-900">
+                      <p className="shrink-0 text-sm font-semibold text-slate-900">
                         ${Number(it.lineTotal || 0).toFixed(2)}
                       </p>
                     </div>
-                  </div>
+                  </li>
                 ))}
-              </div>
+              </ul>
 
-              <div className="mt-5 border-t pt-4 space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">Items total</span>
-                  <span className="font-semibold text-gray-900">
-                    ${itemsTotal.toFixed(2)}
-                  </span>
+              <div className="mt-5 space-y-2 border-t border-slate-100 pt-4 text-sm">
+                <div className="flex justify-between text-slate-600">
+                  <span>Items</span>
+                  <span className="font-semibold text-slate-900">${itemsTotal.toFixed(2)}</span>
                 </div>
-
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">Shipping</span>
-                  <span className="font-semibold text-gray-900">
-                    ${shippingFee.toFixed(2)}
-                  </span>
+                <div className="flex justify-between text-slate-600">
+                  <span>Shipping</span>
+                  <span className="font-semibold text-slate-900">${shippingFee.toFixed(2)}</span>
                 </div>
-
-                <div className="flex items-center justify-between text-base">
-                  <span className="font-semibold text-gray-900">Total</span>
-                  <span className="font-extrabold text-indigo-700">
-                    ${totalUSD.toFixed(2)}
-                  </span>
+                <div className="flex justify-between text-base font-semibold text-slate-900">
+                  <span>Total</span>
+                  <span className="text-indigo-700">${totalUSD.toFixed(2)}</span>
                 </div>
               </div>
+            </Card>
 
-              <div className="mt-4 text-xs text-gray-500">
-                By clicking “Pay Now (Mock)”, you create an order and mark it paid in your system.
-              </div>
-            </div>
-
-            <div className="mt-4 rounded-2xl border bg-white p-5 shadow-sm">
-              <h3 className="font-semibold text-gray-900">Need to edit your cart?</h3>
-              <p className="text-sm text-gray-600 mt-1">
-                You can adjust items in the cart before checkout.
-              </p>
-              <Link href="/cart">
-                <button className="mt-3 rounded-xl bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-black">
-                  Go to Cart
-                </button>
+            <Card>
+              <h3 className="font-semibold text-slate-900">Need changes?</h3>
+              <p className="mt-1 text-sm text-slate-600">Update quantities or remove items in your cart.</p>
+              <Link href="/cart" className={`${linkBtnDark} mt-3 inline-flex`}>
+                Edit cart
               </Link>
-            </div>
+            </Card>
           </div>
         </div>
       )}

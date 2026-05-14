@@ -1,9 +1,10 @@
- "use client";
+"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiJson } from "../lib/api";
+import { fmtDate, fmtMoney } from "../lib/format";
 
 function badgeClass(status) {
   const s = String(status || "").toLowerCase();
@@ -12,18 +13,6 @@ function badgeClass(status) {
   if (s === "delivered") return "bg-green-100 text-green-700 border-green-200";
   if (s === "cancelled") return "bg-red-100 text-red-700 border-red-200";
   return "bg-gray-100 text-gray-700 border-gray-200"; // pending/default
-}
-
-function fmtMoney(n) {
-  const num = Number(n || 0);
-  return num.toFixed(2);
-}
-
-function fmtDate(iso) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleString();
 }
 
 export default function OrdersPage() {

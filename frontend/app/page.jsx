@@ -1,45 +1,41 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import Header from "./components/Header";
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import ProductCard from "./components/ProductCard";
-import { apiJson, API } from "./lib/api";
+import Badge from "./components/ui/Badge";
+import Button from "./components/ui/Button";
+import Callout from "./components/ui/Callout";
+import Card from "./components/ui/Card";
+import EmptyState from "./components/ui/EmptyState";
+import Input from "./components/ui/Input";
+import { ProductCardSkeleton } from "./components/ui/Skeleton";
+import { useAuth } from "./context/AuthContext";
+import { apiJson } from "./lib/api";
+import { SITE_NAME } from "./lib/site";
+
+const PAGE_SIZE = 8;
 
 export default function Home() {
-  const [user, setUser] = useState(null);
+  const { user } = useAuth();
 
   const [products, setProducts] = useState([]);
-  const [msg, setMsg] = useState("");
-
-  // ✅ Cart count for header
-  const [cartCount, setCartCount] = useState(0);
-
-  // ✅ Search + Filter
+  const [catalogLoadError, setCatalogLoadError] = useState("");
+  const [cartFeedback, setCartFeedback] = useState(null);
   const [q, setQ] = useState("");
-  const [filter, setFilter] = useState("all"); // all | in | out
-
-  // Optional: show loading state for products
+  const [filter, setFilter] = useState("all");
   const [loadingProducts, setLoadingProducts] = useState(false);
+  const [page, setPage] = useState(1);
 
-  async function loadMe() {
-    const { res, data } = await apiJson("/api/auth/me");
-
-    if (res.status === 401) {
-      setUser(null);
-      setCartCount(0);
-      return;
-    }
-
-    setUser(data?.user || null);
-  }
-
-  async function loadProducts() {
+  const loadProducts = useCallback(async () => {
+    setCatalogLoadError("");
     setLoadingProducts(true);
 
     const { res, data } = await apiJson("/api/products", { headers: {} });
 
     if (!res.ok) {
       setProducts([]);
+      setCatalogLoadError(data?.message || "We couldn’t load the catalog. Please try again.");
       setLoadingProducts(false);
       return;
     }
@@ -47,50 +43,18 @@ export default function Home() {
     const list = Array.isArray(data) ? data : data.products;
     setProducts(Array.isArray(list) ? list : []);
     setLoadingProducts(false);
-  }
-
-  // ✅ Load cart count (for badge in header)
-  async function loadCartCount() {
-    // if not logged in, keep it 0
-    if (typeof window !== "undefined" && !localStorage.getItem("token")) {
-      setCartCount(0);
-      return;
-    }
-
-    const { res, data } = await apiJson("/api/cart", { headers: {} });
-
-    if (!res.ok) {
-      setCartCount(0);
-      return;
-    }
-
-    const items = Array.isArray(data?.items)
-      ? data.items
-      : Array.isArray(data?.cart?.items)
-      ? data.cart.items
-      : [];
-
-    const totalQty = items.reduce((sum, it) => sum + Number(it.qty || 0), 0);
-    setCartCount(totalQty);
-  }
-
-  useEffect(() => {
-    loadMe();
-    loadProducts();
-    loadCartCount();
-
-    // ✅ listen to cart updates from anywhere (cart page, product page, etc.)
-    function onCartUpdated() {
-      loadCartCount();
-    }
-
-    window.addEventListener("cart:updated", onCartUpdated);
-    return () => window.removeEventListener("cart:updated", onCartUpdated);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function addToCart(productId) {
-    setMsg("");
+  useEffect(() => {
+    loadProducts();
+  }, [loadProducts]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [q, filter]);
+
+  const addToCart = useCallback(async (productId) => {
+    setCartFeedback(null);
 
     const { res, data } = await apiJson("/api/cart/add", {
       method: "POST",
@@ -99,31 +63,17 @@ export default function Home() {
     });
 
     if (!res.ok) {
-      setMsg(data?.message || "Failed to add to cart");
+      setCartFeedback({
+        variant: "danger",
+        text: data?.message || "We couldn’t add that item. Sign in or try again.",
+      });
       return;
     }
 
-    setMsg("Added to cart ✅");
-    setTimeout(() => setMsg(""), 1200);
-
-    // ✅ refresh cart badge immediately
-    await loadCartCount();
-
-    // ✅ notify Header + other pages instantly
+    setCartFeedback({ variant: "success", text: "Added to your cart." });
+    setTimeout(() => setCartFeedback(null), 2200);
     window.dispatchEvent(new Event("cart:updated"));
-  }
-
-  async function handleLogout() {
-    try {
-      await fetch(`${API}/api/auth/logout`, { method: "POST" });
-    } catch {}
-
-    localStorage.removeItem("token");
-    setUser(null);
-    setCartCount(0);
-
-    window.dispatchEvent(new Event("cart:updated"));
-  }
+  }, []);
 
   const shown = useMemo(() => {
     const query = q.trim().toLowerCase();
@@ -142,76 +92,187 @@ export default function Home() {
       });
   }, [products, q, filter]);
 
+  const totalPages = Math.max(1, Math.ceil(shown.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageSlice = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return shown.slice(start, start + PAGE_SIZE);
+  }, [shown, currentPage]);
+
+  const catalogDown = !loadingProducts && Boolean(catalogLoadError) && products.length === 0;
+  const catalogEmptyOk = !loadingProducts && !catalogLoadError && products.length === 0;
+  const catalogFilteredEmpty =
+    !loadingProducts && !catalogDown && products.length > 0 && shown.length === 0;
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto px-4 pb-10">
-        <Header user={user} onLogout={handleLogout} cartCount={cartCount} />
+    <div className="animate-fade-up space-y-8 sm:space-y-10">
+      <section className="rounded-3xl border border-slate-200/80 bg-linear-to-br from-slate-900 via-indigo-950 to-slate-900 px-5 py-10 text-white shadow-[var(--shadow-lg)] sm:px-8 sm:py-12">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-200/90">Storefront</p>
+        <h1 className="mt-2 max-w-2xl text-3xl font-semibold tracking-tight sm:text-4xl lg:text-5xl">
+          Shop {SITE_NAME} with a calm, commerce-grade layout.
+        </h1>
+        <p className="mt-4 max-w-xl text-sm leading-relaxed text-slate-300 sm:text-base">
+          Search, filter by availability, and add to cart when signed in. Built for responsive
+          breakpoints from mobile to wide desktop.
+        </p>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Link
+            href="/products"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-transparent bg-white px-5 py-2.5 text-sm font-semibold text-slate-900 shadow-sm transition-all duration-200 hover:bg-slate-100 hover:shadow-md active:scale-[0.99] min-h-[2.75rem]"
+          >
+            Browse catalog
+          </Link>
+          <Link
+            href="/register"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/30 bg-transparent px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:bg-white/10 active:scale-[0.99] min-h-[2.75rem]"
+          >
+            Create account
+          </Link>
+        </div>
+      </section>
 
-        {/* Toast / message */}
-        {msg ? (
-          <div className="mt-4 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm shadow-sm">
-            {msg}
-          </div>
-        ) : null}
+      {cartFeedback ? (
+        <Callout variant={cartFeedback.variant}>{cartFeedback.text}</Callout>
+      ) : null}
 
-        {/* Search + Filter */}
-        <section className="mt-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-col sm:flex-row flex-1 gap-3">
-              <input
+      <Card className="animate-fade-up-delayed" padding="p-4 sm:p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="grid flex-1 gap-3 sm:grid-cols-[1fr_auto]">
+            <div>
+              <label htmlFor="home-search" className="sr-only">
+                Search products
+              </label>
+              <Input
+                id="home-search"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="Search products..."
-                className="w-full rounded-xl border border-gray-200 px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-300"
+                placeholder="Search by name or description…"
+                autoComplete="off"
+                disabled={catalogDown}
               />
-
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <label htmlFor="home-filter" className="sr-only">
+                Filter by stock
+              </label>
               <select
+                id="home-filter"
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
-                className="w-full sm:w-48 rounded-xl border border-gray-200 px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-300"
+                className="w-full min-h-[2.75rem] rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 sm:w-44 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={catalogDown}
               >
-                <option value="all">All</option>
+                <option value="all">All products</option>
                 <option value="in">In stock</option>
                 <option value="out">Out of stock</option>
               </select>
             </div>
-
-            <button
-              onClick={() => {
-                loadProducts();
-                loadCartCount();
-              }}
-              className="w-full sm:w-auto rounded-xl bg-gray-900 px-5 py-2.5 text-white font-semibold hover:bg-black transition"
-            >
-              Refresh
-            </button>
           </div>
-
-          <div className="mt-3 text-xs text-gray-500">
-            Showing <span className="font-semibold text-gray-700">{shown.length}</span> products
-          </div>
-        </section>
-
-        {/* Products */}
-        <div className="mt-6 flex items-end justify-between gap-3">
-          <h2 className="text-xl font-bold text-gray-900">Products</h2>
-          {loadingProducts ? (
-            <span className="text-sm text-gray-500">Loading…</span>
+          <Button type="button" variant="outlineDark" size="md" className="w-full shrink-0 lg:w-auto" onClick={loadProducts}>
+            Refresh catalog
+          </Button>
+        </div>
+        <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-600 sm:text-sm">
+          <span>Showing</span>
+          <Badge tone="neutral">{shown.length}</Badge>
+          <span>products</span>
+          {shown.length > PAGE_SIZE ? (
+            <>
+              <span className="text-slate-400">·</span>
+              <span>
+                Page {currentPage} of {totalPages}
+              </span>
+            </>
           ) : null}
         </div>
+      </Card>
 
-        {shown.length === 0 ? (
-          <div className="mt-4 rounded-2xl border border-gray-200 bg-white p-6 text-sm text-gray-600 shadow-sm">
-            No products found.
+      <section aria-labelledby="catalog-heading">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 id="catalog-heading" className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
+              Featured catalog
+            </h2>
+            <p className="mt-1 text-sm text-slate-600">Responsive grid, keyboard-friendly controls.</p>
           </div>
-        ) : (
-          <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-            {shown.map((p) => (
-              <ProductCard key={p._id} p={p} user={user} onAddToCart={addToCart} />
+        </div>
+
+        {loadingProducts ? (
+          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <ProductCardSkeleton key={i} />
             ))}
           </div>
+        ) : catalogDown ? (
+          <div className="mt-6 space-y-4">
+            <Callout variant="danger" title="We couldn’t load products">
+              <p>{catalogLoadError}</p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Button type="button" variant="primary" size="md" onClick={loadProducts}>
+                  Try again
+                </Button>
+                <Link
+                  href="/products"
+                  className="inline-flex min-h-[2.75rem] items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-900 shadow-sm transition hover:bg-slate-50"
+                >
+                  Catalog page
+                </Link>
+              </div>
+            </Callout>
+          </div>
+        ) : catalogEmptyOk ? (
+          <div className="mt-6">
+            <EmptyState
+              title="Catalog is empty"
+              description="There are no products to show yet. Check back later."
+              actionLabel="Refresh"
+              onAction={loadProducts}
+            />
+          </div>
+        ) : catalogFilteredEmpty ? (
+          <div className="mt-6">
+            <EmptyState
+              title="No products match"
+              description="Try another search or clear filters to see everything in the catalog."
+              actionLabel="View all products"
+              href="/products"
+            />
+          </div>
+        ) : (
+          <>
+            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {pageSlice.map((p) => (
+                <ProductCard key={p._id} p={p} user={user} onAddToCart={addToCart} />
+              ))}
+            </div>
+            {totalPages > 1 ? (
+              <nav className="mt-8 flex flex-wrap items-center justify-center gap-2" aria-label="Catalog pagination">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  disabled={currentPage <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                >
+                  Previous
+                </Button>
+                <span className="px-2 text-sm text-slate-600">
+                  {currentPage} / {totalPages}
+                </span>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                >
+                  Next
+                </Button>
+              </nav>
+            ) : null}
+          </>
         )}
-      </div>
+      </section>
     </div>
   );
 }

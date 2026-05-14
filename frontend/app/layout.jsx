@@ -1,34 +1,46 @@
 import "./globals.css";
+import AppShell from "./components/AppShell";
+import SiteFooter from "./components/SiteFooter";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "./lib/site";
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#f8fafc",
+};
 
 export const metadata = {
-  title: "Online Store",
-  description: "My Online Store",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: SITE_NAME,
+    template: `%s | ${SITE_NAME}`,
+  },
+  description: SITE_DESCRIPTION,
+  openGraph: {
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+    url: SITE_URL,
+    siteName: SITE_NAME,
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className="h-full">
-      <body className="min-h-screen bg-gray-100 text-gray-900 flex flex-col overflow-x-hidden">
-        {/* Page container */}
-        <div className="flex-1 w-full">
-          {/* Main Content */}
-          <main className="max-w-6xl mx-auto w-full px-4 pt-4 pb-6">
-            {children}
-          </main>
-        </div>
-
-        {/* Footer */}
-        <footer className="w-full bg-gray-900 text-white">
-          <div className="max-w-6xl mx-auto px-4 py-6 text-center">
-            <p className="font-semibold text-lg">Buy with Confidence</p>
-            <p className="text-sm opacity-80 mt-1">
-              Secure Payments • Fast Delivery • Easy Returns
-            </p>
-            <p className="text-xs opacity-60 mt-3">
-              © {new Date().getFullYear()} Online Store
-            </p>
-          </div>
-        </footer>
+    <html lang="en" className="h-full scroll-smooth">
+      <body className="flex min-h-screen flex-col">
+        <AppShell>{children}</AppShell>
+        <SiteFooter />
       </body>
     </html>
   );

@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useAuth } from "../context/AuthContext";
 import { apiJson } from "../lib/api";
 
 export default function ProfilePage() {
   const router = useRouter();
+  const { logout: authLogout } = useAuth();
 
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -41,8 +43,8 @@ export default function ProfilePage() {
     }
   }
 
-  function logout() {
-    localStorage.removeItem("token");
+  async function logout() {
+    await authLogout();
     router.push("/login");
   }
 
@@ -167,7 +169,8 @@ export default function ProfilePage() {
             </Link>
 
             <button
-              onClick={logout}
+              type="button"
+              onClick={() => void logout()}
               className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium transition"
             >
               Logout

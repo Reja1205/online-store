@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "../context/AuthContext";
 import { apiJson } from "../lib/api";
 
 export default function AdminPage() {
   const router = useRouter();
+  const { logout } = useAuth();
   const [me, setMe] = useState(null);
   const [error, setError] = useState("");
 
@@ -27,8 +29,8 @@ export default function AdminPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function logout() {
-    localStorage.removeItem("token");
+  async function onLogout() {
+    await logout();
     router.push("/");
   }
 
@@ -53,7 +55,8 @@ export default function AdminPage() {
               Home
             </Link>
             <button
-              onClick={logout}
+              type="button"
+              onClick={() => void onLogout()}
               className="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 hover:shadow transition"
             >
               Logout
