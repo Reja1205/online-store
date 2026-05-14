@@ -19,12 +19,23 @@ app.use(express.json());
 app.use(cookieParser());
 
 // ✅ Final CORS Configuration
+const extraAllowedOrigins = (process.env.ALLOWED_ORIGINS || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
 const corsOptions = {
   origin: function (origin, cb) {
     if (!origin) return cb(null, true); // Postman / curl
 
+    if (extraAllowedOrigins.includes(origin)) return cb(null, true);
+
     // Local development
-    if (origin === "http://localhost:3000") return cb(null, true);
+    if (origin === "http://localhost:3000" || origin === "http://127.0.0.1:3000")
+      return cb(null, true);
+
+    if (origin === "http://localhost:3001" || origin === "http://127.0.0.1:3001")
+      return cb(null, true);
 
     // Production frontend
     if (origin === "https://online-store-six-gules.vercel.app")
