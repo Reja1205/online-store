@@ -46,25 +46,24 @@ function ShellContent({ children }) {
   }, [loadCartCount]);
 
   return (
-    <>
-      <div className="sticky top-0 z-50 border-b border-slate-200/80 bg-[var(--color-bg)]/85 backdrop-blur-md supports-[backdrop-filter]:bg-[var(--color-bg)]/75">
-        <Container className="py-3">
+    <div className="flex w-full max-w-full flex-col">
+      <div className="sticky top-0 z-40 shrink-0 border-b border-slate-200 bg-white shadow-sm">
+        <Container className="py-3 sm:py-3.5">
           <Header cartCount={cartCount} />
         </Container>
       </div>
-      <div className="flex-1 pb-10 pt-6 sm:pt-8">
-        <Container>{children}</Container>
-      </div>
-    </>
+
+      <main className="relative z-0 w-full overflow-x-clip bg-[var(--color-bg)] pb-2">
+        <Container className="py-6 sm:py-8 lg:py-10">{children}</Container>
+      </main>
+    </div>
   );
 }
 
 export default function AppShell({ children }) {
   return (
     <AuthProvider>
-      <div className="flex min-h-0 flex-1 flex-col">
-        <ShellContent>{children}</ShellContent>
-      </div>
+      <ShellContent>{children}</ShellContent>
     </AuthProvider>
   );
 }

@@ -7,27 +7,29 @@ import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
 import Input from "../components/ui/Input";
 import Label from "../components/ui/Label";
+import { useAuth } from "../context/AuthContext";
 import { apiJson } from "../lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (typeof window !== "undefined" && localStorage.getItem("token")) {
+    if (!authLoading && user) {
       router.replace("/profile");
     }
-  }, [router]);
+  }, [authLoading, user, router]);
 
   async function submit(e) {
     e.preventDefault();
     setError("");
-    setLoading(true);
+    setSubmitting(true);
 
     try {
       const { res, data } = await apiJson("/api/auth/login", {
@@ -37,7 +39,7 @@ export default function LoginPage() {
 
       if (!res.ok) {
         setError(data?.message || "Login failed");
-        setLoading(false);
+        setSubmitting(false);
         return;
       }
 
@@ -55,8 +57,24 @@ export default function LoginPage() {
     } catch {
       setError("Network error");
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
+  }
+
+  if (authLoading) {
+    return (
+      <div className="mx-auto max-w-md py-16 text-center text-sm text-slate-500" aria-busy="true">
+        Checking session…
+      </div>
+    );
+  }
+
+  if (user) {
+    return (
+      <div className="mx-auto max-w-md py-16 text-center text-sm text-slate-500" aria-busy="true">
+        Redirecting…
+      </div>
+    );
   }
 
   return (
@@ -99,8 +117,8 @@ export default function LoginPage() {
             </p>
           ) : null}
 
-          <Button type="submit" variant="primary" size="lg" disabled={loading} className="w-full">
-            {loading ? "Signing in…" : "Sign in"}
+          <Button type="submit" variant="primary" size="lg" disabled={submitting} className="w-full">
+            {submitting ? "Signing in…" : "Sign in"}
           </Button>
 
           <div className="flex justify-between text-sm">

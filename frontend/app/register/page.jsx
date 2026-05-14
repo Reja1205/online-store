@@ -7,10 +7,12 @@ import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
 import Input from "../components/ui/Input";
 import Label from "../components/ui/Label";
+import { useAuth } from "../context/AuthContext";
 import { apiJson } from "../lib/api";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
 
   const [mode, setMode] = useState("user");
   const [name, setName] = useState("");
@@ -23,9 +25,10 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-    if (token) router.replace("/profile");
-  }, [router]);
+    if (!authLoading && user) {
+      router.replace("/profile");
+    }
+  }, [authLoading, user, router]);
 
   async function submit(e) {
     e.preventDefault();
@@ -59,6 +62,22 @@ export default function RegisterPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (authLoading) {
+    return (
+      <div className="mx-auto max-w-md py-16 text-center text-sm text-slate-500" aria-busy="true">
+        Checking session…
+      </div>
+    );
+  }
+
+  if (user) {
+    return (
+      <div className="mx-auto max-w-md py-16 text-center text-sm text-slate-500" aria-busy="true">
+        Redirecting…
+      </div>
+    );
   }
 
   return (

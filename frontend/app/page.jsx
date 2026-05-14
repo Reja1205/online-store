@@ -105,8 +105,8 @@ export default function Home() {
     !loadingProducts && !catalogDown && products.length > 0 && shown.length === 0;
 
   return (
-    <div className="animate-fade-up space-y-8 sm:space-y-10">
-      <section className="rounded-3xl border border-slate-200/80 bg-linear-to-br from-slate-900 via-indigo-950 to-slate-900 px-5 py-10 text-white shadow-[var(--shadow-lg)] sm:px-8 sm:py-12">
+    <div className="space-y-8 lg:space-y-10">
+      <section className="rounded-3xl border border-slate-200/80 bg-linear-to-br from-slate-900 via-indigo-950 to-slate-900 px-5 py-12 text-white shadow-[var(--shadow-lg)] sm:px-8 sm:py-14 lg:px-10 lg:py-16">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-200/90">Storefront</p>
         <h1 className="mt-2 max-w-2xl text-3xl font-semibold tracking-tight sm:text-4xl lg:text-5xl">
           Shop {SITE_NAME} with a calm, commerce-grade layout.
@@ -135,7 +135,7 @@ export default function Home() {
         <Callout variant={cartFeedback.variant}>{cartFeedback.text}</Callout>
       ) : null}
 
-      <Card className="animate-fade-up-delayed" padding="p-4 sm:p-5">
+      <Card className="shadow-md" padding="p-5 sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="grid flex-1 gap-3 sm:grid-cols-[1fr_auto]">
             <div>
@@ -172,7 +172,7 @@ export default function Home() {
             Refresh catalog
           </Button>
         </div>
-        <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-600 sm:text-sm">
+        <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-5 text-xs text-slate-600 sm:text-sm">
           <span>Showing</span>
           <Badge tone="neutral">{shown.length}</Badge>
           <span>products</span>
@@ -187,7 +187,7 @@ export default function Home() {
         </div>
       </Card>
 
-      <section aria-labelledby="catalog-heading">
+      <section className="scroll-mt-28 space-y-6" aria-labelledby="catalog-heading">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 id="catalog-heading" className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">

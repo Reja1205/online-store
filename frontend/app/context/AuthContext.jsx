@@ -21,7 +21,14 @@ export function AuthProvider({ children }) {
   const refreshUser = useCallback(async () => {
     const { res, data } = await apiJson("/api/auth/me");
 
-    if (res.status === 401) {
+    if (res.status === 401 || res.status === 403) {
+      if (typeof window !== "undefined") {
+        const hadToken = !!localStorage.getItem("token");
+        localStorage.removeItem("token");
+        if (hadToken) {
+          window.dispatchEvent(new Event("cart:updated"));
+        }
+      }
       setUser(null);
       return null;
     }

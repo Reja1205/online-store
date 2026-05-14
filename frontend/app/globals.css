@@ -29,20 +29,25 @@
 @keyframes fade-up {
   from {
     opacity: 0;
-    transform: translateY(8px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
 .animate-fade-up {
-  animation: fade-up 0.45s ease-out both;
+  animation: fade-up 0.35s ease-out both;
 }
 
 .animate-fade-up-delayed {
-  animation: fade-up 0.5s ease-out 0.08s both;
+  animation: fade-up 0.4s ease-out 0.06s both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up,
+  .animate-fade-up-delayed {
+    animation: none;
+  }
 }
 
 /* stable layout */
@@ -55,6 +60,7 @@ body {
 
 html {
   overflow-y: scroll;
+  scroll-padding-top: 5.5rem;
 }
 
 body {

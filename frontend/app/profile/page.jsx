@@ -1,88 +1,46 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
-import { apiJson } from "../lib/api";
+
+const btnPrimary =
+  "inline-flex min-h-[2.75rem] items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-700";
+const btnSecondary =
+  "inline-flex min-h-[2.75rem] items-center justify-center rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-900 transition hover:bg-gray-200";
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { logout: authLogout } = useAuth();
-
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  async function loadMe() {
-    setError("");
-    setLoading(true);
-
-    try {
-      const { res, data } = await apiJson("/api/auth/me");
-
-      if (res.status === 401) {
-        setUser(null);
-        setLoading(false);
-        return;
-      }
-
-      if (!res.ok) {
-        setError(data?.message || "Failed to load profile");
-        setUser(null);
-        setLoading(false);
-        return;
-      }
-
-      setUser(data?.user || null);
-    } catch {
-      setError("Network error");
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const { user, loading, logout: authLogout } = useAuth();
 
   async function logout() {
     await authLogout();
     router.push("/login");
   }
 
-  useEffect(() => {
-    loadMe();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   if (loading) {
     return (
-      <div className="max-w-3xl mx-auto">
-        <div className="bg-white border border-gray-100 rounded-2xl shadow p-6">
-          <p className="text-gray-600">Loading your profile...</p>
+      <div className="mx-auto max-w-3xl">
+        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+          <p className="text-gray-600">Loading your profile…</p>
         </div>
       </div>
     );
   }
 
-  // Not logged in
   if (!user) {
     return (
-      <div className="max-w-3xl mx-auto">
-        <div className="bg-white border border-gray-100 rounded-2xl shadow p-6">
+      <div className="mx-auto max-w-3xl">
+        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
           <h1 className="text-2xl font-bold text-gray-900">Profile</h1>
-          <p className="text-gray-600 mt-2">
-            You’re not logged in. Please login to view your profile.
-          </p>
+          <p className="mt-2 text-gray-600">You’re not signed in. Sign in to view your profile and orders.</p>
 
-          <div className="flex gap-3 mt-5 flex-wrap">
-            <Link href="/login">
-              <button className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium transition">
-                Go to Login
-              </button>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <Link href="/login" className={btnPrimary}>
+              Sign in
             </Link>
-            <Link href="/">
-              <button className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-900 font-medium transition">
-                Back Home
-              </button>
+            <Link href="/" className={btnSecondary}>
+              Back home
             </Link>
           </div>
         </div>
@@ -96,89 +54,72 @@ export default function ProfilePage() {
       : "bg-blue-100 text-blue-700";
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <div className="bg-white border border-gray-100 rounded-2xl shadow overflow-hidden">
-        {/* Top Banner */}
+    <div className="mx-auto max-w-3xl">
+      <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
         <div className="bg-linear-to-r from-indigo-600 to-purple-600 px-6 py-6">
-          <p className="text-white/80 text-sm">Welcome back</p>
-          <h1 className="text-white text-2xl font-bold">{user.name}</h1>
-          <p className="text-white/90 text-sm mt-1">{user.email}</p>
+          <p className="text-sm text-white/80">Welcome back</p>
+          <h1 className="text-2xl font-bold text-white">{user.name}</h1>
+          <p className="mt-1 text-sm text-white/90">{user.email}</p>
 
           <div className="mt-3 inline-flex">
-            <span className={`text-xs font-semibold px-3 py-1 rounded-full bg-white/15 text-white`}>
+            <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white">
               Role: {user.role}
             </span>
           </div>
         </div>
 
-        {/* Content */}
         <div className="p-6">
-          {error && (
-            <div className="mb-4 p-3 rounded-lg bg-red-50 text-red-700 text-sm">
-              {error}
-            </div>
-          )}
-
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="border border-gray-100 rounded-xl p-4">
+            <div className="rounded-xl border border-gray-100 p-4">
               <p className="text-xs text-gray-500">Name</p>
-              <p className="font-semibold text-gray-900 mt-1">{user.name}</p>
+              <p className="mt-1 font-semibold text-gray-900">{user.name}</p>
             </div>
 
-            <div className="border border-gray-100 rounded-xl p-4">
+            <div className="rounded-xl border border-gray-100 p-4">
               <p className="text-xs text-gray-500">Email</p>
-              <p className="font-semibold text-gray-900 mt-1">{user.email}</p>
+              <p className="mt-1 font-semibold text-gray-900">{user.email}</p>
             </div>
 
-            <div className="border border-gray-100 rounded-xl p-4 sm:col-span-2 flex items-center justify-between gap-3">
+            <div className="flex flex-col gap-3 rounded-xl border border-gray-100 p-4 sm:col-span-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-xs text-gray-500">Account Type</p>
-                <span className={`inline-flex mt-2 text-sm font-semibold px-3 py-1 rounded-full ${roleBadge}`}>
-                  {user.role === "admin" ? "Admin Account" : "User Account"}
+                <p className="text-xs text-gray-500">Account type</p>
+                <span
+                  className={`mt-2 inline-flex rounded-full px-3 py-1 text-sm font-semibold ${roleBadge}`}
+                >
+                  {user.role === "admin" ? "Admin account" : "Customer account"}
                 </span>
               </div>
 
               {user.role === "admin" ? (
-                <Link href="/admin">
-                  <button className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-medium transition">
-                    Go to Admin
-                  </button>
+                <Link href="/admin" className={btnPrimary}>
+                  Admin dashboard
                 </Link>
               ) : (
-                <Link href="/orders">
-                  <button className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium transition">
-                    My Orders
-                  </button>
+                <Link href="/orders" className={btnPrimary}>
+                  My orders
                 </Link>
               )}
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex gap-3 mt-6 flex-wrap">
-            <Link href="/">
-              <button className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-900 font-medium transition">
-                Back Home
-              </button>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link href="/" className={btnSecondary}>
+              Home
             </Link>
-
-            <Link href="/cart">
-              <button className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-900 font-medium transition">
-                View Cart
-              </button>
+            <Link href="/cart" className={btnSecondary}>
+              View cart
             </Link>
-
             <button
               type="button"
               onClick={() => void logout()}
-              className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white font-medium transition"
+              className="inline-flex min-h-[2.75rem] items-center justify-center rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700"
             >
-              Logout
+              Sign out
             </button>
           </div>
 
-          <p className="text-xs text-gray-400 mt-6">
-            Tip: Admins can manage products and view all orders from the Admin Dashboard.
+          <p className="mt-6 text-xs text-gray-400">
+            Admins can manage products and orders from the admin dashboard.
           </p>
         </div>
       </div>
