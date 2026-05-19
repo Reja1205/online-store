@@ -128,3 +128,23 @@ export function productStock(p) {
   const v = p?.stock ?? p?.stockQty ?? 0;
   return Number(v) || 0;
 }
+
+export function productSalePrice(p) {
+  const sale = Number(p?.salePrice);
+  if (!Number.isFinite(sale) || sale < 0) return null;
+  return sale;
+}
+
+/** Price shown to shoppers (sale price when on sale and valid). */
+export function productDisplayPrice(p) {
+  const regular = productPrice(p);
+  const sale = productSalePrice(p);
+  if (p?.onSale && sale != null && sale < regular) return sale;
+  return regular;
+}
+
+export function productIsOnSale(p) {
+  const regular = productPrice(p);
+  const sale = productSalePrice(p);
+  return Boolean(p?.onSale) && sale != null && sale < regular;
+}

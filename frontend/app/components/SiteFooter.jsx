@@ -1,4 +1,5 @@
 import Link from "next/link";
+import BrandLogo from "./BrandLogo";
 import { SITE_NAME } from "../lib/site";
 
 const year = new Date().getFullYear();
@@ -11,9 +12,7 @@ export default function SiteFooter() {
     >
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-10 px-4 py-12 sm:px-6 lg:flex-row lg:justify-between lg:px-8">
         <div className="max-w-md">
-          <p className="text-sm font-semibold uppercase tracking-wider text-white">
-            {SITE_NAME}
-          </p>
+          <BrandLogo href="/" size="sm" variant="footer" />
           <p className="mt-2 text-sm leading-relaxed text-slate-400">
             Secure checkout, clear order status, and a layout tuned for phones through large
             desktops.

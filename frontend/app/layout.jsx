@@ -37,8 +37,11 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className="h-full scroll-smooth">
-      <body className="min-h-screen bg-[var(--color-bg)] text-slate-900 antialiased">
+    <html lang="en" className="h-full scroll-smooth" suppressHydrationWarning>
+      <body
+        className="min-h-screen bg-[var(--color-bg)] text-slate-900 antialiased"
+        suppressHydrationWarning
+      >
         <AppShell>{children}</AppShell>
         <SiteFooter />
       </body>

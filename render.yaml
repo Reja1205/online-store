@@ -1,0 +1,29 @@
+# Render Blueprint — deploy backend API from this repo
+# Dashboard: New → Blueprint → connect GitHub repo, or link this file on an existing Web Service.
+services:
+  - type: web
+    name: online-store-api
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: SHIPPING_FEE_USD
+        value: "5.99"
+      - key: ALLOWED_ORIGINS
+        sync: false
