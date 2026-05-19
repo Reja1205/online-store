@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Header from "./Header";
+import HeaderTicker from "./HeaderTicker";
 import Container from "./ui/Container";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import { apiJson } from "../lib/api";
@@ -47,14 +48,13 @@ function ShellContent({ children }) {
 
   return (
     <div className="flex w-full max-w-full flex-col">
-      <div className="sticky top-0 z-40 shrink-0 border-b border-slate-200 bg-white shadow-sm">
-        <Container className="py-3 sm:py-3.5">
-          <Header cartCount={cartCount} />
-        </Container>
+      <div className="sticky top-0 z-40 shrink-0 shadow-md shadow-indigo-900/10">
+        <Header cartCount={cartCount} />
+        <HeaderTicker />
       </div>
 
       <main className="relative z-0 w-full overflow-x-clip bg-[var(--color-bg)] pb-2">
-        <Container className="py-6 sm:py-8 lg:py-10">{children}</Container>
+        <Container className="pb-4 pt-0 sm:pb-6 lg:pb-8">{children}</Container>
       </main>
     </div>
   );

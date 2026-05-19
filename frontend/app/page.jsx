@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import ProductCard from "./components/ProductCard";
+import { PRODUCT_GRID_CLASS } from "./lib/productGrid";
+import HomeCarousel from "./components/HomeCarousel";
+import ProductSection from "./components/ProductSection";
 import Badge from "./components/ui/Badge";
 import Button from "./components/ui/Button";
 import Callout from "./components/ui/Callout";
@@ -12,8 +15,7 @@ import Input from "./components/ui/Input";
 import { ProductCardSkeleton } from "./components/ui/Skeleton";
 import { useAuth } from "./context/AuthContext";
 import { apiJson } from "./lib/api";
-import { SITE_NAME } from "./lib/site";
-
+import { pickBestSellers, pickFeatured, pickOnSale } from "./lib/productSections";
 const PAGE_SIZE = 8;
 
 export default function Home() {
@@ -99,6 +101,10 @@ export default function Home() {
     return shown.slice(start, start + PAGE_SIZE);
   }, [shown, currentPage]);
 
+  const bestSellers = useMemo(() => pickBestSellers(products), [products]);
+  const featuredProducts = useMemo(() => pickFeatured(products), [products]);
+  const saleProducts = useMemo(() => pickOnSale(products), [products]);
+
   const catalogDown = !loadingProducts && Boolean(catalogLoadError) && products.length === 0;
   const catalogEmptyOk = !loadingProducts && !catalogLoadError && products.length === 0;
   const catalogFilteredEmpty =
@@ -106,34 +112,53 @@ export default function Home() {
 
   return (
     <div className="space-y-8 lg:space-y-10">
-      <section className="rounded-3xl border border-slate-200/80 bg-linear-to-br from-slate-900 via-indigo-950 to-slate-900 px-5 py-12 text-white shadow-[var(--shadow-lg)] sm:px-8 sm:py-14 lg:px-10 lg:py-16">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-200/90">Storefront</p>
-        <h1 className="mt-2 max-w-2xl text-3xl font-semibold tracking-tight sm:text-4xl lg:text-5xl">
-          Shop {SITE_NAME} with a calm, commerce-grade layout.
-        </h1>
-        <p className="mt-4 max-w-xl text-sm leading-relaxed text-slate-300 sm:text-base">
-          Search, filter by availability, and add to cart when signed in. Built for responsive
-          breakpoints from mobile to wide desktop.
-        </p>
-        <div className="mt-6 flex flex-wrap gap-3">
-          <Link
-            href="/products"
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-transparent bg-white px-5 py-2.5 text-sm font-semibold text-slate-900 shadow-sm transition-all duration-200 hover:bg-slate-100 hover:shadow-md active:scale-[0.99] min-h-[2.75rem]"
-          >
-            Browse catalog
-          </Link>
-          <Link
-            href="/register"
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/30 bg-transparent px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:bg-white/10 active:scale-[0.99] min-h-[2.75rem]"
-          >
-            Create account
-          </Link>
-        </div>
+      <section
+        id="hero"
+        className="relative left-1/2 w-screen max-w-[100vw] -translate-x-1/2 scroll-mt-36"
+        aria-label="Hero promotions"
+      >
+        <HomeCarousel products={products} loading={false} />
       </section>
 
       {cartFeedback ? (
         <Callout variant={cartFeedback.variant}>{cartFeedback.text}</Callout>
       ) : null}
+
+      <ProductSection
+        id="best-sellers"
+        title="Best Sellers"
+        subtitle="Customer favorites and top picks this season."
+        viewAllHref="/products?section=best-seller"
+        products={bestSellers}
+        loading={loadingProducts}
+        user={user}
+        onAddToCart={addToCart}
+        accent="amber"
+      />
+
+      <ProductSection
+        id="featured-products"
+        title="Featured Products"
+        subtitle="Hand-picked highlights from our catalog."
+        viewAllHref="/products?section=featured"
+        products={featuredProducts}
+        loading={loadingProducts}
+        user={user}
+        onAddToCart={addToCart}
+        accent="indigo"
+      />
+
+      <ProductSection
+        id="special-sale"
+        title="Special Sale"
+        subtitle="Limited-time deals — save while stock lasts."
+        viewAllHref="/products?section=sale"
+        products={saleProducts}
+        loading={loadingProducts}
+        user={user}
+        onAddToCart={addToCart}
+        accent="rose"
+      />
 
       <Card className="shadow-md" padding="p-5 sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -191,14 +216,14 @@ export default function Home() {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 id="catalog-heading" className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
-              Featured catalog
+              Shop all products
             </h2>
-            <p className="mt-1 text-sm text-slate-600">Responsive grid, keyboard-friendly controls.</p>
+            <p className="mt-1 text-sm text-slate-600">Search, filter, and browse the full catalog.</p>
           </div>
         </div>
 
         {loadingProducts ? (
-          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className={`mt-6 ${PRODUCT_GRID_CLASS}`}>
             {Array.from({ length: 8 }).map((_, i) => (
               <ProductCardSkeleton key={i} />
             ))}
@@ -240,7 +265,7 @@ export default function Home() {
           </div>
         ) : (
           <>
-            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className={`mt-6 ${PRODUCT_GRID_CLASS}`}>
               {pageSlice.map((p) => (
                 <ProductCard key={p._id} p={p} user={user} onAddToCart={addToCart} />
               ))}

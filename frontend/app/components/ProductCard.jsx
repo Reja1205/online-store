@@ -3,7 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { memo } from "react";
-import { productName, productPrice, productStock } from "../lib/api";
+import {
+  productDisplayPrice,
+  productIsOnSale,
+  productName,
+  productPrice,
+  productStock,
+} from "../lib/api";
 
 function isAllowedImageHost(src) {
   try {
@@ -19,6 +25,8 @@ function isAllowedImageHost(src) {
 function ProductCard({ p, user, onAddToCart }) {
   const name = productName(p);
   const price = productPrice(p);
+  const displayPrice = productDisplayPrice(p);
+  const onSale = productIsOnSale(p);
   const stock = productStock(p);
 
   const canAdd = !!user && stock > 0;
@@ -32,7 +40,7 @@ function ProductCard({ p, user, onAddToCart }) {
   const detailHref = `/products/${p._id}`;
 
   return (
-    <article className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[var(--shadow-sm)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)]">
+    <article className="group flex flex-col overflow-hidden rounded-xl border border-slate-200/90 bg-white shadow-[var(--shadow-sm)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)] xl:rounded-lg">
       <Link
         href={detailHref}
         className="relative block w-full cursor-pointer overflow-hidden bg-slate-50 outline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--color-brand)]"
@@ -45,7 +53,7 @@ function ProductCard({ p, user, onAddToCart }) {
                 src={p.imageUrl}
                 alt={name}
                 fill
-                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 16vw, 12vw"
                 className="object-cover transition duration-300 group-hover:scale-[1.02]"
                 loading="lazy"
               />
@@ -66,31 +74,45 @@ function ProductCard({ p, user, onAddToCart }) {
           )}
         </div>
 
+        {onSale ? (
+          <span className="pointer-events-none absolute left-2 top-2 z-10 rounded-full bg-rose-600 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm xl:left-1.5 xl:top-1.5 xl:px-1.5 xl:text-[9px]">
+            Sale
+          </span>
+        ) : null}
         <span
-          className={`pointer-events-none absolute right-3 top-3 z-10 inline-flex max-w-[calc(100%-1.5rem)] items-center truncate rounded-full px-3 py-1 text-xs font-semibold shadow-sm backdrop-blur-[2px] ${stockBadgeClass}`}
+          className={`pointer-events-none absolute right-2 top-2 z-10 inline-flex max-w-[calc(100%-1rem)] items-center truncate rounded-full px-2 py-0.5 text-[10px] font-semibold shadow-sm backdrop-blur-[2px] xl:right-1.5 xl:top-1.5 xl:px-1.5 xl:text-[9px] ${stockBadgeClass}`}
         >
           {stock > 0 ? `In stock · ${stock}` : "Out of stock"}
         </span>
       </Link>
 
-      <div className="flex flex-1 flex-col gap-2 p-4">
+      <div className="flex flex-1 flex-col gap-1.5 p-3 xl:gap-1 xl:p-2">
         <Link
           href={detailHref}
           className="block cursor-pointer rounded-lg outline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--color-brand)]"
         >
-          <h3 className="line-clamp-2 text-base font-semibold leading-snug text-slate-900">{name}</h3>
+          <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-slate-900 xl:line-clamp-1 xl:text-xs">
+            {name}
+          </h3>
 
-          <p className="text-lg font-semibold tracking-tight text-indigo-600">${price}</p>
+          <p className="flex flex-wrap items-baseline gap-1.5">
+            <span className="text-base font-semibold tracking-tight text-indigo-600 xl:text-sm">
+              ${displayPrice.toFixed(2)}
+            </span>
+            {onSale ? (
+              <span className="text-xs text-slate-400 line-through xl:text-[10px]">${price.toFixed(2)}</span>
+            ) : null}
+          </p>
 
           {p.description ? (
-            <p className="line-clamp-2 text-xs leading-relaxed text-slate-600">{p.description}</p>
+            <p className="line-clamp-2 text-xs leading-relaxed text-slate-600 xl:hidden">{p.description}</p>
           ) : null}
         </Link>
 
-        <div className="mt-auto flex gap-2 pt-2">
+        <div className="mt-auto flex gap-1.5 pt-1 xl:gap-1 xl:pt-0.5">
           <Link
             href={detailHref}
-            className="inline-flex flex-1 cursor-pointer items-center justify-center rounded-xl border border-slate-200 bg-slate-50 py-2.5 text-center text-sm font-medium text-slate-800 transition hover:bg-slate-100 min-h-[2.75rem]"
+            className="inline-flex flex-1 cursor-pointer items-center justify-center rounded-lg border border-slate-200 bg-slate-50 py-2 text-center text-xs font-medium text-slate-800 transition hover:bg-slate-100 min-h-[2.25rem] xl:min-h-[1.75rem] xl:rounded-md xl:py-1 xl:text-[10px]"
           >
             Details
           </Link>
@@ -99,7 +121,7 @@ function ProductCard({ p, user, onAddToCart }) {
             type="button"
             onClick={() => onAddToCart(p._id)}
             disabled={!canAdd}
-            className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition min-h-[2.75rem] ${
+            className={`flex-1 rounded-lg py-2 text-xs font-semibold transition min-h-[2.25rem] xl:min-h-[1.75rem] xl:rounded-md xl:py-1 xl:text-[10px] ${
               canAdd
                 ? "cursor-pointer bg-indigo-600 text-white hover:bg-indigo-700"
                 : "cursor-not-allowed bg-slate-200 text-slate-500"

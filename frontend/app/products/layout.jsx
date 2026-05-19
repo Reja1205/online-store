@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { SITE_NAME } from "../lib/site";
 
 export const metadata = {
@@ -6,5 +7,5 @@ export const metadata = {
 };
 
 export default function ProductsLayout({ children }) {
-  return children;
+  return <Suspense fallback={null}>{children}</Suspense>;
 }

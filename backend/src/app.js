@@ -9,6 +9,7 @@ const productRoutes = require("./routes/product.routes");
 const cartRoutes = require("./routes/cart.routes");
 const checkoutRoutes = require("./routes/checkout.routes");
 const orderRoutes = require("./routes/order.routes");
+const wishlistRoutes = require("./routes/wishlist.routes");
 
 const app = express();
 
@@ -24,18 +25,32 @@ const extraAllowedOrigins = (process.env.ALLOWED_ORIGINS || "")
   .map((s) => s.trim())
   .filter(Boolean);
 
+const isPrivateHostname = (hostname) =>
+  hostname === "localhost" ||
+  /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname) ||
+  /^192\.168\.\d{1,3}\.\d{1,3}$/.test(hostname) ||
+  /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname) ||
+  /^172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}$/.test(hostname);
+
+const isDevFrontendOrigin = (origin) => {
+  try {
+    const { protocol, hostname, port } = new URL(origin);
+    if (protocol !== "http:") return false;
+    if (!["3000", "3001"].includes(port)) return false;
+    return isPrivateHostname(hostname);
+  } catch {
+    return false;
+  }
+};
+
 const corsOptions = {
   origin: function (origin, cb) {
     if (!origin) return cb(null, true); // Postman / curl
 
     if (extraAllowedOrigins.includes(origin)) return cb(null, true);
 
-    // Local development
-    if (origin === "http://localhost:3000" || origin === "http://127.0.0.1:3000")
-      return cb(null, true);
-
-    if (origin === "http://localhost:3001" || origin === "http://127.0.0.1:3001")
-      return cb(null, true);
+    // Local development (localhost + LAN, e.g. phone on same Wi‑Fi)
+    if (isDevFrontendOrigin(origin)) return cb(null, true);
 
     // Production frontend
     if (origin === "https://online-store-six-gules.vercel.app")
@@ -79,6 +94,7 @@ app.use("/api/products", productRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/checkout", checkoutRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/ai", aiRoutes);
 
 // 404
