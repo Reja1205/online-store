@@ -37,7 +37,7 @@ export default function CartPage() {
     window.dispatchEvent(new Event("cart:updated"));
   }
 
-  async function removeItem(productId) {
+  async function removeItem(productId, size = "", color = "") {
     setError("");
     setMsg("");
 
@@ -52,7 +52,11 @@ export default function CartPage() {
     const { res, data } = await apiJson("/api/cart/remove", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ productId }),
+      body: JSON.stringify({
+        productId,
+        ...(size ? { size } : {}),
+        ...(color ? { color } : {}),
+      }),
     });
 
     if (!res.ok) {
@@ -87,6 +91,9 @@ export default function CartPage() {
 
       return {
         id: productId,
+        size: it.size || "",
+        color: it.color || "",
+        lineKey: `${productId}::${it.size || ""}::${it.color || ""}`,
         name: productName(safeProduct),
         price: productPrice(safeProduct),
         stock: productStock(safeProduct),
@@ -147,7 +154,7 @@ export default function CartPage() {
             <div className="grid gap-4">
               {rows.map((r) => (
                 <div
-                  key={r.id}
+                  key={r.lineKey}
                   className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm flex gap-4"
                 >
                   <div className="w-24 h-24 rounded-xl bg-gray-100 overflow-hidden flex items-center justify-center border">
@@ -162,6 +169,13 @@ export default function CartPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="font-semibold text-gray-900">{r.name}</p>
+                        {r.size || r.color ? (
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            {[r.color && `Color: ${r.color}`, r.size && `Size: ${r.size}`]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </p>
+                        ) : null}
 
                         {r.deleted && (
                           <p className="text-xs mt-1 text-red-600">
@@ -195,7 +209,7 @@ export default function CartPage() {
 
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => removeItem(r.id)}
+                          onClick={() => removeItem(r.id, r.size, r.color)}
                           className="px-3 py-2 rounded-xl bg-red-50 border border-red-200 text-red-700 hover:bg-red-100 transition text-sm font-medium"
                         >
                           Remove

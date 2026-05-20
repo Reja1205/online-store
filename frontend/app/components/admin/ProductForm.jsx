@@ -2,6 +2,10 @@
 
 import { useEffect, useRef } from "react";
 import { ADMIN_CATEGORIES, getCategoryLabel } from "../../lib/categories";
+import { getCategoryColorMode } from "../../lib/colors";
+import { defaultSizeStockForCategory, getCategorySizeMode } from "../../lib/sizes";
+import ColorFields from "./ColorFields";
+import SizeStockFields from "./SizeStockFields";
 
 const inputClass =
   "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20";
@@ -11,7 +15,10 @@ export const emptyProductForm = {
   price: "",
   stock: "",
   description: "",
+  shortDescription: "",
   category: "",
+  sizeStock: [],
+  colors: [],
   featured: false,
   bestSeller: false,
   onSale: false,
@@ -26,7 +33,12 @@ export function productToForm(p) {
     price: String(p.price ?? ""),
     stock: String(p.stock ?? ""),
     description: p.description || "",
+    shortDescription: p.shortDescription || "",
     category: p.category || "",
+    sizeStock: Array.isArray(p.sizeStock)
+      ? p.sizeStock.map((s) => ({ size: s.size, stock: Number(s.stock ?? 0) }))
+      : [],
+    colors: Array.isArray(p.colors) ? [...p.colors] : [],
     featured: Boolean(p.featured),
     bestSeller: Boolean(p.bestSeller),
     onSale: Boolean(p.onSale),
@@ -42,6 +54,14 @@ export function validateProductForm(values) {
   if (values.stock === "" || Number.isNaN(Number(values.stock))) return "Valid stock quantity is required.";
   if (Number(values.stock) < 0) return "Stock cannot be negative.";
   if (!values.category) return "Please select a category.";
+  if (getCategorySizeMode(values.category)) {
+    if (!values.sizeStock?.length) return "Select at least one size for this clothing category.";
+    const hasStock = values.sizeStock.some((s) => Number(s.stock) > 0);
+    if (!hasStock) return "Enter stock for at least one size.";
+  }
+  if (getCategoryColorMode(values.category) && !values.colors?.length) {
+    return "Select at least one color for this clothing category.";
+  }
   if (values.onSale && values.salePrice !== "") {
     const sale = Number(values.salePrice);
     const regular = Number(values.price);
@@ -52,13 +72,52 @@ export function validateProductForm(values) {
   return "";
 }
 
+/** JSON body for PUT when no image file is uploaded */
+export function buildProductJsonBody(values) {
+  const payload = {
+    name: values.name.trim(),
+    price: Number(values.price),
+    stock: Number(values.stock),
+    description: values.description?.trim() || "",
+    shortDescription: values.shortDescription?.trim().slice(0, 200) || "",
+    category: values.category,
+    featured: values.featured,
+    bestSeller: values.bestSeller,
+    onSale: values.onSale,
+  };
+
+  if (getCategorySizeMode(values.category) && values.sizeStock?.length) {
+    payload.sizeStock = values.sizeStock;
+    payload.stock = values.sizeStock.reduce((sum, s) => sum + Number(s.stock || 0), 0);
+  }
+
+  if (getCategoryColorMode(values.category) && values.colors?.length) {
+    payload.colors = values.colors;
+  }
+
+  if (values.onSale && values.salePrice !== "") {
+    payload.salePrice = Number(values.salePrice);
+  }
+
+  return payload;
+}
+
 export function buildProductFormData(values, { includeImage = true } = {}) {
   const fd = new FormData();
   fd.append("name", values.name.trim());
   fd.append("price", String(Number(values.price)));
   fd.append("stock", String(Number(values.stock)));
   fd.append("description", values.description?.trim() || "");
+  fd.append("shortDescription", values.shortDescription?.trim().slice(0, 200) || "");
   fd.append("category", values.category);
+  if (getCategorySizeMode(values.category) && values.sizeStock?.length) {
+    fd.append("sizeStock", JSON.stringify(values.sizeStock));
+    const total = values.sizeStock.reduce((sum, s) => sum + Number(s.stock || 0), 0);
+    fd.set("stock", String(total));
+  }
+  if (getCategoryColorMode(values.category) && values.colors?.length) {
+    fd.append("colors", JSON.stringify(values.colors));
+  }
   fd.append("featured", String(values.featured));
   fd.append("bestSeller", String(values.bestSeller));
   fd.append("onSale", String(values.onSale));
@@ -166,14 +225,24 @@ export default function ProductForm({
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-700">
             Stock <span className="text-red-600">*</span>
+            {getCategorySizeMode(values.category) ? (
+              <span className="font-normal text-gray-500"> (auto-sum from sizes)</span>
+            ) : null}
           </label>
           <input
             className={inputClass}
-            value={values.stock}
+            value={
+              getCategorySizeMode(values.category)
+                ? String(
+                    (values.sizeStock || []).reduce((sum, s) => sum + Number(s.stock || 0), 0)
+                  )
+                : values.stock
+            }
             onChange={(e) => set("stock", e.target.value)}
             placeholder="10"
             inputMode="numeric"
             required
+            readOnly={Boolean(getCategorySizeMode(values.category))}
           />
         </div>
       </div>
@@ -185,7 +254,21 @@ export default function ProductForm({
         <select
           className={inputClass}
           value={values.category}
-          onChange={(e) => set("category", e.target.value)}
+          onChange={(e) => {
+            const next = e.target.value;
+            const prevSizeMode = getCategorySizeMode(values.category);
+            const nextSizeMode = getCategorySizeMode(next);
+            const prevColorMode = getCategoryColorMode(values.category);
+            const nextColorMode = getCategoryColorMode(next);
+            const patch = { category: next };
+            if (prevSizeMode !== nextSizeMode) {
+              patch.sizeStock = nextSizeMode ? defaultSizeStockForCategory(next) : [];
+            }
+            if (prevColorMode !== nextColorMode) {
+              patch.colors = [];
+            }
+            onChange({ ...values, ...patch });
+          }}
           required
         >
           <option value="">Select a category…</option>
@@ -201,6 +284,18 @@ export default function ProductForm({
           </p>
         ) : null}
       </div>
+
+      <SizeStockFields
+        category={values.category}
+        sizeStock={values.sizeStock}
+        onChange={(sizeStock) => onChange({ ...values, sizeStock })}
+      />
+
+      <ColorFields
+        category={values.category}
+        colors={values.colors}
+        onChange={(colors) => onChange({ ...values, colors })}
+      />
 
       <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
         <p className="text-sm font-semibold text-slate-900">Homepage sections</p>
@@ -251,12 +346,30 @@ export default function ProductForm({
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-gray-700">Description</label>
+        <label className="mb-1 block text-sm font-medium text-gray-700">
+          Short description <span className="font-normal text-gray-500">(catalog cards)</span>
+        </label>
+        <textarea
+          className={`${inputClass} min-h-20`}
+          value={values.shortDescription}
+          onChange={(e) => set("shortDescription", e.target.value)}
+          placeholder="Brief text under the product name on shop cards (max 200 characters)…"
+          maxLength={200}
+        />
+        <p className="mt-1 text-xs text-gray-500">
+          {(values.shortDescription || "").length}/200 characters
+        </p>
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium text-gray-700">
+          Full description <span className="font-normal text-gray-500">(product page)</span>
+        </label>
         <textarea
           className={`${inputClass} min-h-28`}
           value={values.description}
           onChange={(e) => set("description", e.target.value)}
-          placeholder="Short product description…"
+          placeholder="Longer details shown on the product page…"
         />
       </div>
 

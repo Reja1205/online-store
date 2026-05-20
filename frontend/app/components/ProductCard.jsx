@@ -8,8 +8,11 @@ import {
   productIsOnSale,
   productName,
   productPrice,
-  productStock,
 } from "../lib/api";
+import { productHasColors } from "../lib/colors";
+import { productCardBlurb, productReviewSummary } from "../lib/productCard";
+import { productHasSizes, productTotalStock } from "../lib/sizes";
+import StarRating from "./product/StarRating";
 
 function isAllowedImageHost(src) {
   try {
@@ -27,9 +30,11 @@ function ProductCard({ p, user, onAddToCart }) {
   const price = productPrice(p);
   const displayPrice = productDisplayPrice(p);
   const onSale = productIsOnSale(p);
-  const stock = productStock(p);
-
-  const canAdd = !!user && stock > 0;
+  const blurb = productCardBlurb(p);
+  const reviewSummary = productReviewSummary(p);
+  const needsOptions = productHasSizes(p) || productHasColors(p);
+  const stock = productTotalStock(p);
+  const canAdd = stock > 0 && !needsOptions;
   const useNextImage = p.imageUrl && isAllowedImageHost(p.imageUrl);
 
   const stockBadgeClass =
@@ -95,18 +100,34 @@ function ProductCard({ p, user, onAddToCart }) {
             {name}
           </h3>
 
-          <p className="flex flex-wrap items-baseline gap-1.5">
+          <p className="mt-1 flex flex-wrap items-baseline gap-1.5">
             <span className="text-base font-semibold tracking-tight text-indigo-600 xl:text-sm">
               ${displayPrice.toFixed(2)}
             </span>
             {onSale ? (
-              <span className="text-xs text-slate-400 line-through xl:text-[10px]">${price.toFixed(2)}</span>
+              <span className="text-xs text-slate-400 line-through xl:text-[10px]">
+                ${price.toFixed(2)}
+              </span>
             ) : null}
           </p>
 
-          {p.description ? (
-            <p className="line-clamp-2 text-xs leading-relaxed text-slate-600 xl:hidden">{p.description}</p>
-          ) : null}
+          <div className="mt-1.5 grid grid-cols-2 gap-2 items-start">
+            <div className="min-w-0">
+              {blurb ? (
+                <p className="line-clamp-3 text-xs leading-relaxed text-slate-600">{blurb}</p>
+              ) : (
+                <p className="text-xs text-slate-400">No description</p>
+              )}
+            </div>
+            <div className="min-w-0">
+              <StarRating
+                rating={reviewSummary.averageRating}
+                count={reviewSummary.count}
+                size="sm"
+                className="justify-end"
+              />
+            </div>
+          </div>
         </Link>
 
         <div className="mt-auto flex gap-1.5 pt-1 xl:gap-1 xl:pt-0.5">
@@ -117,22 +138,30 @@ function ProductCard({ p, user, onAddToCart }) {
             Details
           </Link>
 
-          <button
-            type="button"
-            onClick={() => onAddToCart(p._id)}
-            disabled={!canAdd}
-            className={`flex-1 rounded-lg py-2 text-xs font-semibold transition min-h-[2.25rem] xl:min-h-[1.75rem] xl:rounded-md xl:py-1 xl:text-[10px] ${
-              canAdd
-                ? "cursor-pointer bg-indigo-600 text-white hover:bg-indigo-700"
-                : "cursor-not-allowed bg-slate-200 text-slate-500"
-            }`}
-            title={
-              !user ? "Sign in to add items" : stock <= 0 ? "Out of stock" : "Add to cart"
-            }
-            aria-label={canAdd ? `Add ${name} to cart` : undefined}
-          >
-            Add
-          </button>
+          {needsOptions ? (
+            <Link
+              href={detailHref}
+              className="inline-flex flex-1 cursor-pointer items-center justify-center rounded-lg bg-indigo-600 py-2 text-center text-xs font-semibold text-white transition hover:bg-indigo-700 min-h-[2.25rem] xl:min-h-[1.75rem] xl:rounded-md xl:py-1 xl:text-[10px]"
+              title="Select size and color on product page"
+            >
+              Add
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={() => onAddToCart(p._id)}
+              disabled={!canAdd}
+              className={`flex-1 rounded-lg py-2 text-xs font-semibold transition min-h-[2.25rem] xl:min-h-[1.75rem] xl:rounded-md xl:py-1 xl:text-[10px] ${
+                canAdd
+                  ? "cursor-pointer bg-indigo-600 text-white hover:bg-indigo-700"
+                  : "cursor-not-allowed bg-slate-200 text-slate-500"
+              }`}
+              title={stock <= 0 ? "Out of stock" : "Add to cart"}
+              aria-label={canAdd ? `Add ${name} to cart` : undefined}
+            >
+              Add
+            </button>
+          )}
         </div>
       </div>
     </article>

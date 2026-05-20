@@ -3,6 +3,8 @@ export const metadata = {
   description: "Enter shipping details and complete your order.",
 };
 
+import { Suspense } from "react";
+
 export default function CheckoutLayout({ children }) {
-  return children;
+  return <Suspense fallback={null}>{children}</Suspense>;
 }

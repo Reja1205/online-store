@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import ShippingAddressForm from "../components/profile/ShippingAddressForm";
 import { useAuth } from "../context/AuthContext";
 
 const btnPrimary =
@@ -100,6 +101,13 @@ export default function ProfilePage() {
                 </Link>
               )}
             </div>
+          </div>
+
+          <div className="mt-6">
+            <ShippingAddressForm
+              initialAddress={user.shippingAddress}
+              userEmail={user.email}
+            />
           </div>
 
           <div className="mt-6 flex flex-wrap gap-3">

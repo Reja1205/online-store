@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import ProductForm, {
   buildProductFormData,
+  buildProductJsonBody,
   productToForm,
   validateProductForm,
 } from "../../../../components/admin/ProductForm";
@@ -63,17 +64,7 @@ export default function EditProductPage() {
     } else {
       ({ res, data } = await apiJson(`/api/products/${id}`, {
         method: "PUT",
-        body: JSON.stringify({
-          name: values.name.trim(),
-          price: Number(values.price),
-          stock: Number(values.stock),
-          description: values.description?.trim() || "",
-          category: values.category,
-          featured: values.featured,
-          bestSeller: values.bestSeller,
-          onSale: values.onSale,
-          salePrice: values.onSale && values.salePrice !== "" ? Number(values.salePrice) : undefined,
-        }),
+        body: JSON.stringify(buildProductJsonBody(values)),
       }));
     }
 

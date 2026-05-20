@@ -15,6 +15,7 @@ import Input from "./components/ui/Input";
 import { ProductCardSkeleton } from "./components/ui/Skeleton";
 import { useAuth } from "./context/AuthContext";
 import { apiJson } from "./lib/api";
+import { fetchProductsCatalogClient } from "./lib/products";
 import { pickBestSellers, pickFeatured, pickOnSale } from "./lib/productSections";
 const PAGE_SIZE = 8;
 
@@ -26,24 +27,23 @@ export default function Home() {
   const [cartFeedback, setCartFeedback] = useState(null);
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState("all");
-  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [loadingProducts, setLoadingProducts] = useState(true);
   const [page, setPage] = useState(1);
 
-  const loadProducts = useCallback(async () => {
+  const loadProducts = useCallback(async (force = false) => {
     setCatalogLoadError("");
     setLoadingProducts(true);
 
-    const { res, data } = await apiJson("/api/products", { headers: {} });
+    const result = await fetchProductsCatalogClient({ force });
 
-    if (!res.ok) {
+    if (!result.ok) {
       setProducts([]);
-      setCatalogLoadError(data?.message || "We couldn’t load the catalog. Please try again.");
+      setCatalogLoadError(result.message || "We couldn’t load the catalog. Please try again.");
       setLoadingProducts(false);
       return;
     }
 
-    const list = Array.isArray(data) ? data : data.products;
-    setProducts(Array.isArray(list) ? list : []);
+    setProducts(result.products);
     setLoadingProducts(false);
   }, []);
 
@@ -55,13 +55,18 @@ export default function Home() {
     setPage(1);
   }, [q, filter]);
 
-  const addToCart = useCallback(async (productId) => {
+  const addToCart = useCallback(async (productId, size, color) => {
     setCartFeedback(null);
 
     const { res, data } = await apiJson("/api/cart/add", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ productId, qty: 1 }),
+      body: JSON.stringify({
+        productId,
+        qty: 1,
+        ...(size ? { size } : {}),
+        ...(color ? { color } : {}),
+      }),
     });
 
     if (!res.ok) {
@@ -193,7 +198,7 @@ export default function Home() {
               </select>
             </div>
           </div>
-          <Button type="button" variant="outlineDark" size="md" className="w-full shrink-0 lg:w-auto" onClick={loadProducts}>
+          <Button type="button" variant="outlineDark" size="md" className="w-full shrink-0 lg:w-auto" onClick={() => loadProducts(true)}>
             Refresh catalog
           </Button>
         </div>
@@ -233,7 +238,7 @@ export default function Home() {
             <Callout variant="danger" title="We couldn’t load products">
               <p>{catalogLoadError}</p>
               <div className="mt-4 flex flex-wrap gap-2">
-                <Button type="button" variant="primary" size="md" onClick={loadProducts}>
+                <Button type="button" variant="primary" size="md" onClick={() => loadProducts(true)}>
                   Try again
                 </Button>
                 <Link

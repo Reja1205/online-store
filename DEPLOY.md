@@ -104,6 +104,31 @@ git push origin main
 - [ ] Admin can edit products (use admin account)
 - [ ] Add to cart + checkout
 - [ ] Product images load (Cloudinary URLs)
+- [ ] **Checkout** — see [CHECKOUT_SETUP.md](./CHECKOUT_SETUP.md) for Stripe, email (SMTP), SMS (Twilio)
+
+### Checkout env vars (Render)
+
+| Variable | Purpose |
+|----------|---------|
+| `FRONTEND_URL` | Vercel site URL (Stripe return URLs) |
+| `STRIPE_SECRET_KEY` | Real payments (omit for demo mode) |
+| `STRIPE_WEBHOOK_SECRET` | From Stripe Dashboard webhook (production) — **not** `stripe listen` |
+| `SMTP_*` + `STORE_EMAIL_FROM` | Order confirmation email |
+| `TWILIO_*` | Order confirmation SMS |
+
+### Production Stripe webhook (step-by-step)
+
+Full guide: **[docs/PRODUCTION_STRIPE_WEBHOOK.md](./docs/PRODUCTION_STRIPE_WEBHOOK.md)**
+
+1. **Stripe Dashboard** → Developers → Webhooks → **Add endpoint**
+2. URL: `https://online-store-7kh8.onrender.com/api/checkout/webhook` (use your Render URL if different)
+3. Event: **`checkout.session.completed`**
+4. Copy signing secret `whsec_...` → Render env **`STRIPE_WEBHOOK_SECRET`**
+5. Render: set **`FRONTEND_URL`** = your Vercel URL (e.g. `https://online-store-six-gules.vercel.app`)
+6. Render: set **`STRIPE_SECRET_KEY`** = `sk_test_...` (or `sk_live_...` for real money)
+7. Redeploy Render + Vercel
+8. Test: `https://online-store-7kh8.onrender.com/health` → `"stripeWebhook": true`
+9. Checkout on live Vercel site with card `4242 4242 4242 4242`
 
 ---
 

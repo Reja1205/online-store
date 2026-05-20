@@ -15,6 +15,7 @@
   "dependencies": {
     "bcrypt": "^6.0.0",
     "cloudinary": "^2.9.0",
+    "compression": "^1.8.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^17.2.3",
@@ -23,7 +24,10 @@
     "mongoose": "^9.1.5",
     "multer": "^2.0.2",
     "multer-storage-cloudinary": "^2.2.1",
-    "openai": "^6.18.0"
+    "nodemailer": "^8.0.7",
+    "openai": "^6.18.0",
+    "stripe": "^22.1.1",
+    "twilio": "^6.0.2"
   },
   "devDependencies": {
     "jest": "^30.2.0",

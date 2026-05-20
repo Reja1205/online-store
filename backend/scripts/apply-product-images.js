@@ -5,7 +5,7 @@
  *   node scripts/apply-product-images.js
  *
  * Place JPG/PNG files in ../frontend/public/product-images/
- * Filename slug should match PRODUCT_MAP keys below.
+ * Matches products by image slug prefix in filename (e.g. t-shirt-1.png).
  */
 
 require("dotenv").config();
@@ -15,7 +15,9 @@ const mongoose = require("mongoose");
 const cloudinary = require("../src/config/cloudinary");
 const Product = require("../src/models/Product");
 
-/** Map image filename (without ext) → product name in database */
+const IMAGES_DIR = path.join(__dirname, "../../frontend/public/product-images");
+
+/** Filename slug (without ext) → exact product name in database */
 const PRODUCT_MAP = {
   panjabi: "Panjabi",
   "womens-abayas": "Womens Abayas",
@@ -23,9 +25,22 @@ const PRODUCT_MAP = {
   "painted-sea-shells": "Painted beautiful sea shells",
   "arabian-styles": "Arabian styles",
   elegance: "Elegance",
+  "t-shirt-1": "Smart Fit T-Shirt — Navy",
+  "t-shirt-2": "Smart Fit T-Shirt — White",
+  "t-shirt-3": "Smart Fit T-Shirt — Black",
+  "t-shirt-4": "Smart Fit T-Shirt — Gray",
+  "t-shirt-5": "Smart Fit T-Shirt — Burgundy",
+  "abaya-1": "Elegant Abaya — Black",
+  "abaya-2": "Elegant Abaya — Navy",
+  "abaya-3": "Elegant Abaya — Beige",
+  "abaya-4": "Elegant Abaya — Gray",
+  "abaya-5": "Elegant Abaya — Burgundy",
+  "panjabi-1": "Classic Panjabi — White",
+  "panjabi-2": "Classic Panjabi — Navy",
+  "panjabi-3": "Classic Panjabi — Cream",
+  "panjabi-4": "Classic Panjabi — Black",
+  "panjabi-5": "Classic Panjabi — Maroon",
 };
-
-const IMAGES_DIR = path.join(__dirname, "../../frontend/public/product-images");
 
 async function uploadFile(filePath) {
   const result = await cloudinary.uploader.upload(filePath, {

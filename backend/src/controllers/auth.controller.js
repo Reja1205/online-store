@@ -1,6 +1,11 @@
 const bcrypt = require("bcrypt");
 const User = require("../models/User");
 const { signToken } = require("../utils/jwt");
+const { mergeGuestCartIntoUser } = require("../utils/cartOwner");
+const {
+  normalizeShippingAddress,
+  validateShippingAddress,
+} = require("../constants/address");
 
 function buildCookieOptions(req) {
   const origin = req.headers.origin || "";
@@ -111,11 +116,19 @@ async function login(req, res) {
     const cookieName = process.env.COOKIE_NAME || "token";
     res.cookie(cookieName, token, buildCookieOptions(req));
 
-    // Return token too (useful if you switch to Authorization header later)
+    const guestId = String(req.headers["x-guest-id"] || "").trim();
+    await mergeGuestCartIntoUser(guestId, user._id);
+
     return res.json({
       message: "Login successful",
       token,
-      user: { id: user._id, name: user.name, email: user.email, role: user.role },
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        shippingAddress: user.shippingAddress || {},
+      },
     });
   } catch (err) {
     console.error("LOGIN_ERROR:", err);
@@ -137,7 +150,13 @@ async function me(req, res) {
     if (!user) return res.status(404).json({ message: "User not found" });
 
     return res.json({
-      user: { id: user._id, name: user.name, email: user.email, role: user.role },
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        shippingAddress: user.shippingAddress || {},
+      },
     });
   } catch (err) {
     console.error("ME_ERROR:", err);
@@ -145,4 +164,42 @@ async function me(req, res) {
   }
 }
 
-module.exports = { registerUser, registerAdmin, login, logout, me };
+// PUT /api/auth/address — save default shipping address on profile
+async function updateAddress(req, res) {
+  try {
+    const shippingAddress = normalizeShippingAddress(req.body?.shippingAddress || req.body || {});
+    const validation = validateShippingAddress(shippingAddress);
+    if (!validation.ok) {
+      return res.status(400).json({ message: validation.message });
+    }
+
+    if (!shippingAddress.email) {
+      const user = await User.findById(req.user.id).select("email");
+      shippingAddress.email = user?.email || "";
+    }
+
+    const updated = await User.findByIdAndUpdate(
+      req.user.id,
+      { $set: { shippingAddress } },
+      { new: true, runValidators: true }
+    ).select("-password");
+
+    if (!updated) return res.status(404).json({ message: "User not found" });
+
+    return res.json({
+      message: "Address saved",
+      user: {
+        id: updated._id,
+        name: updated.name,
+        email: updated.email,
+        role: updated.role,
+        shippingAddress: updated.shippingAddress || {},
+      },
+    });
+  } catch (err) {
+    console.error("UPDATE_ADDRESS_ERROR:", err);
+    return res.status(500).json({ message: "Server error", error: err.message });
+  }
+}
+
+module.exports = { registerUser, registerAdmin, login, logout, me, updateAddress };

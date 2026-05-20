@@ -47,6 +47,7 @@ export default function LoginPage() {
         localStorage.setItem("token", data.token);
       }
       window.dispatchEvent(new Event("auth:changed"));
+      window.dispatchEvent(new Event("cart:updated"));
       const role = data?.user?.role;
       if (role === "admin") {
         router.replace("/admin");
