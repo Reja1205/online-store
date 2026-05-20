@@ -28,7 +28,10 @@ export default function ProductReviews({ productId, user, initialSummary }) {
   const loadReviews = useCallback(async () => {
     if (!productId) return;
     setLoading(true);
-    const { res, data } = await apiJson(`/api/products/${productId}/reviews`, { headers: {} });
+    const { res, data } = await apiJson(`/api/products/${productId}/reviews`, {
+      headers: {},
+      perfLabel: "reviews",
+    });
     if (res.ok) {
       setReviews(Array.isArray(data?.reviews) ? data.reviews : []);
       if (data?.summary) setSummary(data.summary);

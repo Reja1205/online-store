@@ -1,12 +1,22 @@
 const router = require("express").Router();
 
-const requireAuth = require("../middleware/auth.middleware");
-const { previewCheckout, payCheckout } = require("../controllers/checkout.controller");
+const optionalAuth = require("../middleware/optionalAuth.middleware");
+const requireCartOwner = require("../middleware/cartOwner.middleware");
+const {
+  checkoutConfig,
+  previewCheckout,
+  placeOrder,
+  payCheckout,
+  confirmCheckout,
+} = require("../controllers/checkout.controller");
 
-// Preview cart totals
-router.get("/preview", requireAuth, previewCheckout);
+router.get("/config", checkoutConfig);
+router.get("/confirm", optionalAuth, confirmCheckout);
 
-// Mock “Pay Now” -> creates paid order + clears cart
-router.post("/pay", requireAuth, payCheckout);
+router.use(optionalAuth, requireCartOwner);
+
+router.get("/preview", previewCheckout);
+router.post("/place-order", placeOrder);
+router.post("/pay", payCheckout); // legacy mock alias
 
 module.exports = router;

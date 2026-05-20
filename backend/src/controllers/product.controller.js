@@ -7,6 +7,15 @@ const {
   normalizeCategorySlug,
   getCategoryMatchValues,
 } = require("../constants/categories");
+const {
+  getCategorySizeMode,
+  parseSizeStockPayload,
+  totalStockFromSizeStock,
+} = require("../constants/sizes");
+const {
+  getCategoryColorMode,
+  parseColorsPayload,
+} = require("../constants/colors");
 
 function parseBool(value) {
   if (value === true || value === "true" || value === "1" || value === 1) return true;
@@ -46,6 +55,32 @@ function validateCategoryOrRespond(category, res) {
   return true;
 }
 
+function applyVariantsToProductData(body, category, target) {
+  const sizeMode = getCategorySizeMode(category);
+  const colorMode = getCategoryColorMode(category);
+
+  if (!sizeMode) {
+    target.sizes = [];
+    target.sizeStock = [];
+  } else {
+    const { sizes, sizeStock } = parseSizeStockPayload(body, category);
+    if (sizes.length === 0) return false;
+    target.sizes = sizes;
+    target.sizeStock = sizeStock;
+    target.stock = totalStockFromSizeStock(sizeStock, Number(target.stock || 0));
+  }
+
+  if (!colorMode) {
+    target.colors = [];
+  } else {
+    const colors = parseColorsPayload(body, category);
+    if (colors.length === 0) return false;
+    target.colors = colors;
+  }
+
+  return true;
+}
+
 function validateSalePricing(productData, res) {
   if (!productData.onSale) return true;
   const sale = productData.salePrice;
@@ -72,21 +107,115 @@ async function uploadToCloudinary(file) {
   return result.secure_url;
 }
 
-// GET /api/products (public) — optional ?category=mens
+const CATALOG_SELECT =
+  "name price salePrice onSale featured bestSeller stock imageUrl category sizes sizeStock colors shortDescription description createdAt updatedAt";
+const SIMILAR_SELECT =
+  "name price salePrice onSale stock imageUrl category sizes sizeStock colors createdAt";
+
+function parseLimit(raw, fallback = 200) {
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 1) return fallback;
+  return Math.min(Math.floor(n), 500);
+}
+
+function parsePage(raw) {
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 1) return 1;
+  return Math.floor(n);
+}
+
+function buildCategoryFilter(rawCategory) {
+  const filter = {};
+  const category = normalizeCategory(rawCategory);
+  if (!category) return { filter, category: null };
+
+  if (!isValidCategory(category)) {
+    return { error: "Invalid category" };
+  }
+  const variants = getCategoryMatchValues(category);
+  filter.category = variants.length > 1 ? { $in: variants } : category;
+  return { filter, category };
+}
+
+// GET /api/products (public)
+// Query: ?category=mens&page=1&limit=200&full=1 (admin UI — includes description)
 async function listProducts(req, res) {
+  const started = process.hrtime.bigint();
   try {
-    const filter = {};
-    const category = normalizeCategory(req.query?.category);
-    if (category) {
-      if (!isValidCategory(category)) {
-        return res.status(400).json({ message: "Invalid category" });
-      }
-      const variants = getCategoryMatchValues(category);
-      filter.category = variants.length > 1 ? { $in: variants } : category;
+    const built = buildCategoryFilter(req.query?.category);
+    if (built.error) {
+      return res.status(400).json({ message: built.error });
     }
 
-    const products = await Product.find(filter).sort({ createdAt: -1 });
-    return res.json({ products });
+    const page = parsePage(req.query?.page);
+    const limit = parseLimit(req.query?.limit);
+    const skip = (page - 1) * limit;
+    const fullFields = req.query?.full === "1" || req.query?.full === "true";
+
+    const query = Product.find(built.filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    if (!fullFields) {
+      query.select(CATALOG_SELECT);
+    }
+
+    const [products, total] = await Promise.all([
+      query.exec(),
+      Product.countDocuments(built.filter),
+    ]);
+
+    const productIds = products.map((p) => p._id);
+    let reviewByProduct = new Map();
+    if (productIds.length > 0) {
+      const stats = await Review.aggregate([
+        { $match: { productId: { $in: productIds } } },
+        {
+          $group: {
+            _id: "$productId",
+            count: { $sum: 1 },
+            averageRating: { $avg: "$rating" },
+          },
+        },
+      ]);
+      reviewByProduct = new Map(
+        stats.map((row) => [
+          String(row._id),
+          {
+            count: row.count,
+            averageRating: Math.round(row.averageRating * 10) / 10,
+          },
+        ])
+      );
+    }
+
+    const productsWithReviews = products.map((p) => ({
+      ...p,
+      reviewSummary: reviewByProduct.get(String(p._id)) || {
+        count: 0,
+        averageRating: 0,
+      },
+    }));
+
+    // Public catalog: allow CDN/browser cache; short TTL keeps admin edits fresh
+    res.set(
+      "Cache-Control",
+      "public, max-age=60, s-maxage=120, stale-while-revalidate=300"
+    );
+
+    const ms = Number(process.hrtime.bigint() - started) / 1e6;
+    if (process.env.PERF_LOG === "1" || process.env.NODE_ENV === "development") {
+      console.log(
+        `[PERF] listProducts count=${products.length} total=${total} db=${ms.toFixed(1)}ms`
+      );
+    }
+
+    return res.json({
+      products: productsWithReviews,
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) || 1 },
+    });
   } catch (err) {
     console.error("LIST_PRODUCTS_ERROR:", err);
     return res.status(500).json({ message: "Server error" });
@@ -112,7 +241,11 @@ async function getProduct(req, res) {
     }
 
     const [similarProducts, reviewStats] = await Promise.all([
-      Product.find(similarFilter).sort({ createdAt: -1 }).limit(8).lean(),
+      Product.find(similarFilter)
+        .select(SIMILAR_SELECT)
+        .sort({ createdAt: -1 })
+        .limit(8)
+        .lean(),
       Review.aggregate([
         { $match: { productId: new mongoose.Types.ObjectId(id) } },
         {
@@ -132,6 +265,7 @@ async function getProduct(req, res) {
         }
       : { count: 0, averageRating: 0 };
 
+    res.set("Cache-Control", "public, max-age=30, stale-while-revalidate=120");
     return res.json({ product, similarProducts, reviewSummary: summary });
   } catch (err) {
     console.error("GET_PRODUCT_ERROR:", err);
@@ -142,7 +276,7 @@ async function getProduct(req, res) {
 // POST /api/products (admin) — multipart image
 async function createProduct(req, res) {
   try {
-    const { name, price, description, stock, category } = req.body || {};
+    const { name, price, description, shortDescription, stock, category } = req.body || {};
 
     if (!name || price === undefined || price === "") {
       return res.status(400).json({ message: "name and price are required" });
@@ -155,11 +289,18 @@ async function createProduct(req, res) {
       name: String(name).trim(),
       price: Number(price),
       description: description || "",
+      shortDescription: String(shortDescription || "").trim().slice(0, 200),
       category: categorySlug,
       stock: stock === undefined || stock === "" ? 0 : Number(stock),
       imageUrl: "",
     };
     applyProductFlags(req.body, productData);
+
+    if (!applyVariantsToProductData(req.body, categorySlug, productData)) {
+      return res.status(400).json({
+        message: "Select at least one size and one color for this clothing category",
+      });
+    }
 
     if (!validateSalePricing(productData, res)) return;
 
@@ -191,18 +332,59 @@ async function createProduct(req, res) {
 
 function pickUpdates(body) {
   const updates = {};
-  const allowed = ["name", "price", "description", "stock", "category", "imageUrl"];
+  const allowed = [
+    "name",
+    "price",
+    "description",
+    "shortDescription",
+    "stock",
+    "category",
+    "imageUrl",
+  ];
 
   for (const key of allowed) {
     if (body[key] !== undefined) updates[key] = body[key];
   }
 
   if (updates.name !== undefined) updates.name = String(updates.name).trim();
+  if (updates.shortDescription !== undefined) {
+    updates.shortDescription = String(updates.shortDescription).trim().slice(0, 200);
+  }
   if (updates.price !== undefined) updates.price = Number(updates.price);
   if (updates.stock !== undefined) updates.stock = Number(updates.stock);
   if (updates.category !== undefined) updates.category = normalizeCategory(updates.category);
 
   applyProductFlags(body, updates);
+
+  const variantCategory = updates.category ?? body.category;
+
+  if (
+    body.sizeStock !== undefined ||
+    body.sizes !== undefined ||
+    body.colors !== undefined
+  ) {
+    const sizeMode = getCategorySizeMode(variantCategory);
+    if (sizeMode) {
+      const { sizes, sizeStock } = parseSizeStockPayload(body, variantCategory);
+      updates.sizes = sizes;
+      updates.sizeStock = sizeStock;
+      if (sizeStock.length > 0) updates.stock = totalStockFromSizeStock(sizeStock);
+    }
+
+    const colorMode = getCategoryColorMode(variantCategory);
+    if (colorMode) {
+      updates.colors = parseColorsPayload(body, variantCategory);
+    }
+  } else if (updates.category !== undefined) {
+    if (!getCategorySizeMode(updates.category)) {
+      updates.sizes = [];
+      updates.sizeStock = [];
+    }
+    if (!getCategoryColorMode(updates.category)) {
+      updates.colors = [];
+    }
+  }
+
   return updates;
 }
 
@@ -221,6 +403,26 @@ async function updateProduct(req, res) {
 
     if (updates.category !== undefined && !validateCategoryOrRespond(updates.category, res)) {
       return;
+    }
+
+    const mergedCategory = updates.category ?? existing.category;
+    if (
+      req.body?.sizeStock !== undefined ||
+      req.body?.sizes !== undefined ||
+      updates.category !== undefined
+    ) {
+      const mergedData = {
+        stock: updates.stock ?? existing.stock,
+        sizes: updates.sizes ?? existing.sizes,
+        sizeStock: updates.sizeStock ?? existing.sizeStock,
+      };
+      if (getCategorySizeMode(mergedCategory) && (!mergedData.sizes || mergedData.sizes.length === 0)) {
+        return res.status(400).json({ message: "Select at least one size for this clothing category" });
+      }
+      const mergedColors = updates.colors ?? existing.colors;
+      if (getCategoryColorMode(mergedCategory) && (!mergedColors || mergedColors.length === 0)) {
+        return res.status(400).json({ message: "Select at least one color for this clothing category" });
+      }
     }
 
     const merged = {
@@ -259,7 +461,9 @@ async function updateProduct(req, res) {
     });
   } catch (err) {
     console.error("UPDATE_PRODUCT_ERROR:", err);
-    return res.status(500).json({ message: "Server error", error: err.message });
+    const message =
+      process.env.NODE_ENV === "development" ? err.message : "Server error";
+    return res.status(500).json({ message, error: err.message });
   }
 }
 

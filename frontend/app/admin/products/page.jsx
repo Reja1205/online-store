@@ -34,7 +34,9 @@ export default function AdminProductsPage() {
     setError("");
     setLoading(true);
 
-    const path = category ? `/api/products?category=${encodeURIComponent(category)}` : "/api/products";
+    const params = new URLSearchParams({ full: "1", limit: "500" });
+    if (category) params.set("category", category);
+    const path = `/api/products?${params}`;
     const { res, data } = await apiJson(path, { headers: {} });
 
     setLoading(false);

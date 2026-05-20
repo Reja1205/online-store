@@ -25,5 +25,13 @@ services:
         sync: false
       - key: SHIPPING_FEE_USD
         value: "5.99"
+      - key: FRONTEND_URL
+        sync: false
+      - key: STORE_NAME
+        value: Western Culture
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
       - key: ALLOWED_ORIGINS
         sync: false

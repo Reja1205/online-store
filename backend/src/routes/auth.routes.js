@@ -6,6 +6,7 @@ const {
   login,
   logout,
   me,
+  updateAddress,
 } = require("../controllers/auth.controller");
 
 const requireAuth = require("../middleware/auth.middleware");
@@ -21,5 +22,6 @@ router.post("/logout", logout);
 
 // ME (protected)
 router.get("/me", requireAuth, me);
+router.put("/address", requireAuth, updateAddress);
 
 module.exports = router;

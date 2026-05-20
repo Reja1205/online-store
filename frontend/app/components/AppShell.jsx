@@ -8,15 +8,13 @@ import { AuthProvider, useAuth } from "../context/AuthContext";
 import { apiJson } from "../lib/api";
 
 function ShellContent({ children }) {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const [cartCount, setCartCount] = useState(0);
 
-  const loadCartCount = useCallback(async () => {
-    if (typeof window !== "undefined" && !localStorage.getItem("token")) {
-      setCartCount(0);
-      return;
-    }
+  // Stable primitive for effect deps — changes once when auth finishes (avoids varying dep array size)
+  const authSettledKey = loading ? null : user?._id ?? "guest";
 
+  const loadCartCount = useCallback(async () => {
     const { res, data } = await apiJson("/api/cart");
 
     if (!res.ok) {
@@ -34,9 +32,11 @@ function ShellContent({ children }) {
     setCartCount(totalQty);
   }, []);
 
+  // PERF: defer cart API until auth resolves — avoids competing with catalog on first paint
   useEffect(() => {
+    if (authSettledKey === null) return;
     loadCartCount();
-  }, [user, loadCartCount]);
+  }, [authSettledKey, loadCartCount]);
 
   useEffect(() => {
     function onCartUpdated() {

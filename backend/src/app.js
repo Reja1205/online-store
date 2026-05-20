@@ -1,13 +1,16 @@
 const express = require("express");
+const compression = require("compression");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const mongoose = require("mongoose");
+const perfMiddleware = require("./middleware/perf.middleware");
 const aiRoutes = require("./routes/ai.routes");
 
 const authRoutes = require("./routes/auth.routes");
 const productRoutes = require("./routes/product.routes");
 const cartRoutes = require("./routes/cart.routes");
 const checkoutRoutes = require("./routes/checkout.routes");
+const { stripeWebhook } = require("./controllers/checkout.controller");
 const orderRoutes = require("./routes/order.routes");
 const wishlistRoutes = require("./routes/wishlist.routes");
 
@@ -15,6 +18,16 @@ const app = express();
 
 // Render/Proxy friendly (needed for Secure cookies + HTTPS proxies)
 app.set("trust proxy", 1);
+
+app.use(compression());
+app.use(perfMiddleware);
+
+// Stripe webhook must receive raw body (before express.json)
+app.post(
+  "/api/checkout/webhook",
+  express.raw({ type: "application/json" }),
+  stripeWebhook
+);
 
 app.use(express.json());
 app.use(cookieParser());
@@ -68,7 +81,7 @@ const corsOptions = {
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Guest-Id"],
 };
 
 app.use(cors(corsOptions));
@@ -78,6 +91,15 @@ app.options(/.*/, cors(corsOptions));
 
 // Health check
 app.get("/health", (req, res) => {
+  const stripe = Boolean(process.env.STRIPE_SECRET_KEY?.trim());
+  const email = Boolean(
+    process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS
+  );
+  const sms = Boolean(
+    process.env.TWILIO_ACCOUNT_SID &&
+      process.env.TWILIO_AUTH_TOKEN &&
+      process.env.TWILIO_FROM_NUMBER
+  );
   res.json({
     status: "OK",
     message: "Server is running",
@@ -85,6 +107,13 @@ app.get("/health", (req, res) => {
       mongoose.connection.readyState === 1
         ? "connected"
         : "not_connected",
+    checkout: {
+      stripe,
+      stripeWebhook: Boolean(process.env.STRIPE_WEBHOOK_SECRET?.trim()),
+      email,
+      sms,
+      paymentMode: stripe ? "stripe" : "mock",
+    },
   });
 });
 

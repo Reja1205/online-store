@@ -90,6 +90,20 @@ export default function Header({ cartCount = 0 }) {
                 Shop
               </Link>
 
+              <Link
+                href="/cart"
+                className="relative inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
+                aria-label={`Cart, ${cartCount} items`}
+              >
+                <CartIcon />
+                <span className="hidden sm:inline">Cart</span>
+                {cartCount > 0 ? (
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1 text-xs font-bold text-indigo-700">
+                    {cartCount}
+                  </span>
+                ) : null}
+              </Link>
+
               {user ? (
                 <>
                   <Link href="/orders" className={navLink}>
@@ -159,20 +173,6 @@ export default function Header({ cartCount = 0 }) {
                       </div>
                     ) : null}
                   </div>
-
-                  <Link
-                    href="/cart"
-                    className="relative inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
-                    aria-label={`Cart, ${cartCount} items`}
-                  >
-                    <CartIcon />
-                    <span className="hidden sm:inline">Cart</span>
-                    {cartCount > 0 ? (
-                      <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1 text-xs font-bold text-indigo-700">
-                        {cartCount}
-                      </span>
-                    ) : null}
-                  </Link>
                 </>
               ) : (
                 <>
@@ -223,11 +223,11 @@ export default function Header({ cartCount = 0 }) {
           <Link href="/products" className="cursor-pointer rounded-lg px-3 py-2.5 text-sm font-medium text-indigo-950 hover:bg-white/80" onClick={() => setMenuOpen(false)}>
             Shop all
           </Link>
+          <Link href="/cart" className="cursor-pointer rounded-lg px-3 py-2.5 text-sm font-medium text-indigo-950 hover:bg-white/80" onClick={() => setMenuOpen(false)}>
+            Cart{cartCount > 0 ? ` (${cartCount})` : ""}
+          </Link>
           {user ? (
             <>
-              <Link href="/cart" className="cursor-pointer rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-white/80" onClick={() => setMenuOpen(false)}>
-                Cart ({cartCount})
-              </Link>
               <Link href="/orders" className="cursor-pointer rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-white/80" onClick={() => setMenuOpen(false)}>
                 Orders
               </Link>

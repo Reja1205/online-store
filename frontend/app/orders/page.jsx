@@ -173,7 +173,9 @@ export default function OrdersPage() {
               >
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <p className="text-sm text-gray-500">Order placed</p>
+                    <p className="text-sm text-gray-500">
+                      {o.orderNumber ? `Order ${o.orderNumber}` : "Order placed"}
+                    </p>
                     <p className="text-sm font-medium text-gray-900">
                       {fmtDate(o.createdAt)}
                     </p>
