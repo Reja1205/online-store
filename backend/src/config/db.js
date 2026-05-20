@@ -1,6 +1,7 @@
 
 
 const mongoose = require("mongoose");
+const { repairGuestCartDocuments } = require("../utils/cartOwner");
 
 const connectDB = async () => {
   try {
@@ -10,6 +11,7 @@ const connectDB = async () => {
       "mongodb://localhost:27017/ecommerce";
 
     await mongoose.connect(uri);
+    await repairGuestCartDocuments();
     console.log("MongoDB connected");
   } catch (error) {
     console.error("MongoDB connection failed:", error.message);
