@@ -130,6 +130,11 @@ async function addToCart(req, res) {
 
     const quantity = Math.max(1, Number(qty || 1));
     const cart = await findOrCreateCart(req.cartOwner);
+    if (!cart) {
+      return res.status(500).json({ message: "Could not open cart. Please try again." });
+    }
+    if (!Array.isArray(cart.items)) cart.items = [];
+
     const idx = findCartLineIndex(cart, productId, size, color);
 
     const nextQty = (idx >= 0 ? cart.items[idx].qty : 0) + quantity;

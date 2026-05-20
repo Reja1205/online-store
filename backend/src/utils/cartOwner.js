@@ -3,6 +3,24 @@ const Cart = require("../models/Cart");
 const GUEST_ID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+let cartIndexRepairDone = false;
+
+/** Fix legacy guest carts that stored user:null and broke the user unique index. */
+async function repairGuestCartDocuments() {
+  if (cartIndexRepairDone) return;
+  cartIndexRepairDone = true;
+
+  try {
+    await Cart.updateMany(
+      { guestId: { $exists: true, $ne: "" } },
+      { $unset: { user: "" } }
+    );
+    await Cart.syncIndexes();
+  } catch (err) {
+    console.warn("CART_INDEX_REPAIR_WARN:", err.message);
+  }
+}
+
 function resolveCartOwnerFromRequest(req) {
   if (req.user?.id) {
     return { type: "user", id: req.user.id };
@@ -25,18 +43,36 @@ async function findCart(owner) {
 }
 
 async function findOrCreateCart(owner) {
-  let cart = await findCart(owner);
-  if (cart) return cart;
+  await repairGuestCartDocuments();
 
-  const payload =
-    owner.type === "user" ? { user: owner.id, items: [] } : { guestId: owner.id, items: [] };
+  const existing = await Cart.findOne(cartFilter(owner));
+  if (existing) return existing;
+
+  if (owner.type === "guest") {
+    try {
+      const result = await Cart.collection.insertOne({
+        guestId: owner.id,
+        items: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      const cart = await Cart.findById(result.insertedId);
+      if (cart) return cart;
+    } catch (err) {
+      if (err?.code === 11000) {
+        const cart = await Cart.findOne({ guestId: owner.id });
+        if (cart) return cart;
+      }
+      throw err;
+    }
+  }
 
   try {
-    cart = await Cart.create(payload);
-    return cart;
+    return await Cart.create({ user: owner.id, items: [] });
   } catch (err) {
     if (err?.code === 11000) {
-      return Cart.findOne(cartFilter(owner));
+      const cart = await Cart.findOne({ user: owner.id });
+      if (cart) return cart;
     }
     throw err;
   }
@@ -56,7 +92,7 @@ async function mergeGuestCartIntoUser(guestId, userId) {
 
   if (!userCart) {
     await Cart.findByIdAndUpdate(guestCart._id, {
-      $set: { user: userId },
+      $set: { user: userId, items: guestCart.items },
       $unset: { guestId: "" },
     });
     return;
@@ -90,6 +126,7 @@ async function mergeGuestCartIntoUser(guestId, userId) {
 
 module.exports = {
   GUEST_ID_RE,
+  repairGuestCartDocuments,
   resolveCartOwnerFromRequest,
   cartFilter,
   findCart,
