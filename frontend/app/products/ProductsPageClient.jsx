@@ -23,6 +23,8 @@ import { useAuth } from "../context/AuthContext";
 import { apiJson } from "../lib/api";
 import { fetchProductsCatalogClient } from "../lib/products";
 import { PRODUCT_GRID_CLASS } from "../lib/productGrid";
+import { useViewMore } from "../lib/useViewMore";
+import ViewMoreButton from "../components/ViewMoreButton";
 
 export default function ProductsPageClient({
   initialProducts = [],
@@ -137,6 +139,12 @@ export default function ProductsPageClient({
   const listEmptyOk = !loading && !loadError && products.length === 0;
   const filteredEmpty = !loading && !listFailed && products.length > 0 && shown.length === 0;
 
+  const { visible: listVisible, loadMore, hasMore, remaining } = useViewMore(
+    shown,
+    undefined,
+    [q, filter, category, section]
+  );
+
   const selectClass =
     "w-full min-h-[2.125rem] rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-[2.75rem] sm:rounded-xl sm:px-3";
 
@@ -237,6 +245,11 @@ export default function ProductsPageClient({
         <div className="mt-2 hidden flex-wrap items-center gap-2 text-xs text-slate-600 sm:flex sm:text-sm">
           <span>Matches</span>
           <Badge tone="neutral">{shown.length}</Badge>
+          {shown.length > listVisible.length ? (
+            <span className="text-slate-500">
+              · showing {listVisible.length}
+            </span>
+          ) : null}
           {sectionTitle ? <Badge tone="neutral">{sectionTitle}</Badge> : null}
           {category !== "all" ? (
             <Badge tone="neutral">in {getCategoryLabel(category)}</Badge>
@@ -296,11 +309,19 @@ export default function ProductsPageClient({
           }}
         />
       ) : (
-        <div className={PRODUCT_GRID_CLASS}>
-          {shown.map((p) => (
-            <ProductCard key={p._id} p={p} user={user} onAddToCart={addToCart} />
-          ))}
-        </div>
+        <>
+          <div className={PRODUCT_GRID_CLASS}>
+            {listVisible.map((p) => (
+              <ProductCard key={p._id} p={p} user={user} onAddToCart={addToCart} />
+            ))}
+          </div>
+          <ViewMoreButton
+            hasMore={hasMore}
+            remaining={remaining}
+            onLoadMore={loadMore}
+            className="mt-4 sm:mt-6"
+          />
+        </>
       )}
     </div>
   );
