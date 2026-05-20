@@ -47,9 +47,11 @@ function formatLineLabel(name, size, color) {
   return parts.length > 1 ? `${name} — ${parts.slice(1).join(" / ")}` : name;
 }
 
-function mapCartItems(cart) {
-  return (cart.items || []).map((it) => {
-    const productId = toId(it.product?._id || it.product);
+function mapCartItems(cart, productRefs = null) {
+  return (cart.items || []).map((it, index) => {
+    const productId = toId(
+      it.product?._id || it.product || (productRefs ? productRefs[index] : "")
+    );
     const p = it.product;
     const { size, color } = normalizeVariant(it.size, it.color);
 
@@ -83,8 +85,9 @@ async function getCart(req, res) {
     const cart = await findCart(req.cartOwner);
     if (!cart) return res.json({ cart: { items: [] } });
 
+    const productRefs = cart.items.map((it) => toId(it.product));
     await cart.populate("items.product", PRODUCT_CART_FIELDS);
-    return res.json({ cart: { items: mapCartItems(cart) } });
+    return res.json({ cart: { items: mapCartItems(cart, productRefs) } });
   } catch (err) {
     console.error("GET_CART_ERROR:", err);
     return res.status(500).json({ message: "Server error", error: err.message });
@@ -159,14 +162,24 @@ async function removeFromCart(req, res) {
   try {
     const productId = req.body?.productId || req.body?.product;
     const { size, color } = normalizeVariant(req.body?.size, req.body?.color);
-
-    if (!productId) return res.status(400).json({ message: "productId is required" });
+    const lineIndex = Number(req.body?.lineIndex);
 
     const cart = await findCart(req.cartOwner);
     if (!cart) return res.json({ message: "Removed", cart: { items: [] } });
 
-    const key = cartLineKey(productId, size, color);
-    cart.items = cart.items.filter((it) => cartLineKey(it.product, it.size, it.color) !== key);
+    if (Number.isInteger(lineIndex) && lineIndex >= 0 && lineIndex < cart.items.length) {
+      cart.items.splice(lineIndex, 1);
+    } else {
+      if (!productId) {
+        return res.status(400).json({ message: "productId or lineIndex is required" });
+      }
+
+      const key = cartLineKey(productId, size, color);
+      cart.items = cart.items.filter(
+        (it) => cartLineKey(it.product, it.size, it.color) !== key
+      );
+    }
+
     await cart.save();
 
     return res.json({ message: "Removed", cart });

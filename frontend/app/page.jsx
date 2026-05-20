@@ -17,7 +17,8 @@ import { useAuth } from "./context/AuthContext";
 import { apiJson } from "./lib/api";
 import { fetchProductsCatalogClient } from "./lib/products";
 import { pickBestSellers, pickFeatured, pickOnSale } from "./lib/productSections";
-const PAGE_SIZE = 8;
+import { useViewMore } from "./lib/useViewMore";
+import ViewMoreButton from "./components/ViewMoreButton";
 
 export default function Home() {
   const { user } = useAuth();
@@ -28,7 +29,6 @@ export default function Home() {
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState("all");
   const [loadingProducts, setLoadingProducts] = useState(true);
-  const [page, setPage] = useState(1);
 
   const loadProducts = useCallback(async (force = false) => {
     setCatalogLoadError("");
@@ -50,10 +50,6 @@ export default function Home() {
   useEffect(() => {
     loadProducts();
   }, [loadProducts]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [q, filter]);
 
   const addToCart = useCallback(async (productId, size, color) => {
     setCartFeedback(null);
@@ -99,12 +95,8 @@ export default function Home() {
       });
   }, [products, q, filter]);
 
-  const totalPages = Math.max(1, Math.ceil(shown.length / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
-  const pageSlice = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE;
-    return shown.slice(start, start + PAGE_SIZE);
-  }, [shown, currentPage]);
+  const { visible: catalogVisible, loadMore, hasMore, remaining, total: catalogTotal } =
+    useViewMore(shown, undefined, [q, filter]);
 
   const bestSellers = useMemo(() => pickBestSellers(products), [products]);
   const featuredProducts = useMemo(() => pickFeatured(products), [products]);
@@ -206,11 +198,11 @@ export default function Home() {
           <span>Showing</span>
           <Badge tone="neutral">{shown.length}</Badge>
           <span>products</span>
-          {shown.length > PAGE_SIZE ? (
+          {catalogTotal > catalogVisible.length ? (
             <>
               <span className="text-slate-400">·</span>
               <span>
-                Page {currentPage} of {totalPages}
+                Showing {catalogVisible.length} of {catalogTotal}
               </span>
             </>
           ) : null}
@@ -271,35 +263,16 @@ export default function Home() {
         ) : (
           <>
             <div className={`mt-6 ${PRODUCT_GRID_CLASS}`}>
-              {pageSlice.map((p) => (
+              {catalogVisible.map((p) => (
                 <ProductCard key={p._id} p={p} user={user} onAddToCart={addToCart} />
               ))}
             </div>
-            {totalPages > 1 ? (
-              <nav className="mt-8 flex flex-wrap items-center justify-center gap-2" aria-label="Catalog pagination">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  disabled={currentPage <= 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                >
-                  Previous
-                </Button>
-                <span className="px-2 text-sm text-slate-600">
-                  {currentPage} / {totalPages}
-                </span>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  disabled={currentPage >= totalPages}
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                >
-                  Next
-                </Button>
-              </nav>
-            ) : null}
+            <ViewMoreButton
+              hasMore={hasMore}
+              remaining={remaining}
+              onLoadMore={loadMore}
+              className="mt-6"
+            />
           </>
         )}
       </section>

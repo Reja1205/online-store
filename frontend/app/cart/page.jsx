@@ -37,26 +37,33 @@ export default function CartPage() {
     window.dispatchEvent(new Event("cart:updated"));
   }
 
-  async function removeItem(productId, size = "", color = "") {
+  async function removeItem(productId, size = "", color = "", lineIndex = null) {
     setError("");
     setMsg("");
-
-    if (!productId) {
-      setError("Missing productId for this cart item (deleted product).");
-      return;
-    }
 
     const ok = confirm("Remove this item from cart?");
     if (!ok) return;
 
+    const body =
+      productId != null && String(productId).trim() !== ""
+        ? {
+            productId,
+            ...(size ? { size } : {}),
+            ...(color ? { color } : {}),
+          }
+        : typeof lineIndex === "number"
+          ? { lineIndex }
+          : null;
+
+    if (!body) {
+      setError("Could not remove this item. Try clearing the cart or refresh the page.");
+      return;
+    }
+
     const { res, data } = await apiJson("/api/cart/remove", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        productId,
-        ...(size ? { size } : {}),
-        ...(color ? { color } : {}),
-      }),
+      body: JSON.stringify(body),
     });
 
     if (!res.ok) {
@@ -74,7 +81,7 @@ export default function CartPage() {
   }, []);
 
   const rows = useMemo(() => {
-    return items.map((it) => {
+    return items.map((it, lineIndex) => {
       // ✅ new backend returns: { productId, qty, product: null|{...} }
       const productId = String(it.productId || it.product || it.product?._id || "");
       const p = it.product || null;
@@ -91,6 +98,7 @@ export default function CartPage() {
 
       return {
         id: productId,
+        lineIndex,
         size: it.size || "",
         color: it.color || "",
         lineKey: `${productId}::${it.size || ""}::${it.color || ""}`,
@@ -209,7 +217,7 @@ export default function CartPage() {
 
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => removeItem(r.id, r.size, r.color)}
+                          onClick={() => removeItem(r.id, r.size, r.color, r.lineIndex)}
                           className="px-3 py-2 rounded-xl bg-red-50 border border-red-200 text-red-700 hover:bg-red-100 transition text-sm font-medium"
                         >
                           Remove

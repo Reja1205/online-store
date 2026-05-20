@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const Cart = require("../models/Cart");
 const Product = require("../models/Product");
 const Review = require("../models/Review");
 const cloudinary = require("../config/cloudinary");
@@ -477,6 +478,11 @@ async function deleteProduct(req, res) {
 
     const product = await Product.findByIdAndDelete(id);
     if (!product) return res.status(404).json({ message: "Product not found" });
+
+    await Cart.updateMany(
+      { "items.product": product._id },
+      { $pull: { items: { product: product._id } } }
+    );
 
     return res.json({ message: "Product deleted" });
   } catch (err) {
