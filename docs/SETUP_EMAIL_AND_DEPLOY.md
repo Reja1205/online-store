@@ -26,6 +26,10 @@ Gmail SMTP on Render frequently times out on port 587; port 465 may still fail.
 
 **Resend test limit:** With `onboarding@resend.dev`, you can only send to the **same Gmail you used to sign up for Resend** until you [verify a domain](https://resend.com/domains). Example error: *"You can only send testing emails to your own email address"*. Fix: register with that email for testing, or verify your store domain and set `RESEND_FROM=Western Culture <orders@yourdomain.com>`.
 
+**Order emails (after payment):**
+- Customer gets order confirmation (their checkout email).
+- Admin gets a **new order** alert if `ADMIN_ORDER_EMAIL` or `ADMIN_ALERT_EMAIL` is set on Render (use `rejaur1989@gmail.com` until domain is verified).
+
 ### Render / production Gmail fix
 
 If you see **“account created but verification email failed”** on the live site but local works:
