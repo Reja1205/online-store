@@ -106,12 +106,12 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="auth-form mx-auto w-full min-w-0 max-w-md animate-fade-up">
+    <div className="mx-auto max-w-md animate-fade-up">
       <Card padding="p-6 sm:p-8">
         <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Sign in</h1>
         <p className="mt-1 text-sm text-slate-600">Welcome back. Use your account email and password.</p>
 
-        <form onSubmit={submit} className="auth-form mt-6 grid gap-4">
+        <form onSubmit={submit} className="mt-6 grid gap-4">
           <div>
             <Label htmlFor="login-email">Email</Label>
             <Input

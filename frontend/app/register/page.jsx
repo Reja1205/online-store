@@ -129,7 +129,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="auth-form mx-auto w-full min-w-0 max-w-md animate-fade-up">
+    <div className="mx-auto max-w-md animate-fade-up">
       <Card padding="p-6 sm:p-8">
         <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Create account</h1>
         <p className="mt-1 text-sm text-slate-600">
@@ -165,7 +165,7 @@ export default function RegisterPage() {
           </div>
         ) : null}
 
-        <form onSubmit={submit} className="auth-form mt-6 grid gap-4">
+        <form onSubmit={submit} className="mt-6 grid gap-4">
           <div>
             <Label htmlFor="reg-name">Name</Label>
             <Input id="reg-name" className="mt-1.5" value={name} onChange={(e) => setName(e.target.value)} required />

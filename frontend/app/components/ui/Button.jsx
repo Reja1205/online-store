@@ -25,7 +25,7 @@ export default function Button({
   ...props
 }) {
   const base =
-    "inline-flex touch-manipulation items-center justify-center gap-2 font-medium transition-colors duration-200 max-sm:active:scale-100 sm:active:scale-[0.99] disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-brand)]";
+    "inline-flex items-center justify-center gap-2 font-medium transition-all duration-200 active:scale-[0.99] disabled:pointer-events-none disabled:opacity-50 disabled:shadow-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-brand)]";
 
   return (
     <Component
