@@ -22,6 +22,7 @@ const {
   sendPasswordResetEmail,
   sendAdminSecurityAlert,
 } = require("./authEmails");
+const { checkResendRecipient, usesResend } = require("./mailer");
 
 const MAX_LOGIN_HISTORY = 20;
 const LOCK_AFTER_ATTEMPTS = Number(process.env.ACCOUNT_LOCK_ATTEMPTS || 5);
@@ -98,10 +99,18 @@ async function registerUser({ name, email, password }) {
   if (!pwCheck.ok) return { status: 400, message: pwCheck.message };
 
   const cleanEmail = email.toLowerCase().trim();
+  const requireVerify = emailVerificationRequired();
+
+  if (requireVerify && usesResend()) {
+    const resendCheck = checkResendRecipient(cleanEmail);
+    if (!resendCheck.ok) {
+      return { status: 400, message: resendCheck.message, code: "RESEND_TEST_EMAIL_ONLY" };
+    }
+  }
+
   const existing = await User.findOne({ email: cleanEmail }).select(
     "+verificationToken +verificationTokenExpires"
   );
-  const requireVerify = emailVerificationRequired();
 
   if (existing) {
     if (requireVerify && !existing.emailVerified) {

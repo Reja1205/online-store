@@ -14,6 +14,23 @@ function usesResend() {
   return Boolean(process.env.RESEND_API_KEY?.trim());
 }
 
+/** When set, Resend test mode only delivers to this address (onboarding@resend.dev). */
+function getResendTestRecipient() {
+  return String(process.env.RESEND_TEST_RECIPIENT || "").toLowerCase().trim();
+}
+
+function checkResendRecipient(email) {
+  if (!usesResend() || !getResendTestRecipient()) {
+    return { ok: true };
+  }
+  const clean = String(email || "").toLowerCase().trim();
+  if (clean === getResendTestRecipient()) return { ok: true };
+  return {
+    ok: false,
+    message: `During testing, please sign up with ${getResendTestRecipient()} only. To allow any customer email, verify your domain at https://resend.com/domains and remove RESEND_TEST_RECIPIENT on the server.`,
+  };
+}
+
 function normalizeSmtpPass(pass) {
   return String(pass || "").replace(/\s+/g, "");
 }
@@ -203,6 +220,8 @@ module.exports = {
   STORE_EMAIL,
   isEmailConfigured,
   usesResend,
+  getResendTestRecipient,
+  checkResendRecipient,
   getSmtpAttempts,
   getEmailStatus,
   createMailer,

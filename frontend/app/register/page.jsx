@@ -57,6 +57,7 @@ export default function RegisterPage() {
 
       if (!res.ok) {
         setError(data?.message || "Registration failed");
+        setLoading(false);
         return;
       }
 
