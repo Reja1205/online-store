@@ -132,7 +132,7 @@ export default function Header({ cartCount = 0 }) {
                         className="absolute right-0 top-full z-50 mt-2 min-w-[13rem] overflow-hidden rounded-xl border border-indigo-100 bg-white p-1.5 shadow-lg ring-1 ring-indigo-100"
                         role="menu"
                       >
-                        {user.role === "admin" ? (
+                        {(user.role === "admin" || user.role === "superadmin") ? (
                           <p className="mb-1 rounded-lg bg-linear-to-r from-violet-600 to-indigo-600 px-3 py-2 text-center text-xs font-bold uppercase tracking-wide text-white">
                             Admin
                           </p>
@@ -149,7 +149,7 @@ export default function Header({ cartCount = 0 }) {
                           <MenuDot className="bg-amber-500" />
                           Checkout
                         </Link>
-                        {user.role === "admin" ? (
+                        {(user.role === "admin" || user.role === "superadmin") ? (
                           <>
                             <div className="my-1 border-t border-slate-100" />
                             <Link href="/admin" className={dropdownTones.admin} role="menuitem" onClick={() => setAccountOpen(false)}>
@@ -234,7 +234,7 @@ export default function Header({ cartCount = 0 }) {
               <Link href="/profile" className="cursor-pointer rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-white/80" onClick={() => setMenuOpen(false)}>
                 Profile
               </Link>
-              {user.role === "admin" ? (
+              {(user.role === "admin" || user.role === "superadmin") ? (
                 <Link href="/admin" className="cursor-pointer rounded-lg px-3 py-2.5 text-sm text-slate-700 hover:bg-white/80" onClick={() => setMenuOpen(false)}>
                   Admin
                 </Link>

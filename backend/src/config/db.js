@@ -2,6 +2,7 @@
 
 const mongoose = require("mongoose");
 const { repairGuestCartDocuments } = require("../utils/cartOwner");
+const { migrateLegacyUsers } = require("../utils/migrateUsers");
 
 const connectDB = async () => {
   try {
@@ -12,6 +13,7 @@ const connectDB = async () => {
 
     await mongoose.connect(uri);
     await repairGuestCartDocuments();
+    await migrateLegacyUsers();
     console.log("MongoDB connected");
   } catch (error) {
     console.error("MongoDB connection failed:", error.message);

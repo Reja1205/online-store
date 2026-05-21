@@ -13,6 +13,7 @@ const checkoutRoutes = require("./routes/checkout.routes");
 const { stripeWebhook } = require("./controllers/checkout.controller");
 const orderRoutes = require("./routes/order.routes");
 const wishlistRoutes = require("./routes/wishlist.routes");
+const userRoutes = require("./routes/user.routes");
 
 const app = express();
 
@@ -107,6 +108,10 @@ app.get("/health", (req, res) => {
       mongoose.connection.readyState === 1
         ? "connected"
         : "not_connected",
+    auth: {
+      email,
+      requireEmailVerification: process.env.REQUIRE_EMAIL_VERIFICATION === "true",
+    },
     checkout: {
       stripe,
       stripeWebhook: Boolean(process.env.STRIPE_WEBHOOK_SECRET?.trim()),
@@ -124,6 +129,7 @@ app.use("/api/cart", cartRoutes);
 app.use("/api/checkout", checkoutRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/wishlist", wishlistRoutes);
+app.use("/api/users", userRoutes);
 app.use("/api/ai", aiRoutes);
 
 // 404

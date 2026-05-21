@@ -21,7 +21,7 @@ export default function AdminProductsPage() {
       router.push("/login");
       return null;
     }
-    if (!data?.user || data.user.role !== "admin") {
+    if (!data?.user || (data.user.role !== "admin" && data.user.role !== "superadmin")) {
       router.push("/profile");
       return null;
     }

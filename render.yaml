@@ -35,3 +35,19 @@ services:
         sync: false
       - key: ALLOWED_ORIGINS
         sync: false
+      - key: REQUIRE_EMAIL_VERIFICATION
+        value: "false"
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: STORE_EMAIL_FROM
+        sync: false
+      - key: ADMIN_ALERT_EMAIL
+        sync: false
+      - key: ADMIN_SECRET
+        sync: false

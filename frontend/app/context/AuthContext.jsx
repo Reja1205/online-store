@@ -8,6 +8,7 @@ const AuthContext = createContext({
   loading: true,
   refreshUser: async () => {},
   logout: async () => {},
+  logoutAllDevices: async () => {},
 });
 
 export function useAuth() {
@@ -53,6 +54,21 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  const logoutAllDevices = useCallback(async () => {
+    try {
+      await apiJson("/api/auth/logout-all", { method: "POST" });
+    } catch {
+      /* ignore */
+    }
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("token");
+    }
+    setUser(null);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("cart:updated"));
+    }
+  }, []);
+
   useEffect(() => {
     function onAuthChanged() {
       void refreshUser();
@@ -80,8 +96,8 @@ export function AuthProvider({ children }) {
   }, [refreshUser]);
 
   const value = useMemo(
-    () => ({ user, loading, refreshUser, logout }),
-    [user, loading, refreshUser, logout]
+    () => ({ user, loading, refreshUser, logout, logoutAllDevices }),
+    [user, loading, refreshUser, logout, logoutAllDevices]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

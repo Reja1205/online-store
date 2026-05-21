@@ -44,7 +44,7 @@ export default function AdminOrdersPage() {
       setLoading(false);
       return;
     }
-    if (u.role !== "admin") {
+    if (u.role !== "admin" && u.role !== "superadmin") {
       setError("Admin only");
       setOrders([]);
       setLoading(false);

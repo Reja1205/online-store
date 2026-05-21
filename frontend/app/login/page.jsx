@@ -16,28 +16,34 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [verifyHint, setVerifyHint] = useState(false);
 
   useEffect(() => {
     if (!authLoading && user) {
-      router.replace("/profile");
+      router.replace(user.role === "admin" || user.role === "superadmin" ? "/admin" : "/profile");
     }
   }, [authLoading, user, router]);
 
   async function submit(e) {
     e.preventDefault();
     setError("");
+    setVerifyHint(false);
     setSubmitting(true);
 
     try {
       const { res, data } = await apiJson("/api/auth/login", {
         method: "POST",
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, rememberMe }),
       });
 
       if (!res.ok) {
+        if (data?.code === "EMAIL_NOT_VERIFIED") {
+          setVerifyHint(true);
+        }
         setError(data?.message || "Login failed");
         setSubmitting(false);
         return;
@@ -49,7 +55,7 @@ export default function LoginPage() {
       window.dispatchEvent(new Event("auth:changed"));
       window.dispatchEvent(new Event("cart:updated"));
       const role = data?.user?.role;
-      if (role === "admin") {
+      if (role === "admin" || role === "superadmin") {
         router.replace("/admin");
       } else {
         router.replace("/profile");
@@ -90,6 +96,7 @@ export default function LoginPage() {
             <Input
               id="login-email"
               className="mt-1.5"
+              type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
@@ -99,7 +106,15 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <Label htmlFor="login-password">Password</Label>
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="login-password">Password</Label>
+              <Link
+                href="/forgot-password"
+                className="text-xs font-medium text-indigo-600 hover:text-indigo-700"
+              >
+                Forgot password?
+              </Link>
+            </div>
             <Input
               id="login-password"
               className="mt-1.5"
@@ -112,9 +127,29 @@ export default function LoginPage() {
             />
           </div>
 
+          <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+            />
+            Remember me for 30 days
+          </label>
+
           {error ? (
             <p role="alert" className="text-sm text-red-600">
               {error}
+            </p>
+          ) : null}
+
+          {verifyHint ? (
+            <p className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              Check your inbox for the verification link, or{" "}
+              <Link href="/verify-email" className="font-medium underline">
+                resend verification
+              </Link>
+              .
             </p>
           ) : null}
 
@@ -126,7 +161,10 @@ export default function LoginPage() {
             <Link className="text-slate-600 underline-offset-4 hover:text-slate-900 hover:underline" href="/">
               Home
             </Link>
-            <Link className="font-medium text-indigo-600 underline-offset-4 hover:text-indigo-700 hover:underline" href="/register">
+            <Link
+              className="font-medium text-indigo-600 underline-offset-4 hover:text-indigo-700 hover:underline"
+              href="/register"
+            >
               Create account
             </Link>
           </div>

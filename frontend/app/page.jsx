@@ -111,7 +111,7 @@ export default function Home() {
     <>
       <section
         id="hero"
-        className="relative left-1/2 mb-0 w-screen max-w-[100vw] -translate-x-1/2 scroll-mt-36"
+        className="relative -mx-4 mb-0 w-[calc(100%+2rem)] max-w-[100vw] overflow-hidden scroll-mt-36 sm:-mx-6 sm:w-[calc(100%+3rem)] lg:-mx-8 lg:w-[calc(100%+4rem)]"
         aria-label="Hero promotions"
       >
         <HomeCarousel products={products} loading={false} />

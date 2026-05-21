@@ -55,7 +55,7 @@ export default function ProductSection({
         </div>
       ) : (
         <div
-          className={`${PRODUCT_GRID_CLASS} rounded-2xl p-1 ring-1 ${accentRing}`}
+          className={`${PRODUCT_GRID_CLASS} w-full max-w-full overflow-hidden rounded-2xl p-1 ring-1 ${accentRing}`}
         >
           {products.map((p) => (
             <ProductCard key={p._id} p={p} user={user} onAddToCart={onAddToCart} />

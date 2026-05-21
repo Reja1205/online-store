@@ -1,11 +1,4 @@
-const nodemailer = require("nodemailer");
-
-const STORE_NAME = process.env.STORE_NAME || "Western Culture";
-const STORE_EMAIL = process.env.STORE_EMAIL_FROM || process.env.SMTP_USER || "noreply@store.local";
-
-function isEmailConfigured() {
-  return Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
-}
+const { sendEmail, emailLayout, STORE_NAME, isEmailConfigured } = require("./mailer");
 
 function isSmsConfigured() {
   return Boolean(
@@ -13,19 +6,6 @@ function isSmsConfigured() {
       process.env.TWILIO_AUTH_TOKEN &&
       process.env.TWILIO_FROM_NUMBER
   );
-}
-
-function createMailer() {
-  if (!isEmailConfigured()) return null;
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT || 587),
-    secure: process.env.SMTP_SECURE === "true",
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  });
 }
 
 function formatAddress(addr) {
@@ -51,9 +31,9 @@ function buildOrderEmailHtml(order) {
     )
     .join("");
 
-  return `
-    <div style="font-family:sans-serif;max-width:560px;margin:0 auto">
-      <h2 style="color:#4f46e5">Thank you for your order!</h2>
+  return emailLayout({
+    title: "Thank you for your order!",
+    bodyHtml: `
       <p>Hi ${order.shippingAddress?.fullName || "there"},</p>
       <p>We received your order <strong>${order.orderNumber}</strong> and it is confirmed.</p>
       <table style="width:100%;border-collapse:collapse;margin:16px 0">
@@ -66,9 +46,8 @@ function buildOrderEmailHtml(order) {
       <strong>Shipping:</strong> $${Number(order.shippingFee).toFixed(2)}<br/>
       <strong>Total paid:</strong> $${Number(order.totalUSD).toFixed(2)}</p>
       <p><strong>Ship to:</strong><br/><pre style="font-family:inherit;white-space:pre-wrap">${formatAddress(order.shippingAddress)}</pre></p>
-      <p style="color:#64748b;font-size:13px">Questions? Reply to this email.</p>
-    </div>
-  `;
+    `,
+  });
 }
 
 async function sendOrderConfirmationEmail(order) {
@@ -77,25 +56,9 @@ async function sendOrderConfirmationEmail(order) {
 
   const subject = `${STORE_NAME} — Order ${order.orderNumber} confirmed`;
   const html = buildOrderEmailHtml(order);
-  const text = `Your order ${order.orderNumber} is confirmed. Total: $${Number(order.totalUSD).toFixed(2)}. Thank you for shopping at ${STORE_NAME}.`;
+  const text = `Your order ${order.orderNumber} is confirmed. Total: $${Number(order.totalUSD).toFixed(2)}.`;
 
-  const transporter = createMailer();
-  if (!transporter) {
-    if (process.env.NODE_ENV === "development") {
-      console.log("[NOTIFY] Email (dev — SMTP not configured):", { to, subject });
-    }
-    return { sent: false, reason: "smtp_not_configured" };
-  }
-
-  await transporter.sendMail({
-    from: `"${STORE_NAME}" <${STORE_EMAIL}>`,
-    to,
-    subject,
-    text,
-    html,
-  });
-
-  return { sent: true };
+  return sendEmail({ to, subject, html, text });
 }
 
 function normalizePhoneE164(phone) {

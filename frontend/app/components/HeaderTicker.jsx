@@ -36,7 +36,7 @@ function TickerContent() {
 export default function HeaderTicker() {
   return (
     <div
-      className="relative overflow-hidden bg-linear-to-r from-indigo-700 via-indigo-600 to-indigo-800"
+      className="relative w-full max-w-full overflow-hidden bg-linear-to-r from-indigo-700 via-indigo-600 to-indigo-800"
       role="region"
       aria-label="Store announcements"
     >

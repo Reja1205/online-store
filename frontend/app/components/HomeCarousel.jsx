@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { productDisplayPrice, productName } from "../lib/api";
 import { SITE_NAME } from "../lib/site";
+import { useCarouselSwipe } from "../lib/useCarousel";
 import SummerSaleHeroPoster from "./hero/SummerSaleHeroPoster";
 
 /** Amazon-style hero blue */
@@ -70,7 +71,7 @@ function productToSlide(p) {
 function ChevronIcon({ direction }) {
   return (
     <svg
-      className="h-5 w-5 sm:h-10 sm:w-10 md:h-12 md:w-12"
+      className="h-5 w-5 sm:h-8 sm:w-8"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -86,19 +87,26 @@ function ChevronIcon({ direction }) {
   );
 }
 
-/** Same slide + frame size for every carousel item */
-const SLIDE_HEIGHT = "h-[11.75rem] sm:h-[300px] lg:h-[340px]";
-const FRAME_CLASS =
-  "relative h-[10.25rem] w-[8.75rem] shrink-0 overflow-hidden rounded-lg bg-[#005a82]/45 shadow-[0_8px_20px_rgba(0,0,0,0.22)] ring-1 ring-white/20 sm:h-[248px] sm:w-[280px]";
+/** Responsive slide shell — content vertically centered */
+const SLIDE_SHELL =
+  "flex h-full min-h-[clamp(17.5rem,48vw,20rem)] w-full flex-col items-center justify-center sm:min-h-[300px] sm:flex-row lg:min-h-[340px]";
+
+/** Visual frame — neutral backdrop for photos (no blue band above image) */
+const VISUAL_FRAME =
+  "relative mx-auto flex h-[10.5rem] w-full max-w-[10.5rem] items-center justify-center overflow-hidden rounded-lg bg-white/95 shadow-[0_8px_20px_rgba(0,0,0,0.18)] ring-1 ring-white/25 sm:h-[248px] sm:max-w-[280px]";
 
 function SlideVisual({ slide, priority }) {
   let content;
   if (slide.poster === "summer") {
-    content = <SummerSaleHeroPoster className="h-full w-full object-contain object-center p-1" />;
+    content = (
+      <div className="flex h-full w-full items-center justify-center bg-gradient-to-b from-[#fff7e6] to-[#ffe4a8] p-1.5">
+        <SummerSaleHeroPoster className="h-full w-full max-h-full object-contain object-center" />
+      </div>
+    );
   } else if (!slide.imageUrl) {
     content = (
-      <div className="flex h-full w-full items-center justify-center bg-white/5" aria-hidden>
-        <p className="text-3xl font-light text-white/35 sm:text-5xl">{SITE_NAME.charAt(0)}</p>
+      <div className="flex h-full w-full items-center justify-center bg-white/10" aria-hidden>
+        <p className="text-3xl font-light text-slate-400/80 sm:text-5xl">{SITE_NAME.charAt(0)}</p>
       </div>
     );
   } else if (isAllowedImageHost(slide.imageUrl)) {
@@ -107,8 +115,8 @@ function SlideVisual({ slide, priority }) {
         src={slide.imageUrl}
         alt=""
         fill
-        className="object-contain object-bottom"
-        sizes="(max-width: 640px) 140px, 280px"
+        className="object-contain object-center"
+        sizes="(max-width: 640px) 168px, 280px"
         priority={priority}
       />
     );
@@ -118,32 +126,31 @@ function SlideVisual({ slide, priority }) {
       <img
         src={slide.imageUrl}
         alt=""
-        className="h-full w-full object-contain object-bottom"
+        className="h-full w-full object-contain object-center"
       />
     );
   }
 
   return (
-    <div className="flex h-full items-center justify-center p-2 sm:p-4 lg:p-8">
-      <div className={FRAME_CLASS}>{content}</div>
-    </div>
+    <div className={VISUAL_FRAME}>{content}</div>
   );
 }
 
 function HeroSlide({ slide, priority }) {
   return (
-    <article className={`relative min-w-full shrink-0 overflow-hidden ${SLIDE_HEIGHT}`}>
-      <div
-        className="flex h-full min-w-0 flex-row items-stretch"
-        style={{ backgroundColor: slide.bg || HERO_BLUE }}
-      >
-        <div className="flex min-w-0 flex-1 flex-col justify-center border-r border-white/15 py-3 pl-10 pr-3 sm:px-10 sm:py-10 lg:px-14">
-          <h2 className="line-clamp-3 text-sm font-normal leading-snug text-white sm:line-clamp-none sm:text-3xl lg:text-[2.15rem] lg:leading-tight">
+    <article
+      className="relative flex h-full w-full min-w-0 flex-[0_0_100%] basis-full shrink-0 grow-0 overflow-hidden"
+      aria-roledescription="slide"
+    >
+      <div className={SLIDE_SHELL} style={{ backgroundColor: slide.bg || HERO_BLUE }}>
+        {/* Text — centered in panel */}
+        <div className="flex min-w-0 flex-1 flex-col items-center justify-center px-11 py-4 text-center sm:border-r sm:border-white/15 sm:px-8 sm:py-6 lg:px-12 lg:py-8">
+          <h2 className="line-clamp-4 max-w-md text-[clamp(0.875rem,3.5vw,1rem)] font-normal leading-snug text-white sm:line-clamp-none sm:text-2xl lg:text-[2.15rem] lg:leading-tight">
             {slide.headline}
           </h2>
           <Link
             href={slide.href}
-            className="mt-2.5 inline-flex w-fit max-w-full min-h-[2rem] items-center justify-center rounded-full px-4 py-1.5 text-xs font-semibold text-slate-900 shadow-sm transition hover:brightness-95 sm:mt-5 sm:min-h-[2.5rem] sm:px-6 sm:py-2 sm:text-sm"
+            className="mt-3 inline-flex w-fit max-w-full min-h-[2.25rem] items-center justify-center rounded-full px-5 py-2 text-xs font-semibold text-slate-900 shadow-sm transition hover:brightness-95 sm:mt-5 sm:min-h-[2.5rem] sm:px-6 sm:text-sm"
             style={{ backgroundColor: CTA_YELLOW }}
             onMouseEnter={(e) => {
               e.currentTarget.style.backgroundColor = CTA_YELLOW_HOVER;
@@ -154,12 +161,13 @@ function HeroSlide({ slide, priority }) {
           >
             {slide.cta}
           </Link>
-          <p className="mt-1.5 text-[10px] text-white/90 sm:mt-6 sm:text-xs">
+          <p className="mt-2 text-[10px] text-white/90 sm:mt-5 sm:text-xs">
             {slide.terms || "Terms apply."}
           </p>
         </div>
 
-        <div className="relative flex w-[9.25rem] shrink-0 items-stretch sm:w-[300px]">
+        {/* Visual — centered in panel */}
+        <div className="flex w-full shrink-0 items-center justify-center px-4 py-4 sm:w-[42%] sm:max-w-[320px] sm:px-6 sm:py-6 lg:px-8">
           <SlideVisual slide={slide} priority={priority} />
         </div>
       </div>
@@ -221,6 +229,12 @@ export default function HomeCarousel({ products = [], loading = false }) {
   const next = useCallback(() => goTo(active + 1), [active, goTo]);
   const prev = useCallback(() => goTo(active - 1), [active, goTo]);
 
+  const { onTouchStart, onTouchEnd } = useCarouselSwipe({
+    onNext: next,
+    onPrev: prev,
+    enabled: count > 1,
+  });
+
   useEffect(() => {
     if (paused || count <= 1) return;
     const timer = window.setInterval(next, 6000);
@@ -235,9 +249,9 @@ export default function HomeCarousel({ products = [], loading = false }) {
     return (
       <section
         aria-label="Featured promotions"
-        className={`overflow-hidden bg-[#007eb9] ${SLIDE_HEIGHT}`}
+        className="relative w-full overflow-hidden bg-[#007eb9] min-h-[clamp(17.5rem,48vw,20rem)] sm:min-h-[300px] lg:min-h-[340px]"
       >
-        <div className="h-full animate-pulse bg-[#006da3]" />
+        <div className="h-full min-h-[inherit] animate-pulse bg-[#006da3]" />
       </section>
     );
   }
@@ -246,15 +260,17 @@ export default function HomeCarousel({ products = [], loading = false }) {
     <section
       aria-label="Featured promotions"
       aria-roledescription="carousel"
-      className={`group relative overflow-hidden ${SLIDE_HEIGHT}`}
+      className="group relative w-full max-w-full overflow-hidden overscroll-x-contain min-h-[clamp(17.5rem,48vw,20rem)] sm:min-h-[300px] lg:min-h-[340px]"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocusCapture={() => setPaused(true)}
       onBlurCapture={() => setPaused(false)}
     >
       <div
-        className={`flex h-full ${SLIDE_HEIGHT} transition-transform duration-500 ease-out motion-reduce:transition-none`}
-        style={{ transform: `translateX(-${active * 100}%)` }}
+        className="flex h-full min-h-[inherit] w-full touch-pan-y transition-transform duration-500 ease-out will-change-transform motion-reduce:transition-none"
+        style={{ transform: `translate3d(-${active * 100}%, 0, 0)` }}
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
       >
         {slides.map((slide, i) => (
           <HeroSlide key={slide.id} slide={slide} priority={i === 0} />
@@ -266,7 +282,7 @@ export default function HomeCarousel({ products = [], loading = false }) {
           <button
             type="button"
             onClick={prev}
-            className="absolute left-0.5 top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-[#007eb9]/75 text-white/95 backdrop-blur-sm transition hover:bg-[#006da3] sm:left-2 sm:h-14 sm:w-14 sm:rounded-none sm:bg-transparent"
+            className="absolute left-2 top-1/2 z-30 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-[#007eb9]/90 text-white shadow-md transition hover:bg-[#006da3] sm:left-3 sm:h-11 sm:w-11 sm:bg-[#007eb9]/75 sm:shadow-none sm:backdrop-blur-sm"
             aria-label="Previous slide"
           >
             <ChevronIcon direction="left" />
@@ -274,14 +290,14 @@ export default function HomeCarousel({ products = [], loading = false }) {
           <button
             type="button"
             onClick={next}
-            className="absolute right-0.5 top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-[#007eb9]/75 text-white/95 backdrop-blur-sm transition hover:bg-[#006da3] sm:right-2 sm:h-14 sm:w-14 sm:rounded-none sm:bg-transparent"
+            className="absolute right-2 top-1/2 z-30 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-[#007eb9]/90 text-white shadow-md transition hover:bg-[#006da3] sm:right-3 sm:h-11 sm:w-11 sm:bg-[#007eb9]/75 sm:shadow-none sm:backdrop-blur-sm"
             aria-label="Next slide"
           >
             <ChevronIcon direction="right" />
           </button>
 
           <div
-            className="absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 gap-1.5"
+            className="absolute bottom-3 left-1/2 z-30 flex -translate-x-1/2 gap-1.5 sm:bottom-4"
             role="tablist"
             aria-label="Carousel slides"
           >

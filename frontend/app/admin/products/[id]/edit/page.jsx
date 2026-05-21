@@ -109,7 +109,7 @@ export default function EditProductPage() {
         router.push("/login");
         return;
       }
-      if (!data?.user || data.user.role !== "admin") {
+      if (!data?.user || (data.user.role !== "admin" && data.user.role !== "superadmin")) {
         router.push("/profile");
         return;
       }

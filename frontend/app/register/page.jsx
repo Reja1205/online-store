@@ -3,12 +3,14 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import PasswordStrength from "../components/auth/PasswordStrength";
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
 import Input from "../components/ui/Input";
 import Label from "../components/ui/Label";
 import { useAuth } from "../context/AuthContext";
 import { apiJson } from "../lib/api";
+import { passwordMeetsPolicy } from "../lib/password";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -34,6 +36,12 @@ export default function RegisterPage() {
     e.preventDefault();
     setMsg("");
     setError("");
+
+    if (!passwordMeetsPolicy(password)) {
+      setError("Use at least 8 characters with uppercase, lowercase, and a number.");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -49,6 +57,12 @@ export default function RegisterPage() {
       if (!res.ok) {
         setError(data?.message || "Registration failed");
         setLoading(false);
+        return;
+      }
+
+      if (data?.verificationRequired) {
+        setMsg("Account created. Check your email to verify, then sign in.");
+        setTimeout(() => router.replace("/verify-email"), 1200);
         return;
       }
 
@@ -139,6 +153,7 @@ export default function RegisterPage() {
               autoComplete="new-password"
               required
             />
+            <PasswordStrength password={password} />
           </div>
 
           {mode === "admin" ? (

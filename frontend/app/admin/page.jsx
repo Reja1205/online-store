@@ -20,7 +20,7 @@ export default function AdminPage() {
         router.push("/login");
         return;
       }
-      if (!data?.user || data.user.role !== "admin") {
+      if (!data?.user || (data.user.role !== "admin" && data.user.role !== "superadmin")) {
         router.push("/profile");
         return;
       }
@@ -120,7 +120,7 @@ export default function AdminPage() {
             <p className="text-lg font-semibold text-gray-900 group-hover:text-sky-700 transition">
               Users
             </p>
-            <p className="mt-1 text-sm text-gray-600">Admin users page</p>
+            <p className="mt-1 text-sm text-gray-600">Search, roles, and account actions</p>
           </Link>
         </div>
       </div>
