@@ -187,6 +187,9 @@ async function registerUser({ name, email, password }) {
 }
 
 async function registerAdmin({ name, email, password, adminSecret }) {
+  if (process.env.DISABLE_PUBLIC_ADMIN_REGISTER === "true") {
+    return { status: 403, message: "Public admin registration is disabled." };
+  }
   const expectedSecret = process.env.ADMIN_SECRET;
   if (!expectedSecret) {
     return { status: 500, message: "ADMIN_SECRET is not set on server" };
@@ -268,7 +271,11 @@ async function login({ email, password, rememberMe }, req, res) {
   };
 }
 
-function logout(req, res) {
+async function logout(req, res) {
+  const userId = req.user?.id;
+  if (userId) {
+    await User.findByIdAndUpdate(userId, { $unset: { refreshTokenHash: 1 } });
+  }
   clearAuthCookies(res, req);
   return { status: 200, message: "Logged out" };
 }

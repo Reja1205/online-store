@@ -10,6 +10,17 @@ import Label from "../components/ui/Label";
 import { useAuth } from "../context/AuthContext";
 import { apiJson } from "../lib/api";
 
+function safeRedirectPath(path) {
+  if (!path || typeof path !== "string") return null;
+  if (!path.startsWith("/") || path.startsWith("//")) return null;
+  return path;
+}
+
+function getRedirectFromUrl() {
+  if (typeof window === "undefined") return null;
+  return safeRedirectPath(new URLSearchParams(window.location.search).get("redirect"));
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
@@ -24,6 +35,11 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!authLoading && user) {
+      const redirect = getRedirectFromUrl();
+      if (redirect) {
+        router.replace(redirect);
+        return;
+      }
       router.replace(user.role === "admin" || user.role === "superadmin" ? "/admin" : "/profile");
     }
   }, [authLoading, user, router]);
@@ -54,11 +70,16 @@ export default function LoginPage() {
       }
       window.dispatchEvent(new Event("auth:changed"));
       window.dispatchEvent(new Event("cart:updated"));
-      const role = data?.user?.role;
-      if (role === "admin" || role === "superadmin") {
-        router.replace("/admin");
+      const redirect = getRedirectFromUrl();
+      if (redirect) {
+        router.replace(redirect);
       } else {
-        router.replace("/profile");
+        const role = data?.user?.role;
+        if (role === "admin" || role === "superadmin") {
+          router.replace("/admin");
+        } else {
+          router.replace("/profile");
+        }
       }
       router.refresh();
     } catch {

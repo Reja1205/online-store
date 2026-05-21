@@ -12,7 +12,7 @@ function signAccessToken(payload, options = {}) {
     ? process.env.JWT_REMEMBER_EXPIRES_IN || "30d"
     : process.env.JWT_EXPIRES_IN || "7d";
 
-  return jwt.sign(payload, getSecret(), { expiresIn });
+  return jwt.sign({ ...payload, type: "access" }, getSecret(), { expiresIn });
 }
 
 function signRefreshToken(payload, options = {}) {

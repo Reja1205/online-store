@@ -1,5 +1,6 @@
 const router = require("express").Router();
 const requireAuth = require("../middleware/auth.middleware");
+const optionalAuth = require("../middleware/optionalAuth.middleware");
 const requireVerified = require("../middleware/requireVerified.middleware");
 const { authLimiter, strictAuthLimiter } = require("../middleware/rateLimit.middleware");
 
@@ -22,9 +23,9 @@ router.post("/register-user", authLimiter, registerUser);
 router.post("/register-admin", strictAuthLimiter, registerAdmin);
 
 router.post("/login", strictAuthLimiter, login);
-router.post("/logout", logout);
+router.post("/logout", optionalAuth, logout);
 router.post("/logout-all", requireAuth, logoutAll);
-router.post("/refresh", refreshToken);
+router.post("/refresh", strictAuthLimiter, refreshToken);
 
 router.get("/verify-email", verifyEmail);
 router.post("/verify-email", verifyEmail);

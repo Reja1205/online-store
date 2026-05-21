@@ -4,6 +4,7 @@ const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const mongoose = require("mongoose");
 const perfMiddleware = require("./middleware/perf.middleware");
+const securityHeaders = require("./middleware/securityHeaders.middleware");
 const aiRoutes = require("./routes/ai.routes");
 
 const authRoutes = require("./routes/auth.routes");
@@ -21,6 +22,7 @@ const app = express();
 app.set("trust proxy", 1);
 
 app.use(compression());
+app.use(securityHeaders);
 app.use(perfMiddleware);
 
 // Stripe webhook must receive raw body (before express.json)

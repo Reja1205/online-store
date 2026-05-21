@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const User = require("../models/User");
+const AuditLog = require("../models/AuditLog");
 const { isAdminRole } = require("../utils/userPublic");
 const Cart = require("../models/Cart");
 const Wishlist = require("../models/Wishlist");
@@ -130,7 +131,14 @@ async function getUserById(req, res) {
     const user = rows[0];
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    return res.json({ user: toPublicUser(user) });
+    return res.json({
+      user: {
+        ...toPublicUser(user),
+        emailVerified: Boolean(user.emailVerified),
+        lastLogin: user.lastLogin || null,
+        loginHistory: (user.loginHistory || []).slice(0, 10),
+      },
+    });
   } catch (err) {
     console.error("GET_USER_ERROR:", err);
     return res.status(500).json({ message: "Server error" });
@@ -238,8 +246,39 @@ async function deleteUser(req, res) {
   }
 }
 
+// GET /api/users/audit-logs — admin audit trail
+async function listAuditLogs(req, res) {
+  try {
+    const page = parsePage(req.query?.page);
+    const limit = parseLimit(req.query?.limit, 50);
+    const skip = (page - 1) * limit;
+    const filter = {};
+    const action = String(req.query?.action || "").trim();
+    if (action) filter.action = action;
+
+    const [rows, total] = await Promise.all([
+      AuditLog.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+      AuditLog.countDocuments(filter),
+    ]);
+
+    return res.json({
+      logs: rows,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit) || 1,
+      },
+    });
+  } catch (err) {
+    console.error("LIST_AUDIT_LOGS_ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+}
+
 module.exports = {
   listUsers,
+  listAuditLogs,
   getUserById,
   updateUser,
   deleteUser,

@@ -250,3 +250,46 @@ frontend/app/
 - All older access tokens fail middleware check immediately.
 
 Refresh tokens are stored hashed on the user document and validated on `POST /api/auth/refresh`.
+
+---
+
+## 14. Latest hardening (incremental, non-breaking)
+
+| Change | Purpose |
+|--------|---------|
+| `logout` revokes `refreshTokenHash` when Bearer/cookie present | Stops refresh after sign-out |
+| Access JWT `type: "access"`; middleware rejects refresh tokens | Prevents refresh token misuse as Bearer |
+| `optionalAuth` aligned with `tokenVersion` + email on `req.user` | Audit logs get actor email |
+| Audit on product CRUD, user update/delete | Broader admin trail |
+| `GET /api/users/audit-logs` | Admin can read audit entries |
+| `GET /api/users/:id` includes `loginHistory` (last 10) | Login activity visibility |
+| `requireVerified` on product reviews | Consistent verified-user policy |
+| `securityHeaders` middleware | Basic production headers |
+| `DISABLE_PUBLIC_ADMIN_REGISTER` + `NEXT_PUBLIC_DISABLE_PUBLIC_ADMIN_REGISTER` | Lock down admin signup after bootstrap |
+| `app/admin/layout.jsx` + `AdminRouteGuard` | Single admin route guard (UI unchanged) |
+| Login `?redirect=/path` | Return URL after sign-in |
+
+**Order emails (separate):** paid orders notify customer + `ADMIN_ALERT_EMAIL` via Resend — see `docs/SETUP_EMAIL_AND_DEPLOY.md`.
+
+### Production env (auth + email)
+
+```bash
+REQUIRE_EMAIL_VERIFICATION=true
+RESEND_API_KEY=...
+RESEND_FROM=orders@yourdomain.com
+EMAIL_PROVIDER=resend
+ADMIN_ALERT_EMAIL=you@gmail.com
+DISABLE_PUBLIC_ADMIN_REGISTER=true
+JWT_SECRET=<long-random>
+FRONTEND_URL=https://your-store.vercel.app
+ALLOWED_ORIGINS=https://your-store.vercel.app
+```
+
+Frontend (Vercel): `NEXT_PUBLIC_DISABLE_PUBLIC_ADMIN_REGISTER=true` when admin signup should be hidden.
+
+### What you should do now
+
+1. **Domain on Resend** — so any customer email works (you already tested with your Gmail).
+2. **Render** — set vars above; redeploy backend.
+3. **Vercel** — optional `NEXT_PUBLIC_DISABLE_PUBLIC_ADMIN_REGISTER=true` after your admin exists.
+4. Keep using **`rejaur1989@gmail.com`** admin account; no need to recreate it.

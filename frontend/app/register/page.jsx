@@ -12,6 +12,9 @@ import { useAuth } from "../context/AuthContext";
 import { apiJson } from "../lib/api";
 import { passwordMeetsPolicy } from "../lib/password";
 
+const ADMIN_REGISTER_DISABLED =
+  process.env.NEXT_PUBLIC_DISABLE_PUBLIC_ADMIN_REGISTER === "true";
+
 export default function RegisterPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
@@ -129,32 +132,38 @@ export default function RegisterPage() {
     <div className="mx-auto max-w-md animate-fade-up">
       <Card padding="p-6 sm:p-8">
         <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Create account</h1>
-        <p className="mt-1 text-sm text-slate-600">Register as a shopper or an administrator.</p>
+        <p className="mt-1 text-sm text-slate-600">
+          {ADMIN_REGISTER_DISABLED
+            ? "Create your shopper account."
+            : "Register as a shopper or an administrator."}
+        </p>
 
-        <div className="mt-5 grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => setMode("user")}
-            className={`rounded-xl border py-2.5 text-sm font-medium transition min-h-[2.75rem] ${
-              mode === "user"
-                ? "border-indigo-600 bg-indigo-600 text-white"
-                : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-            }`}
-          >
-            User
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode("admin")}
-            className={`rounded-xl border py-2.5 text-sm font-medium transition min-h-[2.75rem] ${
-              mode === "admin"
-                ? "border-indigo-600 bg-indigo-600 text-white"
-                : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-            }`}
-          >
-            Admin
-          </button>
-        </div>
+        {!ADMIN_REGISTER_DISABLED ? (
+          <div className="mt-5 grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setMode("user")}
+              className={`rounded-xl border py-2.5 text-sm font-medium transition min-h-[2.75rem] ${
+                mode === "user"
+                  ? "border-indigo-600 bg-indigo-600 text-white"
+                  : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+              }`}
+            >
+              User
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("admin")}
+              className={`rounded-xl border py-2.5 text-sm font-medium transition min-h-[2.75rem] ${
+                mode === "admin"
+                  ? "border-indigo-600 bg-indigo-600 text-white"
+                  : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+              }`}
+            >
+              Admin
+            </button>
+          </div>
+        ) : null}
 
         <form onSubmit={submit} className="mt-6 grid gap-4">
           <div>

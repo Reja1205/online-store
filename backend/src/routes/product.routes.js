@@ -2,7 +2,9 @@ const router = require("express").Router();
 
 const requireAuth = require("../middleware/auth.middleware");
 const requireAdmin = require("../middleware/admin.middleware");
-const upload = require("../middleware/upload"); // ✅ your upload.js
+const requireVerified = require("../middleware/requireVerified.middleware");
+const audit = require("../middleware/auditLog.middleware");
+const upload = require("../middleware/upload");
 
 const {
   listProducts,
@@ -19,12 +21,11 @@ const {
 // Public
 router.get("/", listProducts);
 router.get("/:productId/reviews", listProductReviews);
-router.post("/:productId/reviews", requireAuth, createProductReview);
+router.post("/:productId/reviews", requireAuth, requireVerified, createProductReview);
 router.get("/:id", getProduct);
 
-// Admin only (accept image file)
-router.post("/", requireAuth, requireAdmin, upload.single("image"), createProduct);
-router.put("/:id", requireAuth, requireAdmin, upload.single("image"), updateProduct);
-router.delete("/:id", requireAuth, requireAdmin, deleteProduct);
+router.post("/", requireAuth, requireAdmin, audit("product.create", "product"), upload.single("image"), createProduct);
+router.put("/:id", requireAuth, requireAdmin, audit("product.update", "product"), upload.single("image"), updateProduct);
+router.delete("/:id", requireAuth, requireAdmin, audit("product.delete", "product"), deleteProduct);
 
 module.exports = router;

@@ -17,9 +17,13 @@ module.exports = async function requireAuth(req, res, next) {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
+    if (decoded.type === "refresh") {
+      return res.status(401).json({ message: "Invalid access token" });
+    }
+
     if (decoded.tv !== undefined) {
       const user = await User.findById(decoded.id)
-        .select("tokenVersion role emailVerified")
+        .select("tokenVersion role emailVerified email")
         .lean();
 
       if (!user) return res.status(401).json({ message: "Not logged in" });
@@ -31,12 +35,14 @@ module.exports = async function requireAuth(req, res, next) {
       req.user = {
         id: decoded.id,
         role: user.role,
+        email: user.email,
         emailVerified: user.emailVerified,
       };
     } else {
       req.user = {
         id: decoded.id,
         role: decoded.role,
+        email: decoded.email || "",
         emailVerified: true,
       };
     }

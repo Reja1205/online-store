@@ -41,7 +41,14 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(async () => {
     try {
-      await fetch(`${API}/api/auth/logout`, { method: "POST", credentials: "include" });
+      const token =
+        typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      await fetch(`${API}/api/auth/logout`, {
+        method: "POST",
+        credentials: "include",
+        headers,
+      });
     } catch {
       /* ignore */
     }

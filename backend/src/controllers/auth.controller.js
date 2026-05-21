@@ -75,8 +75,13 @@ async function login(req, res) {
   }
 }
 
-function logout(req, res) {
-  return sendResult(res, authService.logout(req, res));
+async function logout(req, res) {
+  try {
+    return sendResult(res, await authService.logout(req, res));
+  } catch (err) {
+    console.error("LOGOUT_ERROR:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
 }
 
 async function logoutAll(req, res) {
