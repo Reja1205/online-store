@@ -90,12 +90,18 @@ export default function RegisterPage() {
         return;
       }
 
-      setMsg("Account created. Redirecting to sign in…");
+      if (mode === "admin") {
+        setMsg(
+          "Admin account created. No verification email is sent for admins — sign in now with your email and password."
+        );
+      } else {
+        setMsg("Account created. Redirecting to sign in…");
+      }
       setLoading(false);
       setTimeout(() => {
         router.replace("/login");
         router.refresh();
-      }, 600);
+      }, mode === "admin" ? 1500 : 600);
     } catch {
       setError("Network error");
     } finally {
