@@ -162,7 +162,7 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 py-6 sm:py-8">
+    <div className="mx-auto w-full min-w-0 max-w-5xl space-y-6 overflow-x-clip py-6 sm:py-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">

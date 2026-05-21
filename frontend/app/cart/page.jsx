@@ -118,14 +118,14 @@ export default function CartPage() {
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto p-6">
+      <div className="mx-auto w-full min-w-0 max-w-4xl overflow-x-clip p-6">
         <p className="text-gray-600">Loading cart...</p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="mx-auto w-full min-w-0 max-w-4xl overflow-x-clip p-6">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <h1 className="text-2xl font-bold text-gray-900">Your Cart</h1>
 

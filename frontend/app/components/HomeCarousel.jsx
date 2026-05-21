@@ -260,14 +260,14 @@ export default function HomeCarousel({ products = [], loading = false }) {
     <section
       aria-label="Featured promotions"
       aria-roledescription="carousel"
-      className="group relative w-full max-w-full overflow-hidden overscroll-x-contain min-h-[clamp(17.5rem,48vw,20rem)] sm:min-h-[300px] lg:min-h-[340px]"
+      className="group relative isolate w-full min-w-0 max-w-full overflow-hidden overscroll-x-none touch-pan-y min-h-[clamp(17.5rem,48vw,20rem)] sm:min-h-[300px] lg:min-h-[340px] [contain:paint]"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocusCapture={() => setPaused(true)}
       onBlurCapture={() => setPaused(false)}
     >
       <div
-        className="flex h-full min-h-[inherit] w-full touch-pan-y transition-transform duration-500 ease-out will-change-transform motion-reduce:transition-none"
+        className="flex h-full min-h-[inherit] w-full max-w-full touch-pan-y transition-transform duration-500 ease-out will-change-transform motion-reduce:transition-none"
         style={{ transform: `translate3d(-${active * 100}%, 0, 0)` }}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}

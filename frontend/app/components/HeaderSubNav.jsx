@@ -21,8 +21,11 @@ const chipActive = `${chipBase} border-indigo-700 bg-indigo-600 text-white shado
 
 export default function HeaderSubNav({ onOpenMenu }) {
   return (
-    <nav className="header-subnav px-3 py-2.5 sm:px-4" aria-label="Browse departments">
-      <div className="mx-auto flex max-w-[1500px] items-center gap-2 overflow-x-auto scrollbar-none">
+    <nav
+      className="header-subnav w-full min-w-0 max-w-full overflow-x-clip px-3 py-2.5 sm:px-4"
+      aria-label="Browse departments"
+    >
+      <div className="mx-auto flex w-full min-w-0 max-w-[1500px] items-center gap-2 overflow-x-auto overscroll-x-contain scrollbar-none">
         <button
           type="button"
           onClick={onOpenMenu}

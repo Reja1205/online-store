@@ -163,7 +163,7 @@ export default function ProductDetailsPage() {
   const useNextImage = p.imageUrl && isAllowedImageHost(p.imageUrl);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-8 pb-10 animate-fade-up">
+    <div className="mx-auto w-full min-w-0 max-w-6xl space-y-8 overflow-x-clip pb-10 animate-fade-up">
       <Link
         href="/products"
         className="inline-flex text-sm font-medium text-indigo-600 underline-offset-4 hover:text-indigo-700 hover:underline"

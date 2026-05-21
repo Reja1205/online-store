@@ -36,11 +36,11 @@ function TickerContent() {
 export default function HeaderTicker() {
   return (
     <div
-      className="relative w-full max-w-full overflow-hidden bg-linear-to-r from-indigo-700 via-indigo-600 to-indigo-800"
+      className="relative isolate w-full min-w-0 max-w-full overflow-hidden bg-linear-to-r from-indigo-700 via-indigo-600 to-indigo-800 [contain:paint]"
       role="region"
       aria-label="Store announcements"
     >
-      <div className="header-ticker-track flex w-max items-center py-2">
+      <div className="header-ticker-track flex w-max max-w-none items-center py-2 will-change-transform">
         <TickerContent />
         <span className="flex shrink-0 items-center" aria-hidden>
           <TickerContent />

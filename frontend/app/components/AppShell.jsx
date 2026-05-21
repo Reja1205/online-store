@@ -47,14 +47,14 @@ function ShellContent({ children }) {
   }, [loadCartCount]);
 
   return (
-    <div className="flex w-full max-w-full flex-col">
-      <div className="sticky top-0 z-40 shrink-0 shadow-md shadow-indigo-900/10">
+    <div className="flex min-h-0 w-full min-w-0 max-w-full flex-col overflow-x-clip">
+      <div className="sticky top-0 z-40 w-full min-w-0 max-w-full shrink-0 overflow-x-clip shadow-md shadow-indigo-900/10">
         <Header cartCount={cartCount} />
         <HeaderTicker />
       </div>
 
-      <main className="relative z-0 w-full overflow-x-clip bg-[var(--color-bg)] pb-2">
-        <Container className="pb-4 pt-0 sm:pb-6 lg:pb-8">{children}</Container>
+      <main className="relative z-0 w-full min-w-0 max-w-full overflow-x-clip bg-[var(--color-bg)] pb-2">
+        <Container className="min-w-0 pb-4 pt-0 sm:pb-6 lg:pb-8">{children}</Container>
       </main>
     </div>
   );

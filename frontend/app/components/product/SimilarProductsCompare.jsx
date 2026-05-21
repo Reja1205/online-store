@@ -54,8 +54,8 @@ export default function SimilarProductsCompare({ currentProduct, similarProducts
         </span>
       </div>
 
-      <div className="mt-3 overflow-x-auto">
-        <table className="w-full min-w-[32rem] border-collapse text-left text-sm">
+      <div className="mt-3 max-w-full min-w-0 overflow-x-auto overscroll-x-contain">
+        <table className="w-full min-w-[min(32rem,100%)] border-collapse text-left text-sm">
           <thead>
             <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
               <th className="py-2 pr-3 font-medium">Product</th>

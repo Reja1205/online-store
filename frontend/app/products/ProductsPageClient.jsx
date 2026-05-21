@@ -149,7 +149,7 @@ export default function ProductsPageClient({
     "w-full min-h-[2.125rem] rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:cursor-not-allowed disabled:opacity-60 sm:min-h-[2.75rem] sm:rounded-xl sm:px-3";
 
   return (
-    <div className="space-y-4 pb-8 animate-fade-up sm:space-y-6">
+    <div className="min-w-0 space-y-4 overflow-x-clip pb-8 animate-fade-up sm:space-y-6">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <h1 className="truncate text-xl font-semibold tracking-tight text-slate-900 sm:text-3xl">

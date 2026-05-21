@@ -86,7 +86,7 @@ export default function OrdersPage() {
 
   if (loading) {
     return (
-      <div className="max-w-5xl mx-auto p-6">
+      <div className="mx-auto min-w-0 max-w-full max-w-5xl overflow-x-clip p-6">
         <div className="rounded-2xl border bg-white p-6 shadow-sm">
           <p className="text-gray-600">Loading your orders...</p>
         </div>
@@ -96,7 +96,7 @@ export default function OrdersPage() {
 
   if (error) {
     return (
-      <div className="max-w-5xl mx-auto p-6">
+      <div className="mx-auto min-w-0 max-w-full max-w-5xl overflow-x-clip p-6">
         <div className="rounded-2xl border border-red-200 bg-red-50 p-6 shadow-sm">
           <p className="text-red-700 font-medium">{error}</p>
 
@@ -119,7 +119,7 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-6">
+    <div className="mx-auto min-w-0 max-w-full max-w-5xl overflow-x-clip p-6">
       {/* Header */}
       <div className="rounded-2xl bg-linear-to-r from-indigo-600 via-purple-600 to-pink-600 p-px shadow-sm">
         <div className="rounded-2xl bg-white/10 backdrop-blur px-5 py-5">

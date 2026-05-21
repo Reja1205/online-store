@@ -111,13 +111,13 @@ export default function Home() {
     <>
       <section
         id="hero"
-        className="relative -mx-4 mb-0 w-[calc(100%+2rem)] max-w-[100vw] overflow-hidden scroll-mt-36 sm:-mx-6 sm:w-[calc(100%+3rem)] lg:-mx-8 lg:w-[calc(100%+4rem)]"
+        className="full-bleed mb-0 scroll-mt-36"
         aria-label="Hero promotions"
       >
         <HomeCarousel products={products} loading={false} />
       </section>
 
-      <div className="space-y-8 lg:space-y-10">
+      <div className="min-w-0 space-y-8 lg:space-y-10">
       {cartFeedback ? (
         <Callout variant={cartFeedback.variant}>{cartFeedback.text}</Callout>
       ) : null}

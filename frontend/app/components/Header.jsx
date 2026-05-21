@@ -76,8 +76,8 @@ export default function Header({ cartCount = 0 }) {
   const firstName = user?.name?.split(/\s+/)[0];
 
   return (
-    <header className="site-header header-main w-full">
-      <div className="mx-auto max-w-[1500px] px-3 py-3 sm:px-4 lg:py-3.5">
+    <header className="site-header header-main w-full min-w-0 max-w-full overflow-x-clip">
+      <div className="mx-auto box-border w-full min-w-0 max-w-[1500px] px-3 py-3 sm:px-4 lg:py-3.5">
           <div className="flex items-center gap-3 lg:gap-5">
             <BrandLogo size="md" theme="light" />
 

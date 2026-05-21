@@ -129,26 +129,73 @@ button:not(:disabled) {
   cursor: pointer;
 }
 
-/* stable layout */
+/* stable layout — lock viewport width on mobile (no horizontal scroll/shift) */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 html,
 body {
   height: 100%;
   margin: 0;
   padding: 0;
+  max-width: 100%;
 }
 
 html {
+  overflow-x: clip;
   overflow-y: scroll;
   scroll-padding-top: 8.5rem;
+  scrollbar-gutter: stable;
 }
 
 body {
   width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: clip;
+  overscroll-behavior-x: none;
   background-color: var(--color-bg);
   color: var(--color-fg);
   -webkit-font-smoothing: antialiased;
+  -webkit-overflow-scrolling: touch;
+}
+
+img,
+video,
+svg,
+canvas {
+  max-width: 100%;
+}
+
+/* Full-bleed sections inside padded containers (no calc/100vw overflow) */
+.full-bleed {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  margin-left: -1rem;
+  margin-right: -1rem;
+  overflow: hidden;
+}
+
+@media (min-width: 640px) {
+  .full-bleed {
+    margin-left: -1.5rem;
+    margin-right: -1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .full-bleed {
+    margin-left: -2rem;
+    margin-right: -2rem;
+  }
+}
+
+/* Dev-only: add class "debug-overflow" on <html> to highlight wide children */
+html.debug-overflow * {
+  outline: 1px solid rgba(239, 68, 68, 0.35);
 }
 
 /* Focus visibility — keyboard users */
