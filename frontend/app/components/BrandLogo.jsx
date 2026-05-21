@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useId } from "react";
-import { SITE_NAME } from "../lib/site";
+import { SITE_NAME, SITE_WORDMARK } from "../lib/site";
 
 /**
- * Western Culture wordmark + RR monogram (Rejaur Rahman).
+ * BigBag wordmark + RR monogram (Rejaur Rahman).
  */
 export default function BrandLogo({
   href = "/",
@@ -26,10 +26,12 @@ export default function BrandLogo({
         ? "text-2xl sm:text-[1.65rem] leading-tight"
         : "text-lg sm:text-xl leading-tight";
 
-  const westernClass =
+  const firstClass =
     theme === "dark" ? "font-bold tracking-tight text-white" : "font-bold tracking-tight text-slate-800";
-  const cultureClass =
+  const secondClass =
     theme === "dark" ? "font-bold tracking-tight text-indigo-300" : "font-bold tracking-tight text-indigo-600";
+
+  const { first, second } = SITE_WORDMARK;
 
   const mark = (
     <svg
@@ -79,13 +81,13 @@ export default function BrandLogo({
   const wordmark =
     variant === "footer" ? (
       <span className={`flex flex-col ${textSize}`}>
-        <span className="font-bold tracking-tight text-white">Western</span>
-        <span className="font-bold tracking-tight text-indigo-300">Culture</span>
+        <span className="font-bold tracking-tight text-white">{first}</span>
+        <span className="font-bold tracking-tight text-indigo-300">{second}</span>
       </span>
     ) : (
       <span className={`hidden min-[380px]:inline ${textSize}`}>
-        <span className={westernClass}>Western </span>
-        <span className={cultureClass}>Culture</span>
+        <span className={firstClass}>{first}</span>
+        <span className={secondClass}>{second}</span>
       </span>
     );
 

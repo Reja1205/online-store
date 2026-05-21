@@ -1,6 +1,6 @@
 const nodemailer = require("nodemailer");
 
-const STORE_NAME = process.env.STORE_NAME || "Western Culture";
+const STORE_NAME = process.env.STORE_NAME || "BigBag";
 const STORE_EMAIL = process.env.STORE_EMAIL_FROM || process.env.SMTP_USER || "noreply@store.local";
 
 function isEmailConfigured() {

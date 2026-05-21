@@ -36,7 +36,7 @@ Add or update **all** of these:
 | `STRIPE_WEBHOOK_SECRET` | `whsec_...` | From **Part B** (Stripe Dashboard webhook — **not** from `stripe listen`) |
 | `FRONTEND_URL` | `https://YOUR-APP.vercel.app` | **No trailing slash.** Where customers return after Stripe pay |
 | `ALLOWED_ORIGINS` | `https://YOUR-APP.vercel.app` | Same Vercel URL (comma-separate if you have multiple) |
-| `STORE_NAME` | `Western Culture` | Optional, used in emails |
+| `STORE_NAME` | `BigBag` | Optional, used in emails |
 
 Keep existing vars: `MONGO_URI`, `JWT_SECRET`, `CLOUDINARY_*`, etc.
 

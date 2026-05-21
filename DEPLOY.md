@@ -1,4 +1,4 @@
-# Deploy Western Culture Online Store
+# Deploy BigBag Online Store
 
 Deploy **frontend** on [Vercel](https://vercel.com) and **backend** on [Render](https://render.com). MongoDB Atlas and Cloudinary stay as external services.
 

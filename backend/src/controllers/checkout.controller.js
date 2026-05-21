@@ -11,7 +11,7 @@ async function checkoutConfig(req, res) {
     stripe: isStripeEnabled(),
     email: isEmailConfigured(),
     sms: isSmsConfigured(),
-    storeName: process.env.STORE_NAME || "Western Culture",
+    storeName: process.env.STORE_NAME || "BigBag",
   });
 }
 

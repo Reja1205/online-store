@@ -28,7 +28,7 @@ services:
       - key: FRONTEND_URL
         sync: false
       - key: STORE_NAME
-        value: Western Culture
+        value: BigBag
       - key: STRIPE_SECRET_KEY
         sync: false
       - key: STRIPE_WEBHOOK_SECRET

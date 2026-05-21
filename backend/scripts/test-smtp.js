@@ -26,13 +26,13 @@ async function main() {
   console.log("Sending test email to", to, "...");
 
   const html = emailLayout({
-    title: "SMTP test — Western Culture",
+    title: "SMTP test — BigBag",
     bodyHtml: "<p>If you received this, email is working. You can enable verification emails next.</p>",
   });
 
   const result = await sendEmail({
     to,
-    subject: "Western Culture — SMTP test",
+    subject: "BigBag — SMTP test",
     html,
     text: "SMTP test OK",
   });

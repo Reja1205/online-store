@@ -91,7 +91,7 @@ SMTP_SECURE=false
 SMTP_USER=your@gmail.com
 SMTP_PASS=your-app-password
 STORE_EMAIL_FROM=your@gmail.com
-STORE_NAME=Western Culture
+STORE_NAME=BigBag
 ```
 
 ### Other providers
@@ -128,7 +128,7 @@ SMS sends after order is **paid** (same time as email).
 # ... existing MONGO_URI, JWT, Cloudinary ...
 
 FRONTEND_URL=http://localhost:3000
-STORE_NAME=Western Culture
+STORE_NAME=BigBag
 
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
