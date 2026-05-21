@@ -6,7 +6,9 @@ import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "./lib/site";
 export const viewport = {
   width: "device-width",
   initialScale: 1,
+  maximumScale: 1,
   themeColor: "#f8fafc",
+  interactiveWidget: "resizes-content",
 };
 
 export const metadata = {

@@ -5,7 +5,7 @@ import { useId } from "react";
 import { SITE_NAME } from "../lib/site";
 
 /**
- * Western Culture wordmark + monogram (Title Case: Western Culture).
+ * Western Culture wordmark + RR monogram (Rejaur Rahman).
  */
 export default function BrandLogo({
   href = "/",
@@ -38,18 +38,35 @@ export default function BrandLogo({
       viewBox="0 0 48 48"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className="shrink-0"
+      className="shrink-0 rounded-full"
       aria-hidden
     >
-      <rect width="48" height="48" rx="10" fill={`url(#${gradId})`} />
+      <circle cx="24" cy="24" r="24" fill={`url(#${gradId})`} />
+      <circle
+        cx="24"
+        cy="24"
+        r="22"
+        fill="none"
+        stroke="#e0e7ff"
+        strokeWidth="1.5"
+        opacity="0.85"
+      />
       <path
-        d="M10 32V16l6.5 10.5L23 16v16M28 32V16l10 14"
+        d="M11 33V15h5.2c2.8 0 4.8 1.9 4.8 4.6 0 2.2-1.3 3.6-3.2 4.1l4.4 9.3"
         stroke="white"
-        strokeWidth="2.8"
+        strokeWidth="2.5"
         strokeLinecap="round"
         strokeLinejoin="round"
+        fill="none"
       />
-      <path d="M8 36h32" stroke="#a5b4fc" strokeWidth="2.5" strokeLinecap="round" />
+      <path
+        d="M25 33V15h5.2c2.8 0 4.8 1.9 4.8 4.6 0 2.2-1.3 3.6-3.2 4.1l4.4 9.3"
+        stroke="white"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
       <defs>
         <linearGradient id={gradId} x1="4" y1="4" x2="44" y2="44" gradientUnits="userSpaceOnUse">
           <stop stopColor="#4338ca" />

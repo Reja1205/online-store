@@ -152,7 +152,7 @@ function VerifyEmailContent() {
 
 export default function VerifyEmailPage() {
   return (
-    <div className="mx-auto max-w-md animate-fade-up">
+    <div className="auth-form mx-auto w-full min-w-0 max-w-md animate-fade-up">
       <Suspense fallback={<p className="text-sm text-slate-500">Loading…</p>}>
         <VerifyEmailContent />
       </Suspense>

@@ -40,7 +40,7 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="mx-auto max-w-md animate-fade-up">
+    <div className="auth-form mx-auto w-full min-w-0 max-w-md animate-fade-up">
       <Card padding="p-6 sm:p-8">
         <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Forgot password</h1>
         <p className="mt-1 text-sm text-slate-600">
