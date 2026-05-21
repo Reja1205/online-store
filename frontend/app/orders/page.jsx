@@ -15,6 +15,14 @@ function badgeClass(status) {
   return "bg-gray-100 text-gray-700 border-gray-200"; // pending/default
 }
 
+function returnBadgeClass(status) {
+  const s = String(status || "").toLowerCase();
+  if (s === "approved" || s === "received") return "bg-indigo-100 text-indigo-800 border-indigo-200";
+  if (s === "completed") return "bg-green-100 text-green-800 border-green-200";
+  if (s === "rejected" || s === "cancelled") return "bg-red-100 text-red-800 border-red-200";
+  return "bg-amber-100 text-amber-900 border-amber-200";
+}
+
 export default function OrdersPage() {
   const router = useRouter();
 
@@ -248,6 +256,47 @@ export default function OrdersPage() {
                     </span>
                   </div>
                 </div>
+
+                {Array.isArray(o.returns) && o.returns.length > 0 ? (
+                  <div className="mt-4 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Return requests
+                    </p>
+                    <ul className="mt-2 space-y-2">
+                      {o.returns.map((r) => (
+                        <li key={r.id} className="flex flex-wrap items-center gap-2 text-sm">
+                          <span className="font-medium text-slate-900">{r.returnNumber}</span>
+                          <span
+                            className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${returnBadgeClass(r.status)}`}
+                          >
+                            {String(r.status).toUpperCase()}
+                          </span>
+                          <span className="text-slate-600">
+                            {r.resolution === "replacement" ? "Replacement" : "Refund"}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+
+                {o.returnEligibility?.eligible ? (
+                  <div className="mt-4">
+                    <Link
+                      href={`/orders/${o._id}/return`}
+                      className="inline-flex rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 transition"
+                    >
+                      Request return ({o.returnEligibility.daysRemaining} days left)
+                    </Link>
+                    <p className="mt-2 text-xs text-slate-500">
+                      14-day policy · You pay return shipping · Full refund or replacement
+                    </p>
+                  </div>
+                ) : o.returnEligibility?.openReturn ? (
+                  <p className="mt-4 text-sm text-slate-600">
+                    Return in progress: {o.returnEligibility.openReturn.returnNumber}
+                  </p>
+                ) : null}
               </div>
             ))}
           </div>

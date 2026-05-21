@@ -1,5 +1,6 @@
 const Order = require("../models/Order");
 const Product = require("../models/Product");
+const { enrichOrdersWithReturns } = require("../services/return.service");
 
 // helper: compute totals even if some older orders are missing fields
 function normalizeOrder(orderDoc) {
@@ -75,7 +76,8 @@ async function createOrder(req, res) {
 async function myOrders(req, res) {
   try {
     const docs = await Order.find({ user: req.user.id }).sort({ createdAt: -1 });
-    const orders = docs.map(normalizeOrder);
+    const normalized = docs.map(normalizeOrder);
+    const orders = await enrichOrdersWithReturns(normalized, req.user.id);
     return res.json({ orders });
   } catch (err) {
     console.error("MY_ORDERS_ERROR:", err);

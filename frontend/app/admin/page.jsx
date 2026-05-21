@@ -111,6 +111,19 @@ export default function AdminPage() {
           </Link>
 
           <Link
+            href="/admin/returns"
+            className="group rounded-2xl border border-gray-200 bg-white p-5 shadow-sm hover:shadow-lg transition"
+          >
+            <div className="mb-3 inline-flex rounded-xl bg-violet-50 px-3 py-1 text-xs font-semibold text-violet-700">
+              Returns
+            </div>
+            <p className="text-lg font-semibold text-gray-900 group-hover:text-violet-700 transition">
+              Return requests
+            </p>
+            <p className="mt-1 text-sm text-gray-600">Approve refunds or replacements</p>
+          </Link>
+
+          <Link
             href="/admin/users"
             className="group rounded-2xl border border-gray-200 bg-white p-5 shadow-sm hover:shadow-lg transition"
           >
