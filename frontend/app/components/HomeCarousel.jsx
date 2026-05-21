@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { productDisplayPrice, productName } from "../lib/api";
 import { SITE_NAME } from "../lib/site";
+import SummerSaleHeroPoster from "./hero/SummerSaleHeroPoster";
 
 /** Amazon-style hero blue */
 const HERO_BLUE = "#007eb9";
@@ -19,6 +20,7 @@ const FALLBACK_SLIDES = [
     cta: "Shop the sale",
     terms: "Limited time. Terms apply.",
     bg: HERO_BLUE,
+    poster: "summer",
   },
   {
     id: "shipping",
@@ -68,7 +70,7 @@ function productToSlide(p) {
 function ChevronIcon({ direction }) {
   return (
     <svg
-      className="h-10 w-10 sm:h-12 sm:w-12"
+      className="h-5 w-5 sm:h-10 sm:w-10 md:h-12 md:w-12"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -84,59 +86,64 @@ function ChevronIcon({ direction }) {
   );
 }
 
-function SlideImage({ slide, priority }) {
-  if (!slide.imageUrl) {
-    return (
-      <div className="flex h-full min-h-[200px] w-full items-center justify-center p-6">
-        <div
-          className="max-w-md rounded-lg bg-white/10 px-8 py-10 text-center backdrop-blur-sm"
-          aria-hidden
-        >
-          <p className="text-5xl font-light text-white/40">{SITE_NAME.charAt(0)}</p>
-        </div>
+/** Same slide + frame size for every carousel item */
+const SLIDE_HEIGHT = "h-[11.75rem] sm:h-[300px] lg:h-[340px]";
+const FRAME_CLASS =
+  "relative h-[10.25rem] w-[8.75rem] shrink-0 overflow-hidden rounded-lg bg-[#005a82]/45 shadow-[0_8px_20px_rgba(0,0,0,0.22)] ring-1 ring-white/20 sm:h-[248px] sm:w-[280px]";
+
+function SlideVisual({ slide, priority }) {
+  let content;
+  if (slide.poster === "summer") {
+    content = <SummerSaleHeroPoster className="h-full w-full object-contain object-center p-1" />;
+  } else if (!slide.imageUrl) {
+    content = (
+      <div className="flex h-full w-full items-center justify-center bg-white/5" aria-hidden>
+        <p className="text-3xl font-light text-white/35 sm:text-5xl">{SITE_NAME.charAt(0)}</p>
       </div>
+    );
+  } else if (isAllowedImageHost(slide.imageUrl)) {
+    content = (
+      <Image
+        src={slide.imageUrl}
+        alt=""
+        fill
+        className="object-contain object-bottom"
+        sizes="(max-width: 640px) 140px, 280px"
+        priority={priority}
+      />
+    );
+  } else {
+    content = (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={slide.imageUrl}
+        alt=""
+        className="h-full w-full object-contain object-bottom"
+      />
     );
   }
 
   return (
-    <div className="relative flex h-full min-h-[200px] w-full items-end justify-center p-4 sm:p-6 lg:p-8">
-      <div className="relative h-[85%] w-full max-w-md drop-shadow-2xl">
-        {isAllowedImageHost(slide.imageUrl) ? (
-          <Image
-            src={slide.imageUrl}
-            alt=""
-            fill
-            className="object-contain object-bottom"
-            sizes="(max-width: 1024px) 50vw, 400px"
-            priority={priority}
-          />
-        ) : (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={slide.imageUrl}
-            alt=""
-            className="h-full w-full object-contain object-bottom"
-          />
-        )}
-      </div>
+    <div className="flex h-full items-center justify-center p-2 sm:p-4 lg:p-8">
+      <div className={FRAME_CLASS}>{content}</div>
     </div>
   );
 }
 
 function HeroSlide({ slide, priority }) {
   return (
-    <article className="relative min-w-full shrink-0">
+    <article className={`relative min-w-full shrink-0 overflow-hidden ${SLIDE_HEIGHT}`}>
       <div
-        className="flex min-h-[260px] flex-col sm:min-h-[300px] sm:flex-row lg:min-h-[340px]"
+        className="flex h-full min-w-0 flex-row items-stretch"
         style={{ backgroundColor: slide.bg || HERO_BLUE }}
       >
-        <div className="flex flex-1 flex-col justify-center px-6 py-8 sm:px-10 sm:py-10 lg:px-14">
-          <h2 className="max-w-lg text-[1.65rem] font-normal leading-snug tracking-tight text-white sm:text-3xl lg:text-[2.15rem] lg:leading-tight">
+        <div className="flex min-w-0 flex-1 flex-col justify-center border-r border-white/15 py-3 pl-10 pr-3 sm:px-10 sm:py-10 lg:px-14">
+          <h2 className="line-clamp-3 text-sm font-normal leading-snug text-white sm:line-clamp-none sm:text-3xl lg:text-[2.15rem] lg:leading-tight">
             {slide.headline}
           </h2>
           <Link
             href={slide.href}
-            className="mt-5 inline-flex w-fit min-h-[2.5rem] items-center justify-center rounded-full px-6 py-2 text-sm font-medium text-slate-900 shadow-sm transition hover:brightness-95 active:scale-[0.99]"
+            className="mt-2.5 inline-flex w-fit max-w-full min-h-[2rem] items-center justify-center rounded-full px-4 py-1.5 text-xs font-semibold text-slate-900 shadow-sm transition hover:brightness-95 sm:mt-5 sm:min-h-[2.5rem] sm:px-6 sm:py-2 sm:text-sm"
             style={{ backgroundColor: CTA_YELLOW }}
             onMouseEnter={(e) => {
               e.currentTarget.style.backgroundColor = CTA_YELLOW_HOVER;
@@ -147,11 +154,13 @@ function HeroSlide({ slide, priority }) {
           >
             {slide.cta}
           </Link>
-          <p className="mt-6 text-xs text-white/95">{slide.terms || "Terms apply."}</p>
+          <p className="mt-1.5 text-[10px] text-white/90 sm:mt-6 sm:text-xs">
+            {slide.terms || "Terms apply."}
+          </p>
         </div>
 
-        <div className="relative flex flex-1 items-stretch sm:max-w-[48%]">
-          <SlideImage slide={slide} priority={priority} />
+        <div className="relative flex w-[9.25rem] shrink-0 items-stretch sm:w-[300px]">
+          <SlideVisual slide={slide} priority={priority} />
         </div>
       </div>
     </article>
@@ -178,11 +187,23 @@ export default function HomeCarousel({ products = [], loading = false }) {
       unique.push(productToSlide(p));
       if (unique.length >= 4) break;
     }
+    const summerSlide = FALLBACK_SLIDES.find((s) => s.id === "summer-sale");
+    const otherFallbacks = FALLBACK_SLIDES.filter((s) => s.id !== "summer-sale");
+
     if (unique.length >= 1) {
-      return [...unique, ...FALLBACK_SLIDES.filter((s) => !unique.some((u) => u.id === s.id))].slice(
-        0,
-        5
-      );
+      const merged = [
+        ...(summerSlide ? [summerSlide] : []),
+        ...unique,
+        ...otherFallbacks.filter((s) => !unique.some((u) => u.id === s.id)),
+      ];
+      const seenIds = new Set();
+      return merged
+        .filter((s) => {
+          if (seenIds.has(s.id)) return false;
+          seenIds.add(s.id);
+          return true;
+        })
+        .slice(0, 5);
     }
     return FALLBACK_SLIDES;
   }, [products]);
@@ -212,8 +233,11 @@ export default function HomeCarousel({ products = [], loading = false }) {
 
   if (loading) {
     return (
-      <section aria-label="Featured promotions" className="overflow-hidden bg-[#007eb9]">
-        <div className="min-h-[260px] animate-pulse bg-[#006da3] sm:min-h-[300px] lg:min-h-[340px]" />
+      <section
+        aria-label="Featured promotions"
+        className={`overflow-hidden bg-[#007eb9] ${SLIDE_HEIGHT}`}
+      >
+        <div className="h-full animate-pulse bg-[#006da3]" />
       </section>
     );
   }
@@ -222,14 +246,14 @@ export default function HomeCarousel({ products = [], loading = false }) {
     <section
       aria-label="Featured promotions"
       aria-roledescription="carousel"
-      className="group relative overflow-hidden"
+      className={`group relative overflow-hidden ${SLIDE_HEIGHT}`}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocusCapture={() => setPaused(true)}
       onBlurCapture={() => setPaused(false)}
     >
       <div
-        className="flex transition-transform duration-500 ease-out motion-reduce:transition-none"
+        className={`flex h-full ${SLIDE_HEIGHT} transition-transform duration-500 ease-out motion-reduce:transition-none`}
         style={{ transform: `translateX(-${active * 100}%)` }}
       >
         {slides.map((slide, i) => (
@@ -242,7 +266,7 @@ export default function HomeCarousel({ products = [], loading = false }) {
           <button
             type="button"
             onClick={prev}
-            className="absolute left-1 top-1/2 z-20 flex h-14 w-14 -translate-y-1/2 items-center justify-center text-white/95 transition hover:text-white sm:left-2"
+            className="absolute left-0.5 top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-[#007eb9]/75 text-white/95 backdrop-blur-sm transition hover:bg-[#006da3] sm:left-2 sm:h-14 sm:w-14 sm:rounded-none sm:bg-transparent"
             aria-label="Previous slide"
           >
             <ChevronIcon direction="left" />
@@ -250,7 +274,7 @@ export default function HomeCarousel({ products = [], loading = false }) {
           <button
             type="button"
             onClick={next}
-            className="absolute right-1 top-1/2 z-20 flex h-14 w-14 -translate-y-1/2 items-center justify-center text-white/95 transition hover:text-white sm:right-2"
+            className="absolute right-0.5 top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-[#007eb9]/75 text-white/95 backdrop-blur-sm transition hover:bg-[#006da3] sm:right-2 sm:h-14 sm:w-14 sm:rounded-none sm:bg-transparent"
             aria-label="Next slide"
           >
             <ChevronIcon direction="right" />

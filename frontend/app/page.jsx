@@ -108,15 +108,16 @@ export default function Home() {
     !loadingProducts && !catalogDown && products.length > 0 && shown.length === 0;
 
   return (
-    <div className="space-y-8 lg:space-y-10">
+    <>
       <section
         id="hero"
-        className="relative left-1/2 w-screen max-w-[100vw] -translate-x-1/2 scroll-mt-36"
+        className="relative left-1/2 mb-0 w-screen max-w-[100vw] -translate-x-1/2 scroll-mt-36"
         aria-label="Hero promotions"
       >
         <HomeCarousel products={products} loading={false} />
       </section>
 
+      <div className="space-y-8 lg:space-y-10">
       {cartFeedback ? (
         <Callout variant={cartFeedback.variant}>{cartFeedback.text}</Callout>
       ) : null}
@@ -276,6 +277,7 @@ export default function Home() {
           </>
         )}
       </section>
-    </div>
+      </div>
+    </>
   );
 }
