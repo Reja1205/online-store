@@ -8,11 +8,17 @@ function isEmailConfigured() {
 }
 
 function normalizeSmtpPass(pass) {
-  // Gmail app passwords are 16 chars; spaces from copy/paste break auth on Render
   return String(pass || "").replace(/\s+/g, "");
 }
 
-const SMTP_TIMEOUT_MS = Number(process.env.SMTP_SEND_TIMEOUT_MS || 12000);
+function smtpAuth() {
+  return {
+    user: String(process.env.SMTP_USER || "").trim(),
+    pass: normalizeSmtpPass(process.env.SMTP_PASS),
+  };
+}
+
+const SMTP_TIMEOUT_MS = Number(process.env.SMTP_SEND_TIMEOUT_MS || 15000);
 
 function withTimeout(promise, ms, label) {
   return Promise.race([
@@ -23,50 +29,82 @@ function withTimeout(promise, ms, label) {
   ]);
 }
 
-function createMailer() {
-  if (!isEmailConfigured()) return null;
+/** Gmail on Render often works better on 465; try env port first, then fallback. */
+function getSmtpAttempts() {
+  const host = process.env.SMTP_HOST || "smtp.gmail.com";
+  const auth = smtpAuth();
+  const port = Number(process.env.SMTP_PORT || 587);
+  const secure =
+    process.env.SMTP_SECURE === "true" || port === 465;
+
+  const attempts = [{ host, port, secure, auth }];
+
+  const isGmail = host.includes("gmail");
+  if (isGmail) {
+    if (port !== 465) {
+      attempts.push({ host, port: 465, secure: true, auth });
+    }
+    if (port !== 587) {
+      attempts.push({ host, port: 587, secure: false, auth });
+    }
+  }
+
+  return attempts;
+}
+
+function createMailer(config) {
   return nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT || 587),
-    secure: process.env.SMTP_SECURE === "true",
+    ...config,
     connectionTimeout: SMTP_TIMEOUT_MS,
     greetingTimeout: SMTP_TIMEOUT_MS,
     socketTimeout: SMTP_TIMEOUT_MS,
-    auth: {
-      user: String(process.env.SMTP_USER || "").trim(),
-      pass: normalizeSmtpPass(process.env.SMTP_PASS),
-    },
   });
 }
 
 async function sendEmail({ to, subject, html, text }) {
   if (!to) return { sent: false, reason: "no_recipient" };
 
-  const transporter = createMailer();
-  if (!transporter) {
+  if (!isEmailConfigured()) {
     if (process.env.NODE_ENV === "development") {
       console.log("[MAIL] (dev — SMTP not configured):", { to, subject });
     }
     return { sent: false, reason: "smtp_not_configured" };
   }
 
-  try {
-    await withTimeout(
-      transporter.sendMail({
-        from: `"${STORE_NAME}" <${STORE_EMAIL}>`,
-        to,
-        subject,
-        text: text || subject,
-        html,
-      }),
-      SMTP_TIMEOUT_MS,
-      "SMTP send"
-    );
-    return { sent: true };
-  } catch (err) {
-    console.error("SEND_EMAIL_ERROR:", err.message);
-    return { sent: false, reason: err.message || "send_failed" };
+  const mail = {
+    from: `"${STORE_NAME}" <${STORE_EMAIL}>`,
+    to,
+    subject,
+    text: text || subject,
+    html,
+  };
+
+  let lastReason = "send_failed";
+
+  for (const cfg of getSmtpAttempts()) {
+    const transporter = createMailer(cfg);
+    try {
+      await withTimeout(
+        transporter.sendMail(mail),
+        SMTP_TIMEOUT_MS,
+        `SMTP send (port ${cfg.port})`
+      );
+      if (cfg.port !== Number(process.env.SMTP_PORT || 587)) {
+        console.log(`[MAIL] sent via fallback port ${cfg.port}`);
+      }
+      return { sent: true };
+    } catch (err) {
+      lastReason = err.message || "send_failed";
+      console.error(`SEND_EMAIL_ERROR port ${cfg.port}:`, err.message);
+      try {
+        transporter.close();
+      } catch {
+        /* ignore */
+      }
+    }
   }
+
+  return { sent: false, reason: lastReason };
 }
 
 function emailLayout({ title, bodyHtml, ctaHref, ctaLabel }) {
@@ -95,6 +133,7 @@ module.exports = {
   STORE_NAME,
   STORE_EMAIL,
   isEmailConfigured,
+  getSmtpAttempts,
   createMailer,
   sendEmail,
   emailLayout,

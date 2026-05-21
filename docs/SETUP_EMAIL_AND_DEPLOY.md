@@ -9,6 +9,20 @@
 3. Search **App passwords** → create one for **Mail**.  
 4. Copy the 16-character password (no spaces).
 
+### Render / production Gmail fix
+
+If you see **“account created but verification email failed”** on the live site but local works:
+
+1. Render → Environment → set:
+   ```bash
+   SMTP_PORT=465
+   SMTP_SECURE=true
+   SMTP_PASS=your16charapppassword
+   ```
+   (`SMTP_PASS` with **no spaces**)
+2. Save and redeploy.
+3. Open `/verify-email` on your site → **Resend verification** (account already exists).
+
 ### 2. Edit `backend/.env`
 
 Add or fill in these lines (use **your** Gmail):
