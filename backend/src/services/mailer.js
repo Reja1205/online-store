@@ -29,26 +29,32 @@ function withTimeout(promise, ms, label) {
   ]);
 }
 
-/** Gmail on Render often works better on 465; try env port first, then fallback. */
+/** Gmail on Render: use 465 first in production (587 often times out). */
 function getSmtpAttempts() {
   const host = process.env.SMTP_HOST || "smtp.gmail.com";
   const auth = smtpAuth();
   const port = Number(process.env.SMTP_PORT || 587);
-  const secure =
-    process.env.SMTP_SECURE === "true" || port === 465;
-
-  const attempts = [{ host, port, secure, auth }];
-
+  const secure = process.env.SMTP_SECURE === "true" || port === 465;
   const isGmail = host.includes("gmail");
-  if (isGmail) {
-    if (port !== 465) {
-      attempts.push({ host, port: 465, secure: true, auth });
-    }
-    if (port !== 587) {
-      attempts.push({ host, port: 587, secure: false, auth });
-    }
+  const isProd = process.env.NODE_ENV === "production";
+
+  if (isGmail && isProd) {
+    const attempts = [
+      { host, port: 465, secure: true, auth },
+      { host, port: 587, secure: false, auth },
+    ];
+    if (port === 587 && secure === false) return attempts;
+    return [
+      { host, port, secure, auth },
+      ...attempts.filter((a) => a.port !== port),
+    ];
   }
 
+  const attempts = [{ host, port, secure, auth }];
+  if (isGmail) {
+    if (port !== 465) attempts.push({ host, port: 465, secure: true, auth });
+    if (port !== 587) attempts.push({ host, port: 587, secure: false, auth });
+  }
   return attempts;
 }
 

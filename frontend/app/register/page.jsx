@@ -62,9 +62,14 @@ export default function RegisterPage() {
 
       if (data?.verificationRequired) {
         if (data.verificationEmailSent === false) {
+          const hint = data?.emailError
+            ? ` (${data.emailError})`
+            : "";
           setError(
-            data?.message ||
-              "Account created but we could not send the verification email. Go to resend verification (link below)."
+            (data?.message ||
+              "Account created but verification email failed to send.") +
+              hint +
+              " Use Resend on the next page after fixing Render SMTP (port 465)."
           );
         } else {
           setMsg(
@@ -196,9 +201,12 @@ export default function RegisterPage() {
             {loading ? "Creating…" : "Register"}
           </Button>
 
-          <div className="flex justify-between text-sm">
+          <div className="flex flex-wrap justify-between gap-2 text-sm">
             <Link href="/" className="text-slate-600 underline-offset-4 hover:text-slate-900 hover:underline">
               Home
+            </Link>
+            <Link href="/verify-email" className="font-medium text-indigo-600 hover:text-indigo-700 hover:underline">
+              Resend verification
             </Link>
             <Link href="/login" className="font-medium text-indigo-600 hover:text-indigo-700 hover:underline">
               Sign in
