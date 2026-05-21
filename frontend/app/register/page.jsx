@@ -61,8 +61,18 @@ export default function RegisterPage() {
       }
 
       if (data?.verificationRequired) {
-        setMsg("Account created. Check your email to verify, then sign in.");
-        setTimeout(() => router.replace("/verify-email"), 1200);
+        if (data.verificationEmailSent === false) {
+          setError(
+            data?.message ||
+              "Account created but we could not send the verification email. Check spam or use resend on the next page."
+          );
+        } else {
+          setMsg(
+            data?.message ||
+              "Account created. Check your email and spam folder, then verify before signing in."
+          );
+        }
+        setTimeout(() => router.replace("/verify-email"), 1500);
         return;
       }
 

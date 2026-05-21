@@ -7,6 +7,11 @@ function isEmailConfigured() {
   return Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
 }
 
+function normalizeSmtpPass(pass) {
+  // Gmail app passwords are 16 chars; spaces from copy/paste break auth on Render
+  return String(pass || "").replace(/\s+/g, "");
+}
+
 function createMailer() {
   if (!isEmailConfigured()) return null;
   return nodemailer.createTransport({
@@ -14,8 +19,8 @@ function createMailer() {
     port: Number(process.env.SMTP_PORT || 587),
     secure: process.env.SMTP_SECURE === "true",
     auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
+      user: String(process.env.SMTP_USER || "").trim(),
+      pass: normalizeSmtpPass(process.env.SMTP_PASS),
     },
   });
 }

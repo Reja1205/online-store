@@ -1,14 +1,25 @@
 const authService = require("../services/auth.service");
 
 function sendResult(res, result) {
-  const { status = 200, message, user, token, code, lockedUntil, verificationRequired } =
-    result;
+  const {
+    status = 200,
+    message,
+    user,
+    token,
+    code,
+    lockedUntil,
+    verificationRequired,
+    verificationEmailSent,
+    emailError,
+  } = result;
   const body = { message };
   if (user) body.user = user;
   if (token) body.token = token;
   if (code) body.code = code;
   if (lockedUntil) body.lockedUntil = lockedUntil;
   if (verificationRequired !== undefined) body.verificationRequired = verificationRequired;
+  if (verificationEmailSent !== undefined) body.verificationEmailSent = verificationEmailSent;
+  if (emailError) body.emailError = emailError;
   return res.status(status).json(body);
 }
 

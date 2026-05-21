@@ -98,10 +98,43 @@ async function registerUser({ name, email, password }) {
   if (!pwCheck.ok) return { status: 400, message: pwCheck.message };
 
   const cleanEmail = email.toLowerCase().trim();
-  const existing = await User.findOne({ email: cleanEmail });
-  if (existing) return { status: 409, message: "Email already in use" };
-
+  const existing = await User.findOne({ email: cleanEmail }).select(
+    "+verificationToken +verificationTokenExpires"
+  );
   const requireVerify = emailVerificationRequired();
+
+  if (existing) {
+    if (requireVerify && !existing.emailVerified) {
+      const rawToken = generateToken();
+      existing.verificationToken = hashToken(rawToken);
+      existing.verificationTokenExpires = new Date(Date.now() + VERIFY_HOURS * 3600000);
+      await existing.save();
+
+      let verificationEmailSent = false;
+      let emailError = null;
+      try {
+        const mail = await sendVerificationEmail(existing, rawToken);
+        verificationEmailSent = Boolean(mail?.sent);
+        if (!verificationEmailSent) emailError = mail?.reason || "send_failed";
+      } catch (err) {
+        console.error("VERIFY_EMAIL_RESEND_ERROR:", err);
+        emailError = err.message;
+      }
+
+      return {
+        status: 200,
+        message: verificationEmailSent
+          ? "This email is already registered but not verified. We sent a new verification link."
+          : "Account exists but verification email could not be sent. Use resend on the verify page or check SMTP on the server.",
+        user: toPublicUser(existing),
+        verificationRequired: true,
+        verificationEmailSent,
+        emailError,
+      };
+    }
+    return { status: 409, message: "Email already in use" };
+  }
+
   const rawVerify = requireVerify ? generateToken() : null;
 
   const user = await User.create({
@@ -117,19 +150,30 @@ async function registerUser({ name, email, password }) {
       : null,
   });
 
+  let verificationEmailSent = false;
+  let emailError = null;
   if (rawVerify) {
-    sendVerificationEmail(user, rawVerify).catch((err) =>
-      console.error("VERIFY_EMAIL_SEND_ERROR:", err)
-    );
+    try {
+      const mail = await sendVerificationEmail(user, rawVerify);
+      verificationEmailSent = Boolean(mail?.sent);
+      if (!verificationEmailSent) emailError = mail?.reason || "send_failed";
+    } catch (err) {
+      console.error("VERIFY_EMAIL_SEND_ERROR:", err);
+      emailError = err.message;
+    }
   }
 
   return {
     status: 201,
     message: requireVerify
-      ? "Account created. Check your email to verify before signing in."
+      ? verificationEmailSent
+        ? "Account created. Check your email (and spam) to verify before signing in."
+        : "Account created but verification email failed to send. Use resend verification or contact support."
       : "User registered successfully",
     user: toPublicUser(user),
     verificationRequired: requireVerify,
+    verificationEmailSent,
+    emailError,
   };
 }
 
