@@ -9,6 +9,21 @@
 3. Search **App passwords** → create one for **Mail**.  
 4. Copy the 16-character password (no spaces).
 
+### Render: use Resend (recommended — Gmail often fails on Render)
+
+1. Sign up at https://resend.com (free tier).
+2. Create an API key.
+3. On Render, add:
+   ```bash
+   RESEND_API_KEY=re_your_key_here
+   RESEND_FROM=onboarding@resend.dev
+   EMAIL_PROVIDER=resend
+   ```
+4. Save → **Manual Deploy** → wait for **Live**.
+5. Register or **Resend verification** on your live site.
+
+Gmail SMTP on Render frequently times out on port 587; port 465 may still fail.
+
 ### Render / production Gmail fix
 
 If you see **“account created but verification email failed”** on the live site but local works:

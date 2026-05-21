@@ -4,7 +4,14 @@ const STORE_NAME = process.env.STORE_NAME || "Western Culture";
 const STORE_EMAIL = process.env.STORE_EMAIL_FROM || process.env.SMTP_USER || "noreply@store.local";
 
 function isEmailConfigured() {
-  return Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+  return Boolean(
+    process.env.RESEND_API_KEY ||
+      (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS)
+  );
+}
+
+function usesResend() {
+  return Boolean(process.env.RESEND_API_KEY?.trim());
 }
 
 function normalizeSmtpPass(pass) {
@@ -18,7 +25,7 @@ function smtpAuth() {
   };
 }
 
-const SMTP_TIMEOUT_MS = Number(process.env.SMTP_SEND_TIMEOUT_MS || 15000);
+const SMTP_TIMEOUT_MS = Number(process.env.SMTP_SEND_TIMEOUT_MS || 12000);
 
 function withTimeout(promise, ms, label) {
   return Promise.race([
@@ -29,31 +36,22 @@ function withTimeout(promise, ms, label) {
   ]);
 }
 
-/** Gmail on Render: use 465 first in production (587 often times out). */
+/** Render + Gmail: never use 587 in production (it times out). */
 function getSmtpAttempts() {
   const host = process.env.SMTP_HOST || "smtp.gmail.com";
   const auth = smtpAuth();
-  const port = Number(process.env.SMTP_PORT || 587);
-  const secure = process.env.SMTP_SECURE === "true" || port === 465;
   const isGmail = host.includes("gmail");
   const isProd = process.env.NODE_ENV === "production";
 
   if (isGmail && isProd) {
-    const attempts = [
-      { host, port: 465, secure: true, auth },
-      { host, port: 587, secure: false, auth },
-    ];
-    if (port === 587 && secure === false) return attempts;
-    return [
-      { host, port, secure, auth },
-      ...attempts.filter((a) => a.port !== port),
-    ];
+    return [{ host, port: 465, secure: true, auth }];
   }
 
+  const port = Number(process.env.SMTP_PORT || 587);
+  const secure = process.env.SMTP_SECURE === "true" || port === 465;
   const attempts = [{ host, port, secure, auth }];
-  if (isGmail) {
-    if (port !== 465) attempts.push({ host, port: 465, secure: true, auth });
-    if (port !== 587) attempts.push({ host, port: 587, secure: false, auth });
+  if (isGmail && port !== 465) {
+    attempts.push({ host, port: 465, secure: true, auth });
   }
   return attempts;
 }
@@ -67,16 +65,43 @@ function createMailer(config) {
   });
 }
 
-async function sendEmail({ to, subject, html, text }) {
-  if (!to) return { sent: false, reason: "no_recipient" };
+async function sendViaResend({ to, subject, html, text }) {
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  if (!apiKey) return null;
 
-  if (!isEmailConfigured()) {
-    if (process.env.NODE_ENV === "development") {
-      console.log("[MAIL] (dev — SMTP not configured):", { to, subject });
-    }
-    return { sent: false, reason: "smtp_not_configured" };
+  const from =
+    process.env.RESEND_FROM?.trim() ||
+    process.env.STORE_EMAIL_FROM?.trim() ||
+    "onboarding@resend.dev";
+
+  const res = await withTimeout(
+    fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from,
+        to: [to],
+        subject,
+        html,
+        text: text || subject,
+      }),
+    }),
+    SMTP_TIMEOUT_MS,
+    "Resend API"
+  );
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const msg = data?.message || data?.error || `Resend HTTP ${res.status}`;
+    return { sent: false, reason: msg };
   }
+  return { sent: true, provider: "resend" };
+}
 
+async function sendViaSmtp({ to, subject, html, text }) {
   const mail = {
     from: `"${STORE_NAME}" <${STORE_EMAIL}>`,
     to,
@@ -95,10 +120,7 @@ async function sendEmail({ to, subject, html, text }) {
         SMTP_TIMEOUT_MS,
         `SMTP send (port ${cfg.port})`
       );
-      if (cfg.port !== Number(process.env.SMTP_PORT || 587)) {
-        console.log(`[MAIL] sent via fallback port ${cfg.port}`);
-      }
-      return { sent: true };
+      return { sent: true, provider: "smtp", port: cfg.port };
     } catch (err) {
       lastReason = err.message || "send_failed";
       console.error(`SEND_EMAIL_ERROR port ${cfg.port}:`, err.message);
@@ -111,6 +133,36 @@ async function sendEmail({ to, subject, html, text }) {
   }
 
   return { sent: false, reason: lastReason };
+}
+
+async function sendEmail({ to, subject, html, text }) {
+  if (!to) return { sent: false, reason: "no_recipient" };
+
+  if (!isEmailConfigured()) {
+    if (process.env.NODE_ENV === "development") {
+      console.log("[MAIL] (dev — not configured):", { to, subject });
+    }
+    return { sent: false, reason: "smtp_not_configured" };
+  }
+
+  if (usesResend()) {
+    try {
+      const resendResult = await sendViaResend({ to, subject, html, text });
+      if (resendResult?.sent) return resendResult;
+      console.error("RESEND_FAILED:", resendResult?.reason);
+      if (process.env.EMAIL_PROVIDER !== "resend") {
+        return sendViaSmtp({ to, subject, html, text });
+      }
+      return resendResult || { sent: false, reason: "resend_failed" };
+    } catch (err) {
+      console.error("RESEND_ERROR:", err.message);
+      if (process.env.EMAIL_PROVIDER === "resend") {
+        return { sent: false, reason: err.message };
+      }
+    }
+  }
+
+  return sendViaSmtp({ to, subject, html, text });
 }
 
 function emailLayout({ title, bodyHtml, ctaHref, ctaLabel }) {
@@ -135,11 +187,24 @@ function emailLayout({ title, bodyHtml, ctaHref, ctaLabel }) {
 </html>`;
 }
 
+function getEmailStatus() {
+  return {
+    configured: isEmailConfigured(),
+    provider: usesResend() ? "resend" : "smtp",
+    resend: usesResend(),
+    smtpPort: process.env.SMTP_PORT || null,
+    smtpSecure: process.env.SMTP_SECURE || null,
+    productionSmtpPorts: getSmtpAttempts().map((a) => a.port),
+  };
+}
+
 module.exports = {
   STORE_NAME,
   STORE_EMAIL,
   isEmailConfigured,
+  usesResend,
   getSmtpAttempts,
+  getEmailStatus,
   createMailer,
   sendEmail,
   emailLayout,

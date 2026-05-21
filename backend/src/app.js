@@ -111,6 +111,14 @@ app.get("/health", (req, res) => {
     auth: {
       email,
       requireEmailVerification: process.env.REQUIRE_EMAIL_VERIFICATION === "true",
+      ...(() => {
+        try {
+          const { getEmailStatus } = require("./services/mailer");
+          return { emailStatus: getEmailStatus() };
+        } catch {
+          return {};
+        }
+      })(),
     },
     checkout: {
       stripe,
