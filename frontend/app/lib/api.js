@@ -90,13 +90,24 @@ export async function apiJson(path, options = {}) {
   const logPerf = shouldLogPerf();
   const started = logPerf && typeof performance !== "undefined" ? performance.now() : 0;
 
+  const timeoutMs = Number(options.timeoutMs || 0);
+  const controller = timeoutMs > 0 && typeof AbortController !== "undefined" ? new AbortController() : null;
+  let timeoutId = null;
+  if (controller && timeoutMs > 0) {
+    timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  }
+
   try {
     const res = await fetch(
       url,
-      buildFetchInit(options, sessionHeaders({
-        "Content-Type": "application/json",
-        ...(options.headers || {}),
-      }))
+      buildFetchInit(
+        options,
+        sessionHeaders({
+          "Content-Type": "application/json",
+          ...(options.headers || {}),
+        }),
+        controller ? { signal: controller.signal } : {}
+      )
     );
 
     const data = await res.json().catch(() => ({}));
@@ -109,14 +120,23 @@ export async function apiJson(path, options = {}) {
     }
 
     return { res, data };
-  } catch {
+  } catch (err) {
     if (logPerf && started) {
       console.log(`[PERF] api ${label} FAILED ${(performance.now() - started).toFixed(0)}ms`);
     }
+    const aborted = err?.name === "AbortError";
     return {
       res: networkErrorRes,
-      data: networkFailurePayload(),
+      data: aborted
+        ? {
+            code: "TIMEOUT",
+            message:
+              "The server is taking too long. Wait a moment and try again, or use resend verification if your account was created.",
+          }
+        : networkFailurePayload(),
     };
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
   }
 }
 

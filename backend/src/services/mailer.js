@@ -12,12 +12,26 @@ function normalizeSmtpPass(pass) {
   return String(pass || "").replace(/\s+/g, "");
 }
 
+const SMTP_TIMEOUT_MS = Number(process.env.SMTP_SEND_TIMEOUT_MS || 12000);
+
+function withTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+    }),
+  ]);
+}
+
 function createMailer() {
   if (!isEmailConfigured()) return null;
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT || 587),
     secure: process.env.SMTP_SECURE === "true",
+    connectionTimeout: SMTP_TIMEOUT_MS,
+    greetingTimeout: SMTP_TIMEOUT_MS,
+    socketTimeout: SMTP_TIMEOUT_MS,
     auth: {
       user: String(process.env.SMTP_USER || "").trim(),
       pass: normalizeSmtpPass(process.env.SMTP_PASS),
@@ -36,15 +50,23 @@ async function sendEmail({ to, subject, html, text }) {
     return { sent: false, reason: "smtp_not_configured" };
   }
 
-  await transporter.sendMail({
-    from: `"${STORE_NAME}" <${STORE_EMAIL}>`,
-    to,
-    subject,
-    text: text || subject,
-    html,
-  });
-
-  return { sent: true };
+  try {
+    await withTimeout(
+      transporter.sendMail({
+        from: `"${STORE_NAME}" <${STORE_EMAIL}>`,
+        to,
+        subject,
+        text: text || subject,
+        html,
+      }),
+      SMTP_TIMEOUT_MS,
+      "SMTP send"
+    );
+    return { sent: true };
+  } catch (err) {
+    console.error("SEND_EMAIL_ERROR:", err.message);
+    return { sent: false, reason: err.message || "send_failed" };
+  }
 }
 
 function emailLayout({ title, bodyHtml, ctaHref, ctaLabel }) {

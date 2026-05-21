@@ -52,11 +52,11 @@ export default function RegisterPage() {
       const { res, data } = await apiJson(path, {
         method: "POST",
         body: JSON.stringify(payload),
+        timeoutMs: 45000,
       });
 
       if (!res.ok) {
         setError(data?.message || "Registration failed");
-        setLoading(false);
         return;
       }
 
@@ -64,7 +64,7 @@ export default function RegisterPage() {
         if (data.verificationEmailSent === false) {
           setError(
             data?.message ||
-              "Account created but we could not send the verification email. Check spam or use resend on the next page."
+              "Account created but we could not send the verification email. Go to resend verification (link below)."
           );
         } else {
           setMsg(
@@ -72,11 +72,13 @@ export default function RegisterPage() {
               "Account created. Check your email and spam folder, then verify before signing in."
           );
         }
-        setTimeout(() => router.replace("/verify-email"), 1500);
+        setLoading(false);
+        setTimeout(() => router.replace("/verify-email"), 1200);
         return;
       }
 
       setMsg("Account created. Redirecting to sign in…");
+      setLoading(false);
       setTimeout(() => {
         router.replace("/login");
         router.refresh();
