@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
-import { apiJson } from "../../lib/api";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { apiJson, isNetworkFailure } from "../../lib/api";
 import { fmtDate } from "../../lib/format";
 
 const STATUSES = ["pending", "approved", "received", "completed", "rejected", "cancelled"];
@@ -28,18 +28,30 @@ export default function AdminReturnsPage() {
   const [returns, setReturns] = useState([]);
   const [filter, setFilter] = useState("");
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
+  const [actionError, setActionError] = useState("");
   const [msg, setMsg] = useState("");
   const [busyId, setBusyId] = useState("");
   const [notes, setNotes] = useState({});
+  const loadSeq = useRef(0);
 
   const load = useCallback(async () => {
+    const requestId = ++loadSeq.current;
     setLoading(true);
-    setError("");
+    setLoadError("");
     const q = filter ? `?status=${encodeURIComponent(filter)}` : "";
-    const { res, data } = await apiJson(`/api/returns${q}`, { cache: "no-store" });
+    const { res, data } = await apiJson(`/api/returns${q}`, {
+      cache: "no-store",
+      timeoutMs: 30000,
+    });
+    if (loadSeq.current !== requestId) return;
+
     if (!res.ok) {
-      setError(data?.message || "Failed to load returns");
+      setLoadError(
+        isNetworkFailure(res, data)
+          ? data?.message || "Could not reach the server."
+          : data?.message || "Failed to load returns"
+      );
       setReturns([]);
     } else {
       setReturns(Array.isArray(data?.returns) ? data.returns : []);
@@ -54,18 +66,27 @@ export default function AdminReturnsPage() {
   async function updateStatus(id, status) {
     setBusyId(id);
     setMsg("");
-    setError("");
+    setActionError("");
     const { res, data } = await apiJson(`/api/returns/${id}`, {
       method: "PATCH",
       body: JSON.stringify({ status, adminNotes: notes[id] || "" }),
+      timeoutMs: 45000,
     });
     setBusyId("");
     if (!res.ok) {
-      setError(data?.message || "Update failed");
+      setActionError(
+        isNetworkFailure(res, data)
+          ? `${data?.message || "Connection problem."} Your change may not have saved — refresh and check the status.`
+          : data?.message || "Update failed"
+      );
       return;
     }
+    const updated = data?.return;
+    if (updated) {
+      setReturns((prev) => prev.map((r) => (r.id === id ? { ...r, ...updated } : r)));
+    }
     setMsg(data?.message || "Updated");
-    await load();
+    void load();
   }
 
   return (
@@ -106,8 +127,15 @@ export default function AdminReturnsPage() {
           ))}
         </div>
 
-        {error ? (
-          <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>
+        {loadError ? (
+          <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            {loadError}
+          </p>
+        ) : null}
+        {actionError ? (
+          <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            {actionError}
+          </p>
         ) : null}
         {msg ? (
           <p className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{msg}</p>
