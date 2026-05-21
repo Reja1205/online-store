@@ -74,6 +74,9 @@ export default function RegisterPage() {
           setError(
             (data?.message || "Verification email could not be sent.") + help
           );
+          setLoading(false);
+          setTimeout(() => router.replace("/verify-email"), 1200);
+          return;
         } else {
           setMsg(
             data?.message ||
@@ -81,7 +84,8 @@ export default function RegisterPage() {
           );
         }
         setLoading(false);
-        setTimeout(() => router.replace("/verify-email"), 1200);
+        const params = new URLSearchParams({ sent: "1", email });
+        setTimeout(() => router.replace(`/verify-email?${params.toString()}`), 800);
         return;
       }
 
