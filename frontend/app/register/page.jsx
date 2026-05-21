@@ -62,14 +62,17 @@ export default function RegisterPage() {
 
       if (data?.verificationRequired) {
         if (data.verificationEmailSent === false) {
-          const hint = data?.emailError
-            ? ` (${data.emailError})`
-            : "";
+          const err = data?.emailError || "";
+          let help =
+            " Account was created. Use Resend verification on the next page.";
+          if (err.includes("only send testing emails")) {
+            help =
+              " Resend test mode only sends to the email on your Resend account (see error). Register with that email, or verify a domain at resend.com/domains.";
+          } else if (err) {
+            help = ` ${err}`;
+          }
           setError(
-            (data?.message ||
-              "Account created but verification email failed to send.") +
-              hint +
-              " Use Resend on the next page after fixing Render SMTP (port 465)."
+            (data?.message || "Verification email could not be sent.") + help
           );
         } else {
           setMsg(
