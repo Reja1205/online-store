@@ -8,14 +8,30 @@ const sizeStockSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const colorImageSchema = new mongoose.Schema(
+  {
+    color: { type: String, required: true, trim: true },
+    imageUrl: { type: String, required: true, trim: true },
+  },
+  { _id: false }
+);
+
 const productSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
     price: { type: Number, required: true, min: 0 },
     description: { type: String, default: "" },
+    /** Product page accordion — Top highlights (use "Label: value" per line) */
+    detailTopHighlights: { type: String, default: "", maxlength: 5000 },
+    /** Product page accordion — Style */
+    detailStyle: { type: String, default: "", maxlength: 5000 },
+    /** Product page accordion — Item details */
+    detailItemDetails: { type: String, default: "", maxlength: 5000 },
     /** Shown on catalog cards under the product name */
     shortDescription: { type: String, default: "", trim: true, maxlength: 200 },
     imageUrl: { type: String, default: "" },
+    /** Per-color product photos (shop gallery switches by selected color) */
+    colorImages: { type: [colorImageSchema], default: [] },
     category: { type: String, default: "", trim: true, index: true },
     /** Optional promotion campaign (summer sale, clearance, etc.) — separate from department category */
     promotionCategory: { type: String, default: "", trim: true, index: true },

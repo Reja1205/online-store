@@ -76,6 +76,28 @@ const CATALOG = [
     salePrice: 16.99,
   },
   {
+    slug: "mens-tee-hero",
+    name: "Smart Fit T-Shirt — Essential Colors",
+    category: "mens-tshirt",
+    price: 24.99,
+    shortDescription: "Classic crew-neck tee for a sharp everyday look.",
+    description:
+      "Soft cotton blend with a tailored fit. Eight colors — Red, Brown, Black, Blue, Green, White, Navy, and Gray — each with its own photo on the shop.",
+    colors: ["Red", "Brown", "Black", "Blue", "Green", "White", "Navy", "Gray"],
+    colorImageSlugs: [
+      "mens-tee-red",
+      "mens-tee-brown",
+      "mens-tee-black",
+      "mens-tee-blue",
+      "mens-tee-green",
+      "mens-tee-white",
+      "mens-tee-navy",
+      "mens-tee-gray",
+    ],
+    featured: true,
+    bestSeller: true,
+  },
+  {
     slug: "abaya-1",
     name: "Elegant Abaya — Black",
     category: "women",
@@ -172,6 +194,7 @@ const CATALOG = [
     shortDescription: "Maroon panjabi for festive and wedding style.",
     description: "Rich maroon tone with premium buttons. Designed for men who dress with intention.",
     colors: ["Red", "Brown", "Black"],
+    colorImageSlugs: ["panjabi-5-red", "panjabi-5-brown", "panjabi-5-black"],
     onSale: true,
     salePrice: 29.99,
   },
@@ -185,10 +208,25 @@ function imagePath(slug) {
   return "";
 }
 
+/** Per-color images: panjabi-5-red.jpg → Red, etc. */
+function colorImagesFor(def) {
+  if (!Array.isArray(def.colorImageSlugs) || !Array.isArray(def.colors)) return [];
+  return def.colors
+    .map((color, i) => {
+      const slug = def.colorImageSlugs[i];
+      const url = slug ? imagePath(slug) : "";
+      return url ? { color, imageUrl: url } : null;
+    })
+    .filter(Boolean);
+}
+
 async function upsertProduct(def) {
   const stockRows = sizeStock(6);
   const totalStock = stockRows.reduce((s, r) => s + r.stock, 0);
   const img = imagePath(def.slug);
+  const colorImages = colorImagesFor(def);
+  const primaryImage =
+    colorImages[0]?.imageUrl || img;
 
   const doc = {
     name: def.name,
@@ -204,7 +242,8 @@ async function upsertProduct(def) {
     bestSeller: Boolean(def.bestSeller),
     onSale: Boolean(def.onSale),
     salePrice: def.onSale ? def.salePrice : undefined,
-    imageUrl: img,
+    imageUrl: primaryImage,
+    colorImages,
   };
 
   const existing = await Product.findOne({ name: def.name });

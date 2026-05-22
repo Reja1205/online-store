@@ -47,7 +47,7 @@ export default function EditProductPage() {
     setError("");
     setMsg("");
 
-    const validationError = validateProductForm(values);
+    const validationError = validateProductForm(values, { existingImageUrl: imageUrl });
     if (validationError) {
       setError(validationError);
       return;

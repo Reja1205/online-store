@@ -10,12 +10,14 @@ import {
   mensTshirtFreeShippingNote,
   qualifiesMensTshirtFreeShipping,
 } from "../lib/freeShipping";
+import { productHasSizes, stockForSize } from "../lib/sizes";
 
 export default function CartPage() {
   const [items, setItems] = useState([]);
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [updatingLine, setUpdatingLine] = useState(null);
 
   function normalizeCartItems(data) {
     // supports {cart:{items:[...]}} or {items:[...]} or {cartItems:[...]}
@@ -79,6 +81,35 @@ export default function CartPage() {
     await loadCart();
   }
 
+  async function updateQty(row, nextQty) {
+    setError("");
+    setMsg("");
+    const qty = Number(nextQty);
+    if (!Number.isFinite(qty) || qty < 1) return;
+
+    setUpdatingLine(row.lineKey);
+    const { res, data } = await apiJson("/api/cart/update", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        productId: row.id,
+        size: row.size || undefined,
+        color: row.color || undefined,
+        lineIndex: row.lineIndex,
+        qty,
+      }),
+    });
+    setUpdatingLine(null);
+
+    if (!res.ok) {
+      setError(data?.message || "Could not update quantity");
+      return;
+    }
+
+    setMsg("Quantity updated");
+    await loadCart();
+  }
+
   useEffect(() => {
     loadCart();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -109,7 +140,11 @@ export default function CartPage() {
         name: productName(safeProduct),
         product: p,
         price: p ? productDisplayPrice(p) : 0,
-        stock: productStock(safeProduct),
+        stock: p
+          ? productHasSizes(p) && (it.size || "")
+            ? stockForSize(p, it.size)
+            : productStock(p)
+          : productStock(safeProduct),
         qty: Number(it.qty || 1),
         imageUrl: safeProduct.imageUrl || "",
         deleted: !p,
@@ -222,9 +257,43 @@ export default function CartPage() {
                     </div>
 
                     <div className="mt-3 flex items-center justify-between gap-3 flex-wrap">
-                      <p className="text-sm text-gray-700">
-                        Qty: <span className="font-semibold">{r.qty}</span>
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <label
+                          htmlFor={`cart-qty-${r.lineKey}`}
+                          className="text-sm font-medium text-gray-700"
+                        >
+                          Qty
+                        </label>
+                        <select
+                          id={`cart-qty-${r.lineKey}`}
+                          value={r.qty}
+                          disabled={
+                            r.deleted ||
+                            r.stock <= 0 ||
+                            updatingLine === r.lineKey
+                          }
+                          onChange={(e) => updateQty(r, Number(e.target.value))}
+                          className="min-h-[2.25rem] rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-sm text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                          aria-label={`Quantity for ${r.name}`}
+                        >
+                          {Array.from(
+                            {
+                              length: Math.max(
+                                1,
+                                Math.min(99, r.stock > 0 ? r.stock : 1)
+                              ),
+                            },
+                            (_, i) => i + 1
+                          ).map((n) => (
+                            <option key={n} value={n}>
+                              {n}
+                            </option>
+                          ))}
+                        </select>
+                        {updatingLine === r.lineKey ? (
+                          <span className="text-xs text-gray-500">Updating…</span>
+                        ) : null}
+                      </div>
 
                       <div className="flex items-center gap-2">
                         <button

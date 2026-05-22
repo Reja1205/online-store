@@ -23,6 +23,7 @@ const {
   normalizePromotionSlug,
   parsePromotionPercent,
 } = require("../constants/promotions");
+const { applyColorImages } = require("../constants/colorImages");
 
 function parseBool(value) {
   if (value === true || value === "true" || value === "1" || value === 1) return true;
@@ -79,6 +80,7 @@ function applyVariantsToProductData(body, category, target) {
 
   if (!colorMode) {
     target.colors = [];
+    target.colorImages = [];
   } else {
     const colors = parseColorsPayload(body, category);
     if (colors.length === 0) return false;
@@ -115,9 +117,9 @@ async function uploadToCloudinary(file) {
 }
 
 const CATALOG_SELECT =
-  "name price salePrice onSale featured bestSeller stock imageUrl category promotionCategory promotionPercent sizes sizeStock colors shortDescription description createdAt updatedAt";
+  "name price salePrice onSale featured bestSeller stock imageUrl colorImages category promotionCategory promotionPercent sizes sizeStock colors shortDescription description detailTopHighlights detailStyle detailItemDetails createdAt updatedAt";
 const SIMILAR_SELECT =
-  "name price salePrice onSale stock imageUrl category promotionCategory promotionPercent sizes sizeStock colors createdAt";
+  "name price salePrice onSale stock imageUrl colorImages category promotionCategory promotionPercent sizes sizeStock colors createdAt";
 
 function parseLimit(raw, fallback = 200) {
   const n = Number(raw);
@@ -129,6 +131,11 @@ function parsePage(raw) {
   const n = Number(raw);
   if (!Number.isFinite(n) || n < 1) return 1;
   return Math.floor(n);
+}
+
+function normalizeDetailText(value, maxLen = 5000) {
+  if (value === undefined || value === null) return "";
+  return String(value).trim().slice(0, maxLen);
 }
 
 function buildCategoryFilter(rawCategory) {
@@ -372,6 +379,9 @@ async function createProduct(req, res) {
       price: Number(price),
       description: description || "",
       shortDescription: String(shortDescription || "").trim().slice(0, 200),
+      detailTopHighlights: normalizeDetailText(req.body?.detailTopHighlights),
+      detailStyle: normalizeDetailText(req.body?.detailStyle),
+      detailItemDetails: normalizeDetailText(req.body?.detailItemDetails),
       category: categorySlug,
       stock: stock === undefined || stock === "" ? 0 : Number(stock),
       imageUrl: "",
@@ -383,6 +393,8 @@ async function createProduct(req, res) {
         message: "Select at least one size and one color for this clothing category",
       });
     }
+
+    applyColorImages(req.body, productData);
 
     if (!validateSalePricing(productData, res)) return;
 
@@ -421,6 +433,9 @@ function pickUpdates(body) {
     "price",
     "description",
     "shortDescription",
+    "detailTopHighlights",
+    "detailStyle",
+    "detailItemDetails",
     "stock",
     "category",
     "promotionCategory",
@@ -435,6 +450,15 @@ function pickUpdates(body) {
   if (updates.name !== undefined) updates.name = String(updates.name).trim();
   if (updates.shortDescription !== undefined) {
     updates.shortDescription = String(updates.shortDescription).trim().slice(0, 200);
+  }
+  if (updates.detailTopHighlights !== undefined) {
+    updates.detailTopHighlights = normalizeDetailText(updates.detailTopHighlights);
+  }
+  if (updates.detailStyle !== undefined) {
+    updates.detailStyle = normalizeDetailText(updates.detailStyle);
+  }
+  if (updates.detailItemDetails !== undefined) {
+    updates.detailItemDetails = normalizeDetailText(updates.detailItemDetails);
   }
   if (updates.price !== undefined) updates.price = Number(updates.price);
   if (updates.stock !== undefined) updates.stock = Number(updates.stock);
@@ -475,7 +499,12 @@ function pickUpdates(body) {
     }
     if (!getCategoryColorMode(updates.category)) {
       updates.colors = [];
+      updates.colorImages = [];
     }
+  }
+
+  if (body.colorImages !== undefined) {
+    applyColorImages(body, updates);
   }
 
   return updates;
