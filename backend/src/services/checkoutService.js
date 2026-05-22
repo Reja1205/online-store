@@ -9,10 +9,16 @@ const {
 } = require("../constants/address");
 const { calculateShippingFee, getShippingOptions, FREE_SHIPPING_MIN_USD } = require("./shipping");
 const {
+  countMensTshirtQty,
+  MENS_TSHIRT_FREE_SHIPPING_MIN_QTY,
+  qualifiesMensTshirtFreeShipping,
+} = require("../constants/freeShippingPromos");
+const {
   lineUnitPrice,
   validateCartInventory,
   decrementInventory,
 } = require("./inventory");
+const { regularPrice } = require("../utils/productPricing");
 const { sendOrderNotifications } = require("./notifications");
 const {
   isStripeEnabled,
@@ -45,7 +51,11 @@ function buildLineItemsFromCart(cart, productsById) {
     if (!p) throw new Error("Product no longer available: " + pid);
 
     const qty = Math.max(1, Number(ci.qty || 1));
+    const originalPrice = regularPrice(p);
     const price = lineUnitPrice(p);
+    const originalLineTotal = Math.round(originalPrice * qty * 100) / 100;
+    const lineTotal = Math.round(price * qty * 100) / 100;
+    const lineDiscount = Math.max(0, Math.round((originalLineTotal - lineTotal) * 100) / 100);
     const size = String(ci.size || "").trim();
     const color = String(ci.color || "").trim();
     const baseName = p.name || "Product";
@@ -56,37 +66,62 @@ function buildLineItemsFromCart(cart, productsById) {
       name: label,
       size,
       color,
+      originalPrice,
       price,
       qty,
-      lineTotal: price * qty,
+      originalLineTotal,
+      lineTotal,
+      lineDiscount,
     };
   });
+}
+
+function summarizeCheckoutItems(items) {
+  const itemsSubtotalOriginal = items.reduce((sum, it) => sum + Number(it.originalLineTotal || 0), 0);
+  const itemsTotal = items.reduce((sum, it) => sum + Number(it.lineTotal || 0), 0);
+  const discountTotal = Math.max(
+    0,
+    Math.round((itemsSubtotalOriginal - itemsTotal) * 100) / 100
+  );
+  return { itemsSubtotalOriginal, itemsTotal, discountTotal };
 }
 
 async function buildCheckoutPreview(owner, shippingMethod = "standard") {
   const { cart, productsById } = await loadCartWithProducts(owner);
 
+  const shippingOpts = { mensTshirtQty: 0 };
+
   if (!cart) {
-    const shipping = calculateShippingFee(0, shippingMethod);
+    const shipping = calculateShippingFee(0, shippingMethod, shippingOpts);
     return {
       items: [],
+      itemsSubtotalOriginal: 0,
+      discountTotal: 0,
       itemsTotal: 0,
       shippingFee: shipping.shippingFee,
       totalUSD: shipping.shippingFee,
       shippingMethod: shipping.shippingMethod,
-      shippingOptions: getShippingOptions(0),
+      shippingOptions: getShippingOptions(0, shippingOpts),
       freeShippingMin: FREE_SHIPPING_MIN_USD,
+      mensTshirtQtyInCart: 0,
+      mensTshirtFreeShippingMinQty: MENS_TSHIRT_FREE_SHIPPING_MIN_QTY,
+      mensTshirtFreeShippingEligible: false,
       paymentProvider: isStripeEnabled() ? "stripe" : "mock",
     };
   }
 
   const items = buildLineItemsFromCart(cart, productsById);
-  const itemsTotal = items.reduce((sum, it) => sum + it.lineTotal, 0);
-  const shipping = calculateShippingFee(itemsTotal, shippingMethod);
+  const { itemsSubtotalOriginal, itemsTotal, discountTotal } = summarizeCheckoutItems(items);
+  const mensTshirtQtyInCart = countMensTshirtQty(cart.items, productsById);
+  shippingOpts.mensTshirtQty = mensTshirtQtyInCart;
+  const shipping = calculateShippingFee(itemsTotal, shippingMethod, shippingOpts);
   const inventoryErrors = validateCartInventory(cart.items, productsById);
+  const mensTshirtFreeShippingEligible = qualifiesMensTshirtFreeShipping(mensTshirtQtyInCart);
 
   return {
     items,
+    itemsSubtotalOriginal,
+    discountTotal,
     itemsTotal,
     shippingFee: shipping.shippingFee,
     totalUSD: itemsTotal + shipping.shippingFee,
@@ -94,8 +129,12 @@ async function buildCheckoutPreview(owner, shippingMethod = "standard") {
     shippingLabel: shipping.label,
     shippingEta: shipping.eta,
     freeShippingApplied: shipping.freeShippingApplied,
-    shippingOptions: getShippingOptions(itemsTotal),
+    freeShippingReason: shipping.freeShippingReason,
+    shippingOptions: getShippingOptions(itemsTotal, shippingOpts),
     freeShippingMin: FREE_SHIPPING_MIN_USD,
+    mensTshirtQtyInCart,
+    mensTshirtFreeShippingMinQty: MENS_TSHIRT_FREE_SHIPPING_MIN_QTY,
+    mensTshirtFreeShippingEligible,
     inventoryOk: inventoryErrors.length === 0,
     inventoryErrors,
     paymentProvider: isStripeEnabled() ? "stripe" : "mock",
@@ -176,12 +215,17 @@ async function createPendingOrder({ cartOwner, user, body }) {
   }
 
   const items = buildLineItemsFromCart(cart, productsById);
-  const itemsTotal = items.reduce((sum, it) => sum + it.lineTotal, 0);
-  const shipping = calculateShippingFee(itemsTotal, shippingMethod);
+  const { itemsSubtotalOriginal, itemsTotal, discountTotal } = summarizeCheckoutItems(items);
+  const mensTshirtQtyInCart = countMensTshirtQty(cart.items, productsById);
+  const shipping = calculateShippingFee(itemsTotal, shippingMethod, {
+    mensTshirtQty: mensTshirtQtyInCart,
+  });
 
   const orderPayload = {
     orderNumber: generateOrderNumber(),
     items,
+    itemsSubtotalOriginal,
+    discountTotal,
     itemsTotal,
     shippingFee: shipping.shippingFee,
     totalUSD: itemsTotal + shipping.shippingFee,

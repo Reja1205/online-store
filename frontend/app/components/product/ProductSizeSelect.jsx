@@ -10,7 +10,16 @@ import {
 const selectClass =
   "w-full min-h-[2rem] rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20";
 
-export default function ProductSizeSelect({ product, value, onChange, compact = false }) {
+export const compactOptionSelectClass =
+  "min-h-[2.25rem] w-auto min-w-[4.5rem] max-w-[7.5rem] shrink-0 rounded-lg border border-slate-200 bg-white py-1.5 pl-2.5 pr-8 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:cursor-not-allowed disabled:opacity-50";
+
+export default function ProductSizeSelect({
+  product,
+  value,
+  onChange,
+  compact = false,
+  className = "",
+}) {
   const sizes = productSizeOptions(product);
   const [selected, setSelected] = useState(value || "");
 
@@ -42,7 +51,7 @@ export default function ProductSizeSelect({ product, value, onChange, compact = 
           setSelected(e.target.value);
           onChange?.(e.target.value);
         }}
-        className={selectClass}
+        className={compact ? `${compactOptionSelectClass} ${className}`.trim() : `${selectClass} ${className}`.trim()}
         aria-label="Select size"
       >
         {sizes.map((size) => {

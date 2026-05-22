@@ -1,4 +1,4 @@
-import { normalizeCategorySlug } from "./categories";
+import { isMensDepartmentSlug, normalizeCategorySlug } from "./categories";
 
 export const ADULT_SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
 
@@ -23,7 +23,7 @@ const CHILD_CATEGORIES = new Set(["kids", "child"]);
 
 export function getCategorySizeMode(category) {
   const slug = normalizeCategorySlug(category);
-  if (ADULT_CATEGORIES.has(slug)) return "adult";
+  if (ADULT_CATEGORIES.has(slug) || isMensDepartmentSlug(slug)) return "adult";
   if (CHILD_CATEGORIES.has(slug)) return "child";
   return null;
 }

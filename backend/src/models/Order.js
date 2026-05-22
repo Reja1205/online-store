@@ -6,9 +6,12 @@ const orderItemSchema = new mongoose.Schema(
     name: { type: String, required: true },
     size: { type: String, default: "" },
     color: { type: String, default: "" },
+    originalPrice: { type: Number, min: 0 },
     price: { type: Number, required: true, min: 0 },
     qty: { type: Number, required: true, min: 1 },
+    originalLineTotal: { type: Number, min: 0 },
     lineTotal: { type: Number, required: true, min: 0 },
+    lineDiscount: { type: Number, min: 0 },
   },
   { _id: false }
 );
@@ -35,6 +38,8 @@ const orderSchema = new mongoose.Schema(
 
     items: { type: [orderItemSchema], default: [] },
 
+    itemsSubtotalOriginal: { type: Number, default: 0 },
+    discountTotal: { type: Number, default: 0 },
     itemsTotal: { type: Number, default: 0 },
     shippingFee: { type: Number, default: 0 },
     totalUSD: { type: Number, default: 0 },

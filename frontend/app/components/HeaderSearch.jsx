@@ -2,7 +2,8 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
-import { normalizeCategorySlug, PRODUCT_CATEGORIES } from "../lib/categories";
+import CategorySelect from "./CategorySelect";
+import { normalizeCategorySlug } from "../lib/categories";
 
 function SearchIcon({ className = "h-5 w-5" }) {
   return (
@@ -60,19 +61,13 @@ function HeaderSearchInner({ className = "" }) {
         Department
       </label>
       <div className="relative shrink-0 border-r border-indigo-100">
-        <select
+        <CategorySelect
           id="header-search-category"
           value={category}
           onChange={handleCategoryChange}
-          className="h-full cursor-pointer appearance-none rounded-l-full border-0 bg-transparent py-0 pl-4 pr-9 text-xs font-medium text-slate-700 focus:outline-none sm:text-sm"
+          className="h-full max-w-[9.5rem] cursor-pointer appearance-none rounded-l-full border-0 bg-transparent py-0 pl-4 pr-9 text-xs font-medium text-slate-700 focus:outline-none sm:max-w-[11rem] sm:text-sm"
           aria-label="Filter by department"
-        >
-          {PRODUCT_CATEGORIES.map((c) => (
-            <option key={c.value} value={c.value}>
-              {c.label}
-            </option>
-          ))}
-        </select>
+        />
         <span
           className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-500"
           aria-hidden

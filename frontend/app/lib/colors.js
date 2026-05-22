@@ -1,4 +1,4 @@
-import { normalizeCategorySlug } from "./categories";
+import { isMensDepartmentSlug, normalizeCategorySlug } from "./categories";
 import { getCategorySizeMode } from "./sizes";
 
 export const CLOTHING_COLORS = [
@@ -29,7 +29,11 @@ const COLOR_HEX = {
 
 export function getCategoryColorMode(category) {
   const slug = normalizeCategorySlug(category);
-  if (["mens", "women", "kids", "child"].includes(slug) || getCategorySizeMode(category)) {
+  if (
+    ["mens", "women", "kids", "child"].includes(slug) ||
+    isMensDepartmentSlug(slug) ||
+    getCategorySizeMode(category)
+  ) {
     return "clothing";
   }
   return null;

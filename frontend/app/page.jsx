@@ -16,7 +16,7 @@ import { ProductCardSkeleton } from "./components/ui/Skeleton";
 import { useAuth } from "./context/AuthContext";
 import { apiJson } from "./lib/api";
 import { fetchProductsCatalogClient } from "./lib/products";
-import { pickBestSellers, pickFeatured, pickOnSale } from "./lib/productSections";
+import { pickBestSellers, pickFeatured, pickOnSale, pickPromotions } from "./lib/productSections";
 import { useViewMore } from "./lib/useViewMore";
 import ViewMoreButton from "./components/ViewMoreButton";
 
@@ -101,6 +101,7 @@ export default function Home() {
   const bestSellers = useMemo(() => pickBestSellers(products), [products]);
   const featuredProducts = useMemo(() => pickFeatured(products), [products]);
   const saleProducts = useMemo(() => pickOnSale(products), [products]);
+  const promotionProducts = useMemo(() => pickPromotions(products), [products]);
 
   const catalogDown = !loadingProducts && Boolean(catalogLoadError) && products.length === 0;
   const catalogEmptyOk = !loadingProducts && !catalogLoadError && products.length === 0;
@@ -111,7 +112,7 @@ export default function Home() {
     <>
       <section
         id="hero"
-        className="full-bleed mb-0 scroll-mt-36"
+        className="hero-full-bleed mb-0 scroll-mt-36"
         aria-label="Hero promotions"
       >
         <HomeCarousel products={products} loading={false} />
@@ -121,6 +122,18 @@ export default function Home() {
       {cartFeedback ? (
         <Callout variant={cartFeedback.variant}>{cartFeedback.text}</Callout>
       ) : null}
+
+      <ProductSection
+        id="promotions"
+        title="Promotions"
+        subtitle="Summer sale, clearance, holiday events, and more."
+        viewAllHref="/promotions"
+        products={promotionProducts}
+        loading={loadingProducts}
+        user={user}
+        onAddToCart={addToCart}
+        accent="amber"
+      />
 
       <ProductSection
         id="best-sellers"

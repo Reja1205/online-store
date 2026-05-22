@@ -223,6 +223,9 @@ export default function Header({ cartCount = 0 }) {
           <Link href="/products" className="cursor-pointer rounded-lg px-3 py-2.5 text-sm font-medium text-indigo-950 hover:bg-white/80" onClick={() => setMenuOpen(false)}>
             Shop all
           </Link>
+          <Link href="/promotions" className="cursor-pointer rounded-lg px-3 py-2.5 text-sm font-semibold text-amber-800 hover:bg-amber-50" onClick={() => setMenuOpen(false)}>
+            Promotions
+          </Link>
           <Link href="/cart" className="cursor-pointer rounded-lg px-3 py-2.5 text-sm font-medium text-indigo-950 hover:bg-white/80" onClick={() => setMenuOpen(false)}>
             Cart{cartCount > 0 ? ` (${cartCount})` : ""}
           </Link>

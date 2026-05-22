@@ -185,16 +185,61 @@ export function productSalePrice(p) {
   return sale;
 }
 
-/** Price shown to shoppers (sale price when on sale and valid). */
-export function productDisplayPrice(p) {
+function productManualSalePrice(p) {
   const regular = productPrice(p);
   const sale = productSalePrice(p);
   if (p?.onSale && sale != null && sale < regular) return sale;
-  return regular;
+  return null;
+}
+
+/** Price from promotion % when product is in a campaign. */
+export function productPromotionPrice(p) {
+  const regular = productPrice(p);
+  const percent = Number(p?.promotionPercent);
+  const slug = String(p?.promotionCategory || "").trim();
+  if (!slug || !Number.isFinite(percent) || percent <= 0 || percent >= 100) return null;
+  return Math.round(regular * (100 - percent)) / 100;
+}
+
+/** Price shown to shoppers (lowest of regular, manual sale, or promotion). */
+export function productDisplayPrice(p) {
+  const regular = productPrice(p);
+  const candidates = [regular];
+  const manual = productManualSalePrice(p);
+  const promo = productPromotionPrice(p);
+  if (manual != null) candidates.push(manual);
+  if (promo != null) candidates.push(promo);
+  if (p?.displayPrice != null && Number.isFinite(Number(p.displayPrice))) {
+    candidates.push(Number(p.displayPrice));
+  }
+  return Math.min(...candidates);
+}
+
+export function productHasDiscount(p) {
+  return productDisplayPrice(p) < productPrice(p) - 0.001;
 }
 
 export function productIsOnSale(p) {
+  return productHasDiscount(p);
+}
+
+/** Label for discount badge (e.g. "20% off"). */
+export function productDiscountLabel(p) {
   const regular = productPrice(p);
-  const sale = productSalePrice(p);
-  return Boolean(p?.onSale) && sale != null && sale < regular;
+  const display = productDisplayPrice(p);
+  if (display >= regular - 0.001) return "";
+
+  const promoPct = Number(p?.promotionPercent);
+  if (String(p?.promotionCategory || "").trim() && Number.isFinite(promoPct) && promoPct > 0) {
+    return `${Math.round(promoPct)}% off`;
+  }
+
+  const pct = Math.round((1 - display / regular) * 100);
+  return pct > 0 ? `${pct}% off` : "Sale";
+}
+
+export function formatMoneyUSD(amount) {
+  const n = Number(amount);
+  if (!Number.isFinite(n)) return "$0.00";
+  return `$${n.toFixed(2)}`;
 }

@@ -2,7 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { apiJson, productName, productPrice, productStock } from "../lib/api";
+import { apiJson, productDisplayPrice, productName, productStock } from "../lib/api";
+import ProductPrice from "../components/product/ProductPrice";
+import {
+  countMensTshirtQtyFromRows,
+  mensTshirtFreeShippingHeadline,
+  mensTshirtFreeShippingNote,
+  qualifiesMensTshirtFreeShipping,
+} from "../lib/freeShipping";
 
 export default function CartPage() {
   const [items, setItems] = useState([]);
@@ -40,9 +47,6 @@ export default function CartPage() {
   async function removeItem(productId, size = "", color = "", lineIndex = null) {
     setError("");
     setMsg("");
-
-    const ok = confirm("Remove this item from cart?");
-    if (!ok) return;
 
     const body =
       productId != null && String(productId).trim() !== ""
@@ -103,7 +107,8 @@ export default function CartPage() {
         color: it.color || "",
         lineKey: `${productId}::${it.size || ""}::${it.color || ""}`,
         name: productName(safeProduct),
-        price: productPrice(safeProduct),
+        product: p,
+        price: p ? productDisplayPrice(p) : 0,
         stock: productStock(safeProduct),
         qty: Number(it.qty || 1),
         imageUrl: safeProduct.imageUrl || "",
@@ -115,6 +120,9 @@ export default function CartPage() {
   const subtotal = useMemo(() => {
     return rows.reduce((sum, r) => sum + r.price * r.qty, 0);
   }, [rows]);
+
+  const mensTshirtQty = useMemo(() => countMensTshirtQtyFromRows(rows), [rows]);
+  const mensTshirtFreeDelivery = qualifiesMensTshirtFreeShipping(mensTshirtQty);
 
   if (loading) {
     return (
@@ -191,12 +199,15 @@ export default function CartPage() {
                           </p>
                         )}
 
-                        <p className="text-sm text-gray-600 mt-2">
-                          Price:{" "}
-                          <span className="font-medium text-indigo-700">
-                            ${r.price}
-                          </span>
-                        </p>
+                        {r.product ? (
+                          <div className="mt-2">
+                            <ProductPrice product={r.product} size="md" />
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-600 mt-2">
+                            Price: <span className="font-medium">${r.price.toFixed(2)}</span>
+                          </p>
+                        )}
                       </div>
 
                       <span
@@ -237,10 +248,25 @@ export default function CartPage() {
             </div>
 
             <div className="mt-6 bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+              <div
+                className={`mb-4 rounded-xl border px-4 py-3 text-sm ${
+                  mensTshirtFreeDelivery
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+                    : "border-indigo-200 bg-indigo-50 text-indigo-900"
+                }`}
+              >
+                <p className="font-semibold">{mensTshirtFreeShippingHeadline(mensTshirtQty)}</p>
+                <p className="mt-1 text-xs opacity-90">{mensTshirtFreeShippingNote(mensTshirtQty)}</p>
+              </div>
+
               <div className="flex items-center justify-between">
                 <p className="text-gray-700 font-medium">Subtotal</p>
                 <p className="text-gray-900 font-bold">${subtotal.toFixed(2)}</p>
               </div>
+
+              {mensTshirtFreeDelivery ? (
+                <p className="mt-2 text-sm font-medium text-emerald-700">Shipping at checkout: FREE</p>
+              ) : null}
 
               <div className="mt-4 flex justify-end">
                 <Link href="/checkout">

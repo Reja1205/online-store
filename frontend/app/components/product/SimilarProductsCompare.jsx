@@ -1,12 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { productDisplayPrice, productIsOnSale, productName, productPrice } from "../../lib/api";
+import {
+  formatMoneyUSD,
+  productDiscountLabel,
+  productDisplayPrice,
+  productHasDiscount,
+  productName,
+  productPrice,
+} from "../../lib/api";
 import { getCategoryLabel } from "../../lib/categories";
-
-function formatPrice(n) {
-  return `$${Number(n).toFixed(2)}`;
-}
 
 export default function SimilarProductsCompare({ currentProduct, similarProducts = [] }) {
   const currentId = String(currentProduct?._id || "");
@@ -40,7 +43,7 @@ export default function SimilarProductsCompare({ currentProduct, similarProducts
             {currentProduct?.category
               ? `: ${getCategoryLabel(currentProduct.category)}`
               : ""}{" "}
-            · {formatPrice(minPrice)} – {formatPrice(maxPrice)}
+            · {formatMoneyUSD(minPrice)} – {formatMoneyUSD(maxPrice)}
           </p>
         </div>
         <span
@@ -70,29 +73,30 @@ export default function SimilarProductsCompare({ currentProduct, similarProducts
                 {currentName}
                 <span className="ml-1 text-xs font-normal text-indigo-600">(this item)</span>
               </td>
-              <td className="py-2.5 pr-3 font-semibold text-indigo-700">{formatPrice(currentPrice)}</td>
+              <td className="py-2.5 pr-3 font-semibold text-indigo-700">{formatMoneyUSD(currentPrice)}</td>
               <td className="py-2.5 pr-3 text-slate-600">—</td>
               <td className="py-2.5 text-slate-400">Viewing</td>
             </tr>
             {rows.map((p) => {
               const price = productDisplayPrice(p);
               const diff = price - currentPrice;
-              const onSale = productIsOnSale(p);
+              const discounted = productHasDiscount(p);
+              const discountLabel = productDiscountLabel(p);
               return (
                 <tr key={p._id} className="border-b border-slate-100 last:border-0">
                   <td className="py-2.5 pr-3 text-slate-900">
                     {productName(p)}
-                    {onSale ? (
+                    {discounted && discountLabel ? (
                       <span className="ml-1 rounded bg-rose-100 px-1.5 py-0.5 text-[10px] font-semibold text-rose-800">
-                        Sale
+                        {discountLabel}
                       </span>
                     ) : null}
                   </td>
                   <td className="py-2.5 pr-3 font-medium text-slate-800">
-                    {formatPrice(price)}
-                    {onSale && productPrice(p) > price ? (
+                    {formatMoneyUSD(price)}
+                    {discounted && productPrice(p) > price ? (
                       <span className="ml-1 text-xs text-slate-400 line-through">
-                        {formatPrice(productPrice(p))}
+                        {formatMoneyUSD(productPrice(p))}
                       </span>
                     ) : null}
                   </td>
@@ -104,8 +108,8 @@ export default function SimilarProductsCompare({ currentProduct, similarProducts
                     {diff === 0
                       ? "Same price"
                       : diff < 0
-                        ? `${formatPrice(Math.abs(diff))} less`
-                        : `${formatPrice(diff)} more`}
+                        ? `${formatMoneyUSD(Math.abs(diff))} less`
+                        : `${formatMoneyUSD(diff)} more`}
                   </td>
                   <td className="py-2.5">
                     <Link

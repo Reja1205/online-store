@@ -37,6 +37,8 @@ export default function CheckoutPage() {
   const { user, loading: authLoading } = useAuth();
 
   const [items, setItems] = useState([]);
+  const [itemsSubtotalOriginal, setItemsSubtotalOriginal] = useState(0);
+  const [discountTotal, setDiscountTotal] = useState(0);
   const [itemsTotal, setItemsTotal] = useState(0);
   const [shippingFee, setShippingFee] = useState(0);
   const [totalUSD, setTotalUSD] = useState(0);
@@ -46,6 +48,10 @@ export default function CheckoutPage() {
   const [integrations, setIntegrations] = useState(null);
   const [inventoryErrors, setInventoryErrors] = useState([]);
   const [freeShippingMin, setFreeShippingMin] = useState(35);
+  const [mensTshirtQtyInCart, setMensTshirtQtyInCart] = useState(0);
+  const [mensTshirtFreeShippingMinQty, setMensTshirtFreeShippingMinQty] = useState(5);
+  const [mensTshirtFreeShippingEligible, setMensTshirtFreeShippingEligible] = useState(false);
+  const [freeShippingReason, setFreeShippingReason] = useState(null);
 
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
@@ -71,6 +77,8 @@ export default function CheckoutPage() {
     }
 
     setItems(Array.isArray(data.items) ? data.items : []);
+    setItemsSubtotalOriginal(Number(data.itemsSubtotalOriginal ?? data.itemsTotal ?? 0));
+    setDiscountTotal(Number(data.discountTotal || 0));
     setItemsTotal(Number(data.itemsTotal || 0));
     setShippingFee(Number(data.shippingFee || 0));
     setTotalUSD(Number(data.totalUSD || 0));
@@ -79,6 +87,10 @@ export default function CheckoutPage() {
     setPaymentProvider(data.paymentProvider || "mock");
     setInventoryErrors(Array.isArray(data.inventoryErrors) ? data.inventoryErrors : []);
     setFreeShippingMin(Number(data.freeShippingMin || 35));
+    setMensTshirtQtyInCart(Number(data.mensTshirtQtyInCart || 0));
+    setMensTshirtFreeShippingMinQty(Number(data.mensTshirtFreeShippingMinQty || 5));
+    setMensTshirtFreeShippingEligible(Boolean(data.mensTshirtFreeShippingEligible));
+    setFreeShippingReason(data.freeShippingReason || null);
     setLoading(false);
   }, []);
 
@@ -262,8 +274,20 @@ export default function CheckoutPage() {
             <Card>
               <h2 className="text-lg font-semibold text-slate-900">2. Shipping method</h2>
               <p className="mt-1 text-xs text-slate-500">
-                Free standard shipping on orders over ${freeShippingMin.toFixed(2)}.
+                Free standard shipping on orders over ${freeShippingMin.toFixed(2)}. Buy any{" "}
+                {mensTshirtFreeShippingMinQty} men&apos;s t-shirts in one order for free standard &
+                express delivery
+                {mensTshirtQtyInCart > 0
+                  ? ` (${mensTshirtQtyInCart} in cart${mensTshirtFreeShippingEligible ? " — qualifies!" : ""})`
+                  : ""}
+                .
               </p>
+              {mensTshirtFreeShippingEligible ? (
+                <p className="mt-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-800">
+                  FREE delivery applied — {mensTshirtQtyInCart} men&apos;s t-shirt
+                  {mensTshirtQtyInCart === 1 ? "" : "s"} in your order.
+                </p>
+              ) : null}
               <div className="mt-4 space-y-2">
                 {shippingOptions.map((opt) => (
                   <label
@@ -346,28 +370,74 @@ export default function CheckoutPage() {
             <Card>
               <h2 className="text-lg font-semibold text-slate-900">Order summary</h2>
               <ul className="mt-4 space-y-3">
-                {items.map((it, idx) => (
-                  <li key={idx} className="rounded-xl border border-slate-100 bg-slate-50/80 p-3 text-sm">
-                    <div className="flex justify-between gap-2">
-                      <span className="font-medium text-slate-900">{it.name}</span>
-                      <span>${Number(it.lineTotal || 0).toFixed(2)}</span>
-                    </div>
-                    <p className="text-xs text-slate-500">
-                      ${Number(it.price || 0).toFixed(2)} × {it.qty}
-                    </p>
-                  </li>
-                ))}
+                {items.map((it, idx) => {
+                  const qty = Number(it.qty || 1);
+                  const originalUnit = Number(it.originalPrice ?? it.price ?? 0);
+                  const unit = Number(it.price || 0);
+                  const originalLine = Number(it.originalLineTotal ?? originalUnit * qty);
+                  const lineTotal = Number(it.lineTotal || unit * qty);
+                  const lineDiscount = Number(it.lineDiscount ?? Math.max(0, originalLine - lineTotal));
+                  const hasLineDiscount = lineDiscount > 0.001;
+
+                  return (
+                    <li key={idx} className="rounded-xl border border-slate-100 bg-slate-50/80 p-3 text-sm">
+                      <div className="flex justify-between gap-2">
+                        <span className="font-medium text-slate-900">{it.name}</span>
+                        <span className="font-semibold text-slate-900">${lineTotal.toFixed(2)}</span>
+                      </div>
+                      <div className="mt-1.5 space-y-1 text-xs text-slate-600">
+                        <div className="flex justify-between gap-2">
+                          <span>
+                            ${originalUnit.toFixed(2)} × {qty}
+                          </span>
+                          <span className={hasLineDiscount ? "text-slate-500" : ""}>
+                            ${originalLine.toFixed(2)}
+                          </span>
+                        </div>
+                        {hasLineDiscount ? (
+                          <>
+                            <div className="flex justify-between gap-2 text-emerald-700">
+                              <span>Discount</span>
+                              <span>−${lineDiscount.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between gap-2 font-medium text-slate-800">
+                              <span>Item total</span>
+                              <span>${lineTotal.toFixed(2)}</span>
+                            </div>
+                          </>
+                        ) : null}
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
               <div className="mt-4 space-y-2 border-t border-slate-100 pt-4 text-sm">
-                <div className="flex justify-between">
+                <div className="flex justify-between text-slate-600">
+                  <span>Subtotal (original)</span>
+                  <span>${itemsSubtotalOriginal.toFixed(2)}</span>
+                </div>
+                {discountTotal > 0.001 ? (
+                  <div className="flex justify-between text-emerald-700">
+                    <span>Discounts</span>
+                    <span>−${discountTotal.toFixed(2)}</span>
+                  </div>
+                ) : null}
+                <div className="flex justify-between font-semibold text-slate-900">
                   <span>Subtotal</span>
-                  <span className="font-semibold">${itemsTotal.toFixed(2)}</span>
+                  <span>${itemsTotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Shipping</span>
-                  <span className="font-semibold">${shippingFee.toFixed(2)}</span>
+                  <span>
+                    Shipping
+                    {freeShippingReason === "mens-tshirt-qty" ? (
+                      <span className="ml-1 text-xs font-normal text-emerald-700">(5+ men&apos;s tees)</span>
+                    ) : null}
+                  </span>
+                  <span className="font-semibold">
+                    {shippingFee <= 0 ? "FREE" : `$${shippingFee.toFixed(2)}`}
+                  </span>
                 </div>
-                <div className="flex justify-between text-base font-semibold">
+                <div className="flex justify-between border-t border-slate-100 pt-2 text-base font-semibold">
                   <span>Total</span>
                   <span className="text-indigo-700">${totalUSD.toFixed(2)}</span>
                 </div>

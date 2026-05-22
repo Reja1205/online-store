@@ -145,13 +145,25 @@ export default function CheckoutConfirmationPage() {
           ))}
         </ul>
         <div className="mt-4 space-y-1 text-sm">
-          <div className="flex justify-between">
-            <span>Items</span>
+          {Number(order.itemsSubtotalOriginal) > Number(order.itemsTotal) ? (
+            <>
+              <div className="flex justify-between text-slate-600">
+                <span>Subtotal (original)</span>
+                <span>${fmtMoney(order.itemsSubtotalOriginal)}</span>
+              </div>
+              <div className="flex justify-between text-emerald-700">
+                <span>Discounts</span>
+                <span>−${fmtMoney(order.discountTotal)}</span>
+              </div>
+            </>
+          ) : null}
+          <div className="flex justify-between font-semibold text-slate-900">
+            <span>Subtotal</span>
             <span>${fmtMoney(order.itemsTotal)}</span>
           </div>
           <div className="flex justify-between">
             <span>Shipping ({order.shippingMethod || "standard"})</span>
-            <span>${fmtMoney(order.shippingFee)}</span>
+            <span>{Number(order.shippingFee) <= 0 ? "FREE" : `$${fmtMoney(order.shippingFee)}`}</span>
           </div>
           <div className="flex justify-between text-base font-semibold">
             <span>Total</span>

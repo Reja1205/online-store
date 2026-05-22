@@ -1,4 +1,7 @@
 const FREE_SHIPPING_MIN_USD = Number(process.env.FREE_SHIPPING_MIN_USD || 35);
+const {
+  qualifiesMensTshirtFreeShipping,
+} = require("../constants/freeShippingPromos");
 
 const SHIPPING_RATES = {
   standard: {
@@ -15,16 +18,20 @@ const SHIPPING_RATES = {
   },
 };
 
-function calculateShippingFee(itemsTotal, shippingMethod = "standard") {
+function calculateShippingFee(itemsTotal, shippingMethod = "standard", options = {}) {
   const method = SHIPPING_RATES[shippingMethod] ? shippingMethod : "standard";
   const rate = SHIPPING_RATES[method];
   const subtotal = Number(itemsTotal) || 0;
+  const mensTshirtQty = Number(options.mensTshirtQty || 0);
+  const mensTshirtPromo = qualifiesMensTshirtFreeShipping(mensTshirtQty);
+  const orderMinPromo = method === "standard" && subtotal >= FREE_SHIPPING_MIN_USD;
 
-  if (method === "standard" && subtotal >= FREE_SHIPPING_MIN_USD) {
+  if (mensTshirtPromo || orderMinPromo) {
     return {
       shippingMethod: method,
       shippingFee: 0,
       freeShippingApplied: true,
+      freeShippingReason: mensTshirtPromo ? "mens-tshirt-qty" : "order-min",
       label: rate.label,
       eta: rate.eta,
     };
@@ -34,15 +41,16 @@ function calculateShippingFee(itemsTotal, shippingMethod = "standard") {
     shippingMethod: method,
     shippingFee: rate.baseFee,
     freeShippingApplied: false,
+    freeShippingReason: null,
     label: rate.label,
     eta: rate.eta,
   };
 }
 
-function getShippingOptions(itemsTotal) {
+function getShippingOptions(itemsTotal, options = {}) {
   const subtotal = Number(itemsTotal) || 0;
   return Object.values(SHIPPING_RATES).map((rate) => {
-    const calc = calculateShippingFee(subtotal, rate.id);
+    const calc = calculateShippingFee(subtotal, rate.id, options);
     return {
       id: rate.id,
       label: rate.label,

@@ -3,10 +3,16 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { productDisplayPrice, productName } from "../lib/api";
+import {
+  productDiscountLabel,
+  productDisplayPrice,
+  productHasDiscount,
+  productName,
+  productPrice,
+} from "../lib/api";
 import { SITE_NAME } from "../lib/site";
 import { useCarouselSwipe } from "../lib/useCarousel";
-import SummerSaleHeroPoster from "./hero/SummerSaleHeroPoster";
+import HeroSlidePoster from "./hero/HeroSlidePoster";
 
 /** Amazon-style hero blue */
 const HERO_BLUE = "#007eb9";
@@ -30,6 +36,7 @@ const FALLBACK_SLIDES = [
     cta: "Browse catalog",
     terms: "Terms apply.",
     bg: HERO_BLUE,
+    poster: "shipping",
   },
   {
     id: "womens",
@@ -38,6 +45,7 @@ const FALLBACK_SLIDES = [
     cta: "Shop now",
     terms: "Terms apply.",
     bg: HERO_BLUE,
+    poster: "new-arrivals",
   },
 ];
 
@@ -54,8 +62,10 @@ function isAllowedImageHost(src) {
 function productToSlide(p) {
   const name = productName(p);
   const price = productDisplayPrice(p);
-  const headline = p.onSale
-    ? `${name} — now $${price.toFixed(2)}`
+  const discounted = productHasDiscount(p);
+  const label = productDiscountLabel(p);
+  const headline = discounted
+    ? `${name} — ${label} — $${price.toFixed(2)}`
     : `Shop ${name} at ${SITE_NAME}`;
   return {
     id: p._id,
@@ -87,22 +97,20 @@ function ChevronIcon({ direction }) {
   );
 }
 
-/** Responsive slide shell — content vertically centered */
+/** Responsive slide shell — text + visual grouped toward center */
 const SLIDE_SHELL =
-  "flex h-full min-h-[clamp(17.5rem,48vw,20rem)] w-full flex-col items-center justify-center sm:min-h-[300px] sm:flex-row lg:min-h-[340px]";
+  "flex h-full min-h-[clamp(17.5rem,48vw,20rem)] w-full items-center justify-center sm:min-h-[300px] lg:min-h-[340px]";
+const SLIDE_INNER =
+  "mx-auto grid w-full max-w-[1100px] grid-cols-1 items-center gap-4 px-11 py-4 sm:grid-cols-[minmax(0,1fr)_280px] sm:items-center sm:gap-6 sm:px-12 sm:py-6 lg:max-w-[1200px] lg:gap-8";
 
-/** Visual frame — neutral backdrop for photos (no blue band above image) */
+/** Visual frame — fixed width so product photos are never clipped off-slide */
 const VISUAL_FRAME =
-  "relative mx-auto flex h-[10.5rem] w-full max-w-[10.5rem] items-center justify-center overflow-hidden rounded-lg bg-white/95 shadow-[0_8px_20px_rgba(0,0,0,0.18)] ring-1 ring-white/25 sm:h-[248px] sm:max-w-[280px]";
+  "relative mx-auto h-[11rem] w-[11rem] shrink-0 overflow-hidden rounded-lg bg-white shadow-[0_8px_20px_rgba(0,0,0,0.18)] ring-1 ring-white/40 sm:h-[248px] sm:w-[280px]";
 
 function SlideVisual({ slide, priority }) {
   let content;
-  if (slide.poster === "summer") {
-    content = (
-      <div className="flex h-full w-full items-center justify-center bg-gradient-to-b from-[#fff7e6] to-[#ffe4a8] p-1.5">
-        <SummerSaleHeroPoster className="h-full w-full max-h-full object-contain object-center" />
-      </div>
-    );
+  if (slide.poster) {
+    content = <HeroSlidePoster variant={slide.poster} />;
   } else if (!slide.imageUrl) {
     content = (
       <div className="flex h-full w-full items-center justify-center bg-white/10" aria-hidden>
@@ -113,10 +121,11 @@ function SlideVisual({ slide, priority }) {
     content = (
       <Image
         src={slide.imageUrl}
-        alt=""
-        fill
-        className="object-contain object-center"
-        sizes="(max-width: 640px) 168px, 280px"
+        alt={slide.headline || "Product"}
+        width={280}
+        height={248}
+        className="h-full w-full object-contain object-center p-2"
+        sizes="280px"
         priority={priority}
       />
     );
@@ -125,8 +134,9 @@ function SlideVisual({ slide, priority }) {
       // eslint-disable-next-line @next/next/no-img-element
       <img
         src={slide.imageUrl}
-        alt=""
-        className="h-full w-full object-contain object-center"
+        alt={slide.headline || "Product"}
+        className="h-full w-full object-contain object-center p-2"
+        loading={priority ? "eager" : "lazy"}
       />
     );
   }
@@ -143,32 +153,34 @@ function HeroSlide({ slide, priority }) {
       aria-roledescription="slide"
     >
       <div className={SLIDE_SHELL} style={{ backgroundColor: slide.bg || HERO_BLUE }}>
-        {/* Text — centered in panel */}
-        <div className="flex min-w-0 flex-1 flex-col items-center justify-center px-11 py-4 text-center sm:border-r sm:border-white/15 sm:px-8 sm:py-6 lg:px-12 lg:py-8">
-          <h2 className="line-clamp-4 max-w-md text-[clamp(0.875rem,3.5vw,1rem)] font-normal leading-snug text-white sm:line-clamp-none sm:text-2xl lg:text-[2.15rem] lg:leading-tight">
-            {slide.headline}
-          </h2>
-          <Link
-            href={slide.href}
-            className="mt-3 inline-flex w-fit max-w-full min-h-[2.25rem] items-center justify-center rounded-full px-5 py-2 text-xs font-semibold text-slate-900 shadow-sm transition hover:brightness-95 sm:mt-5 sm:min-h-[2.5rem] sm:px-6 sm:text-sm"
-            style={{ backgroundColor: CTA_YELLOW }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = CTA_YELLOW_HOVER;
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = CTA_YELLOW;
-            }}
-          >
-            {slide.cta}
-          </Link>
-          <p className="mt-2 text-[10px] text-white/90 sm:mt-5 sm:text-xs">
-            {slide.terms || "Terms apply."}
-          </p>
-        </div>
+        <div className={SLIDE_INNER}>
+          {/* Text — left of visual, grouped toward center */}
+          <div className="min-w-0 flex flex-col items-center text-center sm:items-start sm:text-left">
+            <h2 className="line-clamp-3 text-[clamp(0.875rem,3.5vw,1rem)] font-normal leading-snug text-white sm:line-clamp-4 sm:text-xl lg:text-2xl lg:leading-tight">
+              {slide.headline}
+            </h2>
+            <Link
+              href={slide.href}
+              className="mt-3 inline-flex w-fit max-w-full min-h-[2.25rem] items-center justify-center rounded-full px-5 py-2 text-xs font-semibold text-slate-900 shadow-sm transition hover:brightness-95 sm:mt-5 sm:min-h-[2.5rem] sm:px-6 sm:text-sm"
+              style={{ backgroundColor: CTA_YELLOW }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = CTA_YELLOW_HOVER;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = CTA_YELLOW;
+              }}
+            >
+              {slide.cta}
+            </Link>
+            <p className="mt-2 text-[10px] text-white/90 sm:mt-5 sm:text-xs">
+              {slide.terms || "Terms apply."}
+            </p>
+          </div>
 
-        {/* Visual — centered in panel */}
-        <div className="flex w-full shrink-0 items-center justify-center px-4 py-4 sm:w-[42%] sm:max-w-[320px] sm:px-6 sm:py-6 lg:px-8">
-          <SlideVisual slide={slide} priority={priority} />
+          {/* Visual — fixed column; always visible beside copy */}
+          <div className="flex w-full justify-center sm:w-[280px] sm:justify-start">
+            <SlideVisual slide={slide} priority={priority} />
+          </div>
         </div>
       </div>
     </article>
@@ -247,10 +259,10 @@ export default function HomeCarousel({ products = [], loading = false }) {
 
   if (loading) {
     return (
-      <section
-        aria-label="Featured promotions"
-        className="relative w-full overflow-hidden bg-[#007eb9] min-h-[clamp(17.5rem,48vw,20rem)] sm:min-h-[300px] lg:min-h-[340px]"
-      >
+    <section
+      aria-label="Featured promotions"
+      className="relative w-full overflow-hidden bg-[#007eb9] min-h-[clamp(17.5rem,48vw,20rem)] sm:min-h-[300px] lg:min-h-[340px] [width:100%]"
+    >
         <div className="h-full min-h-[inherit] animate-pulse bg-[#006da3]" />
       </section>
     );
@@ -260,7 +272,7 @@ export default function HomeCarousel({ products = [], loading = false }) {
     <section
       aria-label="Featured promotions"
       aria-roledescription="carousel"
-      className="group relative isolate w-full min-w-0 max-w-full overflow-hidden overscroll-x-none touch-pan-y min-h-[clamp(17.5rem,48vw,20rem)] sm:min-h-[300px] lg:min-h-[340px] [contain:paint]"
+      className="group relative isolate w-full min-w-0 overflow-hidden overscroll-x-none touch-pan-y bg-[#007eb9] min-h-[clamp(17.5rem,48vw,20rem)] sm:min-h-[300px] lg:min-h-[340px] [contain:paint]"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocusCapture={() => setPaused(true)}

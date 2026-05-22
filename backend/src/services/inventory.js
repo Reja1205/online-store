@@ -1,13 +1,5 @@
 const Product = require("../models/Product");
-
-function lineUnitPrice(product) {
-  const regular = Number(product.price ?? 0);
-  const sale = Number(product.salePrice);
-  if (product.onSale && Number.isFinite(sale) && sale >= 0 && sale < regular) {
-    return sale;
-  }
-  return regular;
-}
+const { lineUnitPrice } = require("../utils/productPricing");
 
 function availableStock(product, size) {
   const normalized = String(size || "").trim();
@@ -80,7 +72,7 @@ async function decrementInventory(lineItems, productsById, session) {
 }
 
 module.exports = {
-  lineUnitPrice,
+  lineUnitPrice, // re-export for callers
   availableStock,
   validateCartInventory,
   decrementInventory,

@@ -64,7 +64,12 @@ function mapCartItems(cart, productRefs = null) {
         ? {
             _id: toId(p._id),
             name: p.name || "",
-            price: Number(p.price || 0),
+            price: regularPrice(p),
+            salePrice: p.salePrice,
+            onSale: Boolean(p.onSale),
+            promotionCategory: p.promotionCategory || "",
+            promotionPercent: p.promotionPercent,
+            displayPrice: lineUnitPrice(p),
             stock: Number(p.stock || 0),
             imageUrl: p.imageUrl || "",
             category: p.category || "",
@@ -77,8 +82,10 @@ function mapCartItems(cart, productRefs = null) {
   });
 }
 
+const { lineUnitPrice, regularPrice } = require("../utils/productPricing");
+
 const PRODUCT_CART_FIELDS =
-  "name price stock imageUrl category sizes sizeStock colors";
+  "name price salePrice onSale promotionCategory promotionPercent stock imageUrl category sizes sizeStock colors";
 
 async function getCart(req, res) {
   try {

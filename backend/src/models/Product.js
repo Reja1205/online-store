@@ -17,6 +17,10 @@ const productSchema = new mongoose.Schema(
     shortDescription: { type: String, default: "", trim: true, maxlength: 200 },
     imageUrl: { type: String, default: "" },
     category: { type: String, default: "", trim: true, index: true },
+    /** Optional promotion campaign (summer sale, clearance, etc.) — separate from department category */
+    promotionCategory: { type: String, default: "", trim: true, index: true },
+    /** Discount % when assigned to a promotion (e.g. 20 = 20% off) */
+    promotionPercent: { type: Number, min: 0, max: 100 },
     featured: { type: Boolean, default: false },
     bestSeller: { type: Boolean, default: false },
     onSale: { type: Boolean, default: false },
@@ -34,6 +38,7 @@ const productSchema = new mongoose.Schema(
 
 // Catalog list: filter by category + sort by newest
 productSchema.index({ category: 1, createdAt: -1 });
+productSchema.index({ promotionCategory: 1, createdAt: -1 });
 productSchema.index({ createdAt: -1 });
 
 module.exports = mongoose.model("Product", productSchema);

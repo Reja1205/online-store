@@ -3,14 +3,22 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { apiJson, productName, productPrice, productStock } from "../../lib/api";
-import { ADMIN_CATEGORIES, getCategoryLabel } from "../../lib/categories";
+import { apiJson, productName, productPrice, productStock, productDisplayPrice, productHasDiscount } from "../../lib/api";
+import CategorySelect from "../../components/CategorySelect";
+import { getCategoryLabel, isMensDepartmentSlug, MENS_SUBCATEGORIES } from "../../lib/categories";
+import { MensSubcategoryNav } from "../../lib/mensCategories";
+import {
+  ADMIN_PROMOTION_CATEGORIES,
+  formatPromotionPercent,
+  getPromotionLabel,
+} from "../../lib/promotions";
 
 export default function AdminProductsPage() {
   const router = useRouter();
   const [me, setMe] = useState(null);
   const [products, setProducts] = useState([]);
   const [categoryFilter, setCategoryFilter] = useState("");
+  const [promotionFilter, setPromotionFilter] = useState("");
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -29,13 +37,14 @@ export default function AdminProductsPage() {
     return data.user;
   }
 
-  async function loadProducts(category = categoryFilter) {
+  async function loadProducts(category = categoryFilter, promotion = promotionFilter) {
     setMsg("");
     setError("");
     setLoading(true);
 
     const params = new URLSearchParams({ full: "1", limit: "500" });
     if (category) params.set("category", category);
+    if (promotion) params.set("promotion", promotion === "in-promotions" ? "all" : promotion);
     const path = `/api/products?${params}`;
     const { res, data } = await apiJson(path, { headers: {} });
 
@@ -79,14 +88,24 @@ export default function AdminProductsPage() {
   }, []);
 
   useEffect(() => {
-    if (me) loadProducts(categoryFilter);
+    if (me) loadProducts(categoryFilter, promotionFilter);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [categoryFilter]);
+  }, [categoryFilter, promotionFilter]);
 
   const countsByCategory = useMemo(() => {
     const counts = {};
     for (const p of products) {
       const key = p.category || "uncategorized";
+      counts[key] = (counts[key] || 0) + 1;
+    }
+    return counts;
+  }, [products]);
+
+  const countsByPromotion = useMemo(() => {
+    const counts = {};
+    for (const p of products) {
+      const key = p.promotionCategory || "";
+      if (!key) continue;
       counts[key] = (counts[key] || 0) + 1;
     }
     return counts;
@@ -127,14 +146,31 @@ export default function AdminProductsPage() {
               <label htmlFor="admin-category-filter" className="mb-1 block text-sm font-medium text-gray-700">
                 Filter by category
               </label>
-              <select
+              <CategorySelect
                 id="admin-category-filter"
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
+                variant="shop"
+                value={categoryFilter || "all"}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setCategoryFilter(v === "all" ? "" : v);
+                }}
                 className="w-full max-w-md rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
+                aria-label="Filter by category"
+              />
+            </div>
+            <div className="flex-1">
+              <label htmlFor="admin-promotion-filter" className="mb-1 block text-sm font-medium text-gray-700">
+                Filter by promotion
+              </label>
+              <select
+                id="admin-promotion-filter"
+                value={promotionFilter}
+                onChange={(e) => setPromotionFilter(e.target.value)}
+                className="w-full max-w-md rounded-lg border border-amber-200 bg-amber-50/50 px-3 py-2 text-sm"
               >
-                <option value="">All categories</option>
-                {ADMIN_CATEGORIES.map((c) => (
+                <option value="">All products</option>
+                <option value="in-promotions">Any promotion</option>
+                {ADMIN_PROMOTION_CATEGORIES.map((c) => (
                   <option key={c.value} value={c.value}>
                     {c.label}
                   </option>
@@ -155,8 +191,20 @@ export default function AdminProductsPage() {
             </Link>
           </div>
 
+          <div className="mt-4">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-indigo-800">
+              Men&apos;s
+            </p>
+            <MensSubcategoryNav
+              activeSlug={
+                categoryFilter && isMensDepartmentSlug(categoryFilter) ? categoryFilter : "mens"
+              }
+              onSelect={(slug) => setCategoryFilter(slug)}
+            />
+          </div>
+
           <div className="mt-4 flex flex-wrap gap-2">
-            {ADMIN_CATEGORIES.filter((c) => countsByCategory[c.value]).map((c) => (
+            {MENS_SUBCATEGORIES.filter((c) => countsByCategory[c.value]).map((c) => (
               <button
                 key={c.value}
                 type="button"
@@ -167,9 +215,48 @@ export default function AdminProductsPage() {
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
-                {c.label} ({countsByCategory[c.value]})
+                {c.label} ({countsByCategory[c.value] || 0})
               </button>
             ))}
+            {[...new Set(products.map((p) => p.category).filter(Boolean))]
+              .filter((slug) => !MENS_SUBCATEGORIES.some((m) => m.value === slug))
+              .map((slug) => (
+                <button
+                  key={slug}
+                  type="button"
+                  onClick={() => setCategoryFilter(slug)}
+                  className={`rounded-full px-3 py-1 text-xs font-medium ${
+                    categoryFilter === slug
+                      ? "bg-indigo-600 text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  {getCategoryLabel(slug)} ({countsByCategory[slug] || 0})
+                </button>
+              ))}
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2 border-t border-amber-100 pt-4">
+            <span className="w-full text-xs font-semibold uppercase tracking-wide text-amber-800">
+              Promotions
+            </span>
+            {ADMIN_PROMOTION_CATEGORIES.filter((c) => countsByPromotion[c.value]).map((c) => (
+              <button
+                key={c.value}
+                type="button"
+                onClick={() => setPromotionFilter(c.value)}
+                className={`rounded-full px-3 py-1 text-xs font-medium ${
+                  promotionFilter === c.value
+                    ? "bg-amber-600 text-white"
+                    : "bg-amber-50 text-amber-900 ring-1 ring-amber-200 hover:bg-amber-100"
+                }`}
+              >
+                {c.label} ({countsByPromotion[c.value]})
+              </button>
+            ))}
+            {!Object.keys(countsByPromotion).length ? (
+              <p className="text-xs text-gray-500">No products assigned to promotions yet.</p>
+            ) : null}
           </div>
         </div>
 
@@ -214,17 +301,39 @@ export default function AdminProductsPage() {
                   <div className="min-w-0">
                     <h3 className="truncate text-base font-semibold text-gray-900">{productName(p)}</h3>
                     <p className="mt-1 text-sm text-gray-600">
-                      ${productPrice(p)} • Stock: {productStock(p)}
+                      {productHasDiscount(p) ? (
+                        <>
+                          <span className="font-medium text-indigo-700">
+                            ${productDisplayPrice(p).toFixed(2)}
+                          </span>
+                          <span className="ml-1 text-gray-400 line-through">
+                            ${productPrice(p).toFixed(2)}
+                          </span>
+                        </>
+                      ) : (
+                        <>${productPrice(p).toFixed(2)}</>
+                      )}{" "}
+                      • Stock: {productStock(p)}
                     </p>
-                    {p.category ? (
-                      <span className="mt-2 inline-block rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-800">
-                        {getCategoryLabel(p.category)}
-                      </span>
-                    ) : (
-                      <span className="mt-2 inline-block rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-800">
-                        No category
-                      </span>
-                    )}
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {p.category ? (
+                        <span className="inline-block rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-800">
+                          {getCategoryLabel(p.category)}
+                        </span>
+                      ) : (
+                        <span className="inline-block rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700">
+                          No category
+                        </span>
+                      )}
+                      {p.promotionCategory ? (
+                        <span className="inline-block rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-900">
+                          {getPromotionLabel(p.promotionCategory)}
+                          {p.promotionPercent
+                            ? ` · ${formatPromotionPercent(p.promotionPercent)}`
+                            : ""}
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
 
                   <span

@@ -17,6 +17,12 @@ const {
   getCategoryColorMode,
   parseColorsPayload,
 } = require("../constants/colors");
+const {
+  isValidPromotionCategory,
+  isValidPromotionPercent,
+  normalizePromotionSlug,
+  parsePromotionPercent,
+} = require("../constants/promotions");
 
 function parseBool(value) {
   if (value === true || value === "true" || value === "1" || value === 1) return true;
@@ -109,9 +115,9 @@ async function uploadToCloudinary(file) {
 }
 
 const CATALOG_SELECT =
-  "name price salePrice onSale featured bestSeller stock imageUrl category sizes sizeStock colors shortDescription description createdAt updatedAt";
+  "name price salePrice onSale featured bestSeller stock imageUrl category promotionCategory promotionPercent sizes sizeStock colors shortDescription description createdAt updatedAt";
 const SIMILAR_SELECT =
-  "name price salePrice onSale stock imageUrl category sizes sizeStock colors createdAt";
+  "name price salePrice onSale stock imageUrl category promotionCategory promotionPercent sizes sizeStock colors createdAt";
 
 function parseLimit(raw, fallback = 200) {
   const n = Number(raw);
@@ -138,8 +144,76 @@ function buildCategoryFilter(rawCategory) {
   return { filter, category };
 }
 
+function parsePromotionCategoryInput(raw) {
+  if (raw === undefined) return undefined;
+  const key = String(raw ?? "")
+    .trim()
+    .toLowerCase();
+  if (!key || key === "none") return "";
+  return normalizePromotionSlug(key);
+}
+
+function applyPromotionFields(body, target, res) {
+  const promoProvided = body?.promotionCategory !== undefined;
+  const percentProvided = body?.promotionPercent !== undefined;
+
+  if (!promoProvided && !percentProvided) return true;
+
+  const slug = promoProvided
+    ? parsePromotionCategoryInput(body.promotionCategory)
+    : target.promotionCategory || "";
+
+  if (slug && !isValidPromotionCategory(slug)) {
+    res.status(400).json({ message: "Invalid promotion category" });
+    return false;
+  }
+
+  if (promoProvided) {
+    target.promotionCategory = slug || "";
+  }
+
+  const effectiveSlug = target.promotionCategory || "";
+
+  if (!effectiveSlug) {
+    target.promotionPercent = undefined;
+    return true;
+  }
+
+  const percent = percentProvided
+    ? parsePromotionPercent(body.promotionPercent)
+    : target.promotionPercent;
+
+  if (!isValidPromotionPercent(percent)) {
+    res.status(400).json({ message: "Select a promotion discount percentage" });
+    return false;
+  }
+
+  target.promotionPercent = percent;
+  return true;
+}
+
+function buildPromotionFilter(rawPromotion) {
+  const filter = {};
+  const key = String(rawPromotion || "")
+    .trim()
+    .toLowerCase();
+  if (!key) return { filter, promotion: null };
+
+  if (key === "all") {
+    filter.promotionCategory = { $exists: true, $nin: ["", null] };
+    return { filter, promotion: "all" };
+  }
+
+  const slug = normalizePromotionSlug(key);
+  if (!isValidPromotionCategory(slug)) {
+    return { error: "Invalid promotion category" };
+  }
+  filter.promotionCategory = slug;
+  return { filter, promotion: slug };
+}
+
 // GET /api/products (public)
-// Query: ?category=mens&page=1&limit=200&full=1 (admin UI — includes description)
+// Query: ?category=mens&promotion=summer-sale|all&page=1&limit=200&full=1
 async function listProducts(req, res) {
   const started = process.hrtime.bigint();
   try {
@@ -148,12 +222,19 @@ async function listProducts(req, res) {
       return res.status(400).json({ message: built.error });
     }
 
+    const promoBuilt = buildPromotionFilter(req.query?.promotion);
+    if (promoBuilt.error) {
+      return res.status(400).json({ message: promoBuilt.error });
+    }
+
+    const mongoFilter = { ...built.filter, ...promoBuilt.filter };
+
     const page = parsePage(req.query?.page);
     const limit = parseLimit(req.query?.limit);
     const skip = (page - 1) * limit;
     const fullFields = req.query?.full === "1" || req.query?.full === "true";
 
-    const query = Product.find(built.filter)
+    const query = Product.find(mongoFilter)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -165,7 +246,7 @@ async function listProducts(req, res) {
 
     const [products, total] = await Promise.all([
       query.exec(),
-      Product.countDocuments(built.filter),
+      Product.countDocuments(mongoFilter),
     ]);
 
     const productIds = products.map((p) => p._id);
@@ -305,6 +386,8 @@ async function createProduct(req, res) {
 
     if (!validateSalePricing(productData, res)) return;
 
+    if (!applyPromotionFields(req.body, productData, res)) return;
+
     let imageWarning = null;
     if (req.file) {
       try {
@@ -340,6 +423,8 @@ function pickUpdates(body) {
     "shortDescription",
     "stock",
     "category",
+    "promotionCategory",
+    "promotionPercent",
     "imageUrl",
   ];
 
@@ -354,6 +439,13 @@ function pickUpdates(body) {
   if (updates.price !== undefined) updates.price = Number(updates.price);
   if (updates.stock !== undefined) updates.stock = Number(updates.stock);
   if (updates.category !== undefined) updates.category = normalizeCategory(updates.category);
+  if (updates.promotionCategory !== undefined) {
+    updates.promotionCategory = parsePromotionCategoryInput(updates.promotionCategory) ?? "";
+  }
+  if (updates.promotionPercent !== undefined) {
+    const parsed = parsePromotionPercent(updates.promotionPercent);
+    updates.promotionPercent = parsed === null ? undefined : parsed;
+  }
 
   applyProductFlags(body, updates);
 
@@ -403,6 +495,28 @@ async function updateProduct(req, res) {
     const updates = pickUpdates(req.body);
 
     if (updates.category !== undefined && !validateCategoryOrRespond(updates.category, res)) {
+      return;
+    }
+
+    const mergedPromotion = {
+      promotionCategory:
+        updates.promotionCategory !== undefined
+          ? updates.promotionCategory
+          : existing.promotionCategory || "",
+      promotionPercent:
+        updates.promotionPercent !== undefined
+          ? updates.promotionPercent
+          : existing.promotionPercent,
+    };
+    Object.assign(updates, mergedPromotion);
+    if (!applyPromotionFields(
+      {
+        promotionCategory: updates.promotionCategory,
+        promotionPercent: updates.promotionPercent,
+      },
+      updates,
+      res
+    )) {
       return;
     }
 

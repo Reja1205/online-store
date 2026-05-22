@@ -1,4 +1,4 @@
-const { normalizeCategorySlug } = require("./categories");
+const { isMensDepartmentSlug, normalizeCategorySlug } = require("./categories");
 const { getCategorySizeMode } = require("./sizes");
 
 const CLOTHING_COLOR_CATEGORIES = new Set(["mens", "women", "kids", "child"]);
@@ -18,7 +18,11 @@ const CLOTHING_COLORS = [
 
 function getCategoryColorMode(category) {
   const slug = normalizeCategorySlug(category);
-  if (CLOTHING_COLOR_CATEGORIES.has(slug) || getCategorySizeMode(category)) {
+  if (
+    CLOTHING_COLOR_CATEGORIES.has(slug) ||
+    isMensDepartmentSlug(slug) ||
+    getCategorySizeMode(category)
+  ) {
     return "clothing";
   }
   return null;

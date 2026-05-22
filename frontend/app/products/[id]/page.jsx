@@ -13,14 +13,10 @@ import StarRating from "../../components/product/StarRating";
 import WishlistButton from "../../components/product/WishlistButton";
 import Badge from "../../components/ui/Badge";
 import Card from "../../components/ui/Card";
+import { compactOptionSelectClass } from "../../components/product/ProductSizeSelect";
 import { useAuth } from "../../context/AuthContext";
-import {
-  apiJson,
-  productDisplayPrice,
-  productIsOnSale,
-  productName,
-  productPrice,
-} from "../../lib/api";
+import { apiJson, productDiscountLabel, productHasDiscount, productName } from "../../lib/api";
+import ProductPrice from "../../components/product/ProductPrice";
 import { getCategoryLabel } from "../../lib/categories";
 import { productHasColors } from "../../lib/colors";
 import {
@@ -55,6 +51,7 @@ export default function ProductDetailsPage() {
   const [msg, setMsg] = useState("");
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedColor, setSelectedColor] = useState("");
+  const [quantity, setQuantity] = useState(1);
 
   const loadProduct = useCallback(async (productId) => {
     setError("");
@@ -85,12 +82,23 @@ export default function ProductDetailsPage() {
     setReviewSummary(data?.reviewSummary || { count: 0, averageRating: 0 });
     setSelectedSize("");
     setSelectedColor("");
+    setQuantity(1);
     setLoading(false);
   }, []);
 
   useEffect(() => {
     loadProduct(id);
   }, [id, loadProduct]);
+
+  useEffect(() => {
+    if (!p) return;
+    const available =
+      productHasSizes(p) && selectedSize
+        ? stockForSize(p, selectedSize)
+        : productTotalStock(p);
+    const cap = available > 0 ? Math.min(99, available) : 1;
+    if (quantity > cap) setQuantity(cap);
+  }, [p, selectedSize, quantity]);
 
   async function addToCart() {
     if (!p?._id) return;
@@ -102,12 +110,21 @@ export default function ProductDetailsPage() {
       setMsg("Please select a color");
       return;
     }
+    const qty = Math.max(1, Number(quantity) || 1);
+    const available =
+      productHasSizes(p) && selectedSize
+        ? stockForSize(p, selectedSize)
+        : productTotalStock(p);
+    if (qty > available) {
+      setMsg(`Only ${available} available in stock`);
+      return;
+    }
     setMsg("");
     const { res, data } = await apiJson("/api/cart/add", {
       method: "POST",
       body: JSON.stringify({
         productId: p._id,
-        qty: 1,
+        qty,
         ...(selectedSize ? { size: selectedSize } : {}),
         ...(selectedColor ? { color: selectedColor } : {}),
       }),
@@ -116,13 +133,13 @@ export default function ProductDetailsPage() {
       setMsg(data?.message || "Could not add to cart");
       return;
     }
-    setMsg("Added to cart");
+    setMsg(qty === 1 ? "Added to cart" : `Added ${qty} to cart`);
     window.dispatchEvent(new Event("cart:updated"));
   }
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-6xl space-y-4 py-6">
+      <div className="mx-auto w-full max-w-[1500px] space-y-4 py-6">
         <div className="h-10 w-40 animate-pulse rounded-lg bg-slate-200" aria-hidden />
         <div className="h-96 animate-pulse rounded-2xl bg-slate-200/80" aria-hidden />
         <p className="sr-only">Loading product</p>
@@ -149,21 +166,22 @@ export default function ProductDetailsPage() {
   }
 
   const name = productName(p);
-  const price = productPrice(p);
-  const displayPrice = productDisplayPrice(p);
-  const onSale = productIsOnSale(p);
+  const discounted = productHasDiscount(p);
+  const discountLabel = productDiscountLabel(p);
   const hasSizes = productHasSizes(p);
   const hasColors = productHasColors(p);
   const stock =
     hasSizes && selectedSize ? stockForSize(p, selectedSize) : productTotalStock(p);
-  const canAdd =
-    stock > 0 &&
-    (!hasSizes || Boolean(selectedSize)) &&
-    (!hasColors || Boolean(selectedColor));
+  const maxQty = stock > 0 ? Math.min(99, stock) : 1;
+  const variantsReady =
+    (!hasSizes || Boolean(selectedSize)) && (!hasColors || Boolean(selectedColor));
+  const canAdd = stock > 0 && variantsReady && quantity >= 1 && quantity <= maxQty;
   const useNextImage = p.imageUrl && isAllowedImageHost(p.imageUrl);
 
+  const qtySelectClass = `${compactOptionSelectClass} max-w-[5rem]`;
+
   return (
-    <div className="mx-auto w-full min-w-0 max-w-6xl space-y-8 overflow-x-clip pb-10 animate-fade-up">
+    <div className="mx-auto w-full min-w-0 max-w-[1500px] space-y-6 overflow-x-clip pb-10 animate-fade-up lg:space-y-8">
       <Link
         href="/products"
         className="inline-flex text-sm font-medium text-indigo-600 underline-offset-4 hover:text-indigo-700 hover:underline"
@@ -172,10 +190,10 @@ export default function ProductDetailsPage() {
       </Link>
 
       <Card className="overflow-hidden p-0" padding="p-0">
-        <div className="flex flex-col md:flex-row">
+        <div className="flex min-h-0 flex-col lg:min-h-[min(36rem,calc(100dvh-11rem))] lg:flex-row">
           {/* Left: product image */}
-          <div className="relative w-full shrink-0 border-b border-slate-100 bg-slate-50 md:w-[42%] md:border-b-0 md:border-r">
-            <div className="relative aspect-square w-full md:min-h-[22rem] md:aspect-auto md:h-full">
+          <div className="relative w-full shrink-0 border-b border-slate-100 bg-slate-50 lg:min-h-[min(36rem,calc(100dvh-11rem))] lg:w-1/2 lg:border-b-0 lg:border-r xl:w-[52%]">
+            <div className="relative aspect-square w-full lg:absolute lg:inset-0 lg:aspect-auto">
               {p.imageUrl ? (
                 useNextImage ? (
                   <Image
@@ -204,16 +222,16 @@ export default function ProductDetailsPage() {
                   Best Seller
                 </span>
               ) : null}
-              {onSale ? (
+              {discounted && discountLabel ? (
                 <span className="absolute left-4 top-12 rounded bg-rose-700 px-2 py-0.5 text-xs font-bold text-white">
-                  Limited time deal
+                  {discountLabel}
                 </span>
               ) : null}
             </div>
           </div>
 
           {/* Right: title, ratings, price, variants, CTA */}
-          <div className="flex flex-1 flex-col gap-4 p-5 sm:p-8">
+          <div className="flex min-w-0 flex-1 flex-col gap-4 p-5 sm:p-6 lg:justify-center lg:p-8 xl:p-10">
             {p.category ? (
               <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 {getCategoryLabel(p.category)}
@@ -235,22 +253,12 @@ export default function ProductDetailsPage() {
               <p className="text-xs text-slate-500">Popular choice this season</p>
             ) : null}
 
-            <div className="flex flex-wrap items-baseline gap-3">
-              <span className="text-3xl font-semibold text-slate-900">
-                ${displayPrice.toFixed(2)}
-              </span>
-              {onSale ? (
-                <>
-                  <span className="text-sm text-slate-500">
-                    List:{" "}
-                    <span className="line-through">${price.toFixed(2)}</span>
-                  </span>
-                  <span className="rounded bg-rose-700 px-2 py-0.5 text-xs font-bold text-white">
-                    Limited time deal
-                  </span>
-                </>
-              ) : null}
-            </div>
+            <ProductPrice
+              product={p}
+              size="lg"
+              showPromotionName
+              className="gap-3"
+            />
 
             {p.description ? (
               <p className="max-w-prose text-sm leading-relaxed text-slate-600 sm:text-base">
@@ -260,35 +268,60 @@ export default function ProductDetailsPage() {
               <p className="text-sm text-slate-400">No description provided.</p>
             )}
 
-            <div className="border-t border-slate-100 pt-4 space-y-4">
-              {hasSizes || hasColors ? (
-                <div
-                  className={`grid max-w-lg gap-3 ${
-                    hasSizes && hasColors ? "grid-cols-2" : "grid-cols-1"
-                  }`}
-                >
-                  {hasSizes ? (
-                    <div className="min-w-0">
-                      <p className="mb-1.5 text-sm font-medium text-slate-700">Size</p>
-                      <ProductSizeSelect
-                        product={p}
-                        value={selectedSize}
-                        onChange={setSelectedSize}
-                      />
-                    </div>
-                  ) : null}
-                  {hasColors ? (
-                    <div className="min-w-0">
-                      <ProductColorSelect
-                        product={p}
-                        value={selectedColor}
-                        onChange={setSelectedColor}
-                        layout="select"
-                        showLabel
-                      />
-                    </div>
-                  ) : null}
+            <div className="border-t border-slate-100 pt-4 space-y-3">
+              <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
+                {hasSizes ? (
+                  <div className="shrink-0">
+                    <p className="mb-1 text-xs font-medium text-slate-700">Size</p>
+                    <ProductSizeSelect
+                      product={p}
+                      value={selectedSize}
+                      compact
+                      onChange={(size) => {
+                        setSelectedSize(size);
+                        setQuantity(1);
+                      }}
+                    />
+                  </div>
+                ) : null}
+                {hasColors ? (
+                  <div className="shrink-0">
+                    <p className="mb-1 text-xs font-medium text-slate-700">Color</p>
+                    <ProductColorSelect
+                      product={p}
+                      value={selectedColor}
+                      onChange={setSelectedColor}
+                      layout="select"
+                      compact
+                    />
+                  </div>
+                ) : null}
+                <div className="shrink-0">
+                  <label htmlFor="product-qty" className="mb-1 block text-xs font-medium text-slate-700">
+                    Qty
+                  </label>
+                  <select
+                    id="product-qty"
+                    value={Math.min(quantity, maxQty)}
+                    onChange={(e) => setQuantity(Number(e.target.value))}
+                    disabled={stock <= 0 || !variantsReady}
+                    className={qtySelectClass}
+                    aria-label="Quantity"
+                  >
+                    {Array.from({ length: maxQty }, (_, i) => i + 1).map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                  </select>
                 </div>
+              </div>
+              {stock > 0 && variantsReady ? (
+                <p className="text-xs text-slate-500">Max {maxQty} per order</p>
+              ) : hasSizes && !selectedSize ? (
+                <p className="text-xs text-slate-500">Select a size to choose quantity</p>
+              ) : hasColors && !selectedColor ? (
+                <p className="text-xs text-slate-500">Select a color to choose quantity</p>
               ) : null}
 
               <div className="flex flex-wrap items-center gap-3">

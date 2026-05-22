@@ -4,12 +4,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import CategorySelect from "../components/CategorySelect";
 import {
   getCategoryLabel,
+  isMensDepartmentSlug,
   normalizeCategorySlug,
   productMatchesCategory,
-  PRODUCT_CATEGORIES,
 } from "../lib/categories";
+import { MensSubcategoryNav, getMensPageTitle } from "../lib/mensCategories";
 import { filterBySection } from "../lib/productSections";
 import ProductCard from "../components/ProductCard";
 import Badge from "../components/ui/Badge";
@@ -154,12 +156,14 @@ export default function ProductsPageClient({
         <div className="min-w-0">
           <h1 className="truncate text-xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
             {category !== "all"
-              ? getCategoryLabel(category)
+              ? isMensDepartmentSlug(category)
+                ? getMensPageTitle(category)
+                : getCategoryLabel(category)
               : sectionTitle || "Catalog"}
           </h1>
           <p className="mt-0.5 hidden text-sm text-slate-600 sm:block">
             {category !== "all"
-              ? `Showing products in ${getCategoryLabel(category)}.`
+              ? `Showing products in ${isMensDepartmentSlug(category) ? getMensPageTitle(category) : getCategoryLabel(category)}.`
               : sectionTitle
                 ? `Browsing ${sectionTitle.toLowerCase()}.`
                 : "Browse by category or search the full catalog."}
@@ -172,6 +176,19 @@ export default function ProductsPageClient({
           ← Home
         </Link>
       </div>
+
+      {isMensDepartmentSlug(category) ? (
+        <MensSubcategoryNav
+          activeSlug={category}
+          onSelect={(slug) => {
+            const params = new URLSearchParams();
+            if (q.trim()) params.set("q", q.trim());
+            if (slug && slug !== "all") params.set("category", slug);
+            if (section) params.set("section", section);
+            router.push(params.toString() ? `/products?${params}` : "/products");
+          }}
+        />
+      ) : null}
 
       <Card padding="p-3 sm:p-5">
         <div className="flex flex-col gap-2 sm:gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -191,7 +208,7 @@ export default function ProductsPageClient({
               />
             </div>
             <div className="grid grid-cols-2 gap-2 lg:contents">
-              <select
+              <CategorySelect
                 id="catalog-category"
                 value={category}
                 onChange={(e) => {
@@ -204,14 +221,8 @@ export default function ProductsPageClient({
                 }}
                 aria-label="Filter by category"
                 disabled={listFailed}
-                className={`${selectClass} lg:w-52`}
-              >
-                {PRODUCT_CATEGORIES.map((c) => (
-                  <option key={c.value} value={c.value}>
-                    {c.label}
-                  </option>
-                ))}
-              </select>
+                className={`${selectClass} lg:w-56`}
+              />
               <select
                 id="catalog-filter"
                 value={filter}

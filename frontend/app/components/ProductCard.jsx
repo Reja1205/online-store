@@ -3,12 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { memo } from "react";
-import {
-  productDisplayPrice,
-  productIsOnSale,
-  productName,
-  productPrice,
-} from "../lib/api";
+import { productName } from "../lib/api";
+import ProductPrice from "./product/ProductPrice";
 import { productHasColors } from "../lib/colors";
 import { productCardBlurb, productReviewSummary } from "../lib/productCard";
 import { productHasSizes, productTotalStock } from "../lib/sizes";
@@ -27,20 +23,12 @@ function isAllowedImageHost(src) {
 
 function ProductCard({ p, user, onAddToCart }) {
   const name = productName(p);
-  const price = productPrice(p);
-  const displayPrice = productDisplayPrice(p);
-  const onSale = productIsOnSale(p);
   const blurb = productCardBlurb(p);
   const reviewSummary = productReviewSummary(p);
   const needsOptions = productHasSizes(p) || productHasColors(p);
   const stock = productTotalStock(p);
   const canAdd = stock > 0 && !needsOptions;
   const useNextImage = p.imageUrl && isAllowedImageHost(p.imageUrl);
-
-  const stockBadgeClass =
-    stock > 0
-      ? "bg-emerald-500/95 text-white ring-1 ring-emerald-600/20"
-      : "bg-rose-500/95 text-white ring-1 ring-rose-700/20";
 
   const detailHref = `/products/${p._id}`;
 
@@ -78,17 +66,6 @@ function ProductCard({ p, user, onAddToCart }) {
             </div>
           )}
         </div>
-
-        {onSale ? (
-          <span className="pointer-events-none absolute left-1.5 top-1.5 z-10 rounded-full bg-rose-600 px-1.5 py-0.5 text-[9px] font-bold text-white shadow-sm md:left-2 md:top-2 md:px-2 md:text-[10px]">
-            Sale
-          </span>
-        ) : null}
-        <span
-          className={`pointer-events-none absolute bottom-1.5 right-1.5 z-10 inline-flex max-w-[calc(100%-0.5rem)] items-center truncate rounded-full px-1.5 py-0.5 text-[9px] font-semibold shadow-sm backdrop-blur-[2px] md:right-2 md:top-2 md:bottom-auto md:px-2 md:text-[10px] ${stockBadgeClass}`}
-        >
-          {stock > 0 ? `In stock · ${stock}` : "Out of stock"}
-        </span>
       </Link>
 
       <div className="flex min-w-0 flex-1 flex-col gap-1 p-2.5 sm:p-3 md:gap-1.5 xl:gap-1 xl:p-2">
@@ -100,16 +77,7 @@ function ProductCard({ p, user, onAddToCart }) {
             {name}
           </h3>
 
-          <p className="mt-0.5 flex flex-wrap items-baseline gap-1.5">
-            <span className="text-base font-semibold tracking-tight text-indigo-600 sm:text-sm xl:text-sm">
-              ${displayPrice.toFixed(2)}
-            </span>
-            {onSale ? (
-              <span className="text-xs text-slate-400 line-through xl:text-[10px]">
-                ${price.toFixed(2)}
-              </span>
-            ) : null}
-          </p>
+          <ProductPrice product={p} size="sm" className="mt-0.5" />
 
           <div className="mt-1 flex flex-col gap-1 sm:gap-1.5 md:mt-1.5 md:grid md:grid-cols-2 md:items-start md:gap-2">
             <div className="min-w-0">

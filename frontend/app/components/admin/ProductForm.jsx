@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { ADMIN_CATEGORIES, getCategoryLabel } from "../../lib/categories";
+import CategorySelect from "../CategorySelect";
+import { getCategoryLabel } from "../../lib/categories";
+import {
+  ADMIN_PROMOTION_CATEGORIES,
+  getPromotionLabel,
+  PROMOTION_PERCENT_OPTIONS,
+} from "../../lib/promotions";
+import { productDisplayPrice, productPrice } from "../../lib/api";
 import { getCategoryColorMode } from "../../lib/colors";
 import { defaultSizeStockForCategory, getCategorySizeMode } from "../../lib/sizes";
 import ColorFields from "./ColorFields";
@@ -17,6 +24,8 @@ export const emptyProductForm = {
   description: "",
   shortDescription: "",
   category: "",
+  promotionCategory: "",
+  promotionPercent: "",
   sizeStock: [],
   colors: [],
   featured: false,
@@ -35,6 +44,11 @@ export function productToForm(p) {
     description: p.description || "",
     shortDescription: p.shortDescription || "",
     category: p.category || "",
+    promotionCategory: p.promotionCategory || "",
+    promotionPercent:
+      p.promotionPercent != null && p.promotionPercent !== ""
+        ? String(p.promotionPercent)
+        : "",
     sizeStock: Array.isArray(p.sizeStock)
       ? p.sizeStock.map((s) => ({ size: s.size, stock: Number(s.stock ?? 0) }))
       : [],
@@ -69,6 +83,9 @@ export function validateProductForm(values) {
     if (sale >= regular) return "Sale price must be lower than the regular price.";
   }
   if (values.onSale && values.salePrice === "") return "Enter a sale price for Special Sale items.";
+  if (values.promotionCategory && !values.promotionPercent) {
+    return "Select a promotion discount percentage.";
+  }
   return "";
 }
 
@@ -81,6 +98,8 @@ export function buildProductJsonBody(values) {
     description: values.description?.trim() || "",
     shortDescription: values.shortDescription?.trim().slice(0, 200) || "",
     category: values.category,
+    promotionCategory: values.promotionCategory || "",
+    promotionPercent: values.promotionCategory ? Number(values.promotionPercent) : undefined,
     featured: values.featured,
     bestSeller: values.bestSeller,
     onSale: values.onSale,
@@ -110,6 +129,10 @@ export function buildProductFormData(values, { includeImage = true } = {}) {
   fd.append("description", values.description?.trim() || "");
   fd.append("shortDescription", values.shortDescription?.trim().slice(0, 200) || "");
   fd.append("category", values.category);
+  fd.append("promotionCategory", values.promotionCategory || "");
+  if (values.promotionCategory && values.promotionPercent !== "") {
+    fd.append("promotionPercent", String(Number(values.promotionPercent)));
+  }
   if (getCategorySizeMode(values.category) && values.sizeStock?.length) {
     fd.append("sizeStock", JSON.stringify(values.sizeStock));
     const total = values.sizeStock.reduce((sum, s) => sum + Number(s.stock || 0), 0);
@@ -251,7 +274,8 @@ export default function ProductForm({
         <label className="mb-1 block text-sm font-medium text-gray-700">
           Category <span className="text-red-600">*</span>
         </label>
-        <select
+        <CategorySelect
+          variant="admin"
           className={inputClass}
           value={values.category}
           onChange={(e) => {
@@ -269,19 +293,87 @@ export default function ProductForm({
             }
             onChange({ ...values, ...patch });
           }}
-          required
+        />
+        {values.category ? (
+          <p className="mt-1 text-xs text-gray-500">
+            Shoppers will find this under <strong>{getCategoryLabel(values.category)}</strong>.
+          </p>
+        ) : null}
+      </div>
+
+      <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-4">
+        <p className="text-sm font-semibold text-amber-950">Promotions</p>
+        <p className="mt-1 text-xs text-amber-900/90">
+          Optional. Assign this product to a sale campaign. It will appear in Shop → Promotions (separate from
+          the department category above).
+        </p>
+        <select
+          className={`${inputClass} mt-3`}
+          value={values.promotionCategory || ""}
+          onChange={(e) => {
+            const next = e.target.value;
+            onChange({
+              ...values,
+              promotionCategory: next,
+              promotionPercent: next ? values.promotionPercent : "",
+            });
+          }}
         >
-          <option value="">Select a category…</option>
-          {ADMIN_CATEGORIES.map((c) => (
+          <option value="">Not in promotions</option>
+          {ADMIN_PROMOTION_CATEGORIES.map((c) => (
             <option key={c.value} value={c.value}>
               {c.label}
             </option>
           ))}
         </select>
-        {values.category ? (
-          <p className="mt-1 text-xs text-gray-500">
-            Shoppers will find this under <strong>{getCategoryLabel(values.category)}</strong>.
-          </p>
+
+        {values.promotionCategory ? (
+          <div className="mt-3">
+            <label className="mb-1 block text-sm font-medium text-amber-950">
+              Promotion discount <span className="text-red-600">*</span>
+            </label>
+            <select
+              className={inputClass}
+              value={values.promotionPercent || ""}
+              onChange={(e) => set("promotionPercent", e.target.value)}
+              required
+            >
+              <option value="">Select discount %…</option>
+              {PROMOTION_PERCENT_OPTIONS.map((pct) => (
+                <option key={pct} value={String(pct)}>
+                  {pct}% off
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-amber-900/80">
+              Listed under <strong>{getPromotionLabel(values.promotionCategory)}</strong>
+              {values.promotionPercent ? (
+                <>
+                  {" "}
+                  at <strong>{values.promotionPercent}% off</strong>
+                </>
+              ) : null}{" "}
+              on the promotions page.
+            </p>
+            {values.promotionPercent && values.price !== "" && !Number.isNaN(Number(values.price)) ? (
+              <p className="mt-2 text-xs text-amber-950">
+                Shoppers pay{" "}
+                <strong>
+                  $
+                  {productDisplayPrice({
+                    price: Number(values.price),
+                    promotionCategory: values.promotionCategory,
+                    promotionPercent: Number(values.promotionPercent),
+                    onSale: values.onSale,
+                    salePrice: values.salePrice !== "" ? Number(values.salePrice) : undefined,
+                  }).toFixed(2)}
+                </strong>{" "}
+                <span className="text-amber-800/80">
+                  (was ${productPrice({ price: Number(values.price) }).toFixed(2)})
+                </span>
+              </p>
+            ) : null}
+          </div>
         ) : null}
       </div>
 

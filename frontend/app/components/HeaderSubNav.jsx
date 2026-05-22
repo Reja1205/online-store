@@ -4,6 +4,7 @@ import Link from "next/link";
 import { PRODUCT_CATEGORIES } from "../lib/categories";
 
 const QUICK_LINKS = [
+  { label: "Promotions", href: "/promotions", accent: true },
   { label: "Best Sellers", href: "/products?section=best-seller" },
   { label: "Sale", href: "/products?section=sale" },
   { label: "Featured", href: "/products?section=featured" },
@@ -43,7 +44,11 @@ export default function HeaderSubNav({ onOpenMenu }) {
         </Link>
 
         {QUICK_LINKS.map((item) => (
-          <Link key={item.href} href={item.href} className={chip}>
+          <Link
+            key={item.href}
+            href={item.href}
+            className={item.accent ? `${chipBase} border-amber-500 bg-amber-50 text-amber-950 hover:border-amber-600 hover:bg-amber-100` : chip}
+          >
             {item.label}
           </Link>
         ))}
@@ -53,7 +58,11 @@ export default function HeaderSubNav({ onOpenMenu }) {
         {NAV_CATEGORIES.map((c) => (
           <Link
             key={c.value}
-            href={`/products?category=${encodeURIComponent(c.value)}`}
+            href={
+              c.value === "mens"
+                ? "/products?category=mens"
+                : `/products?category=${encodeURIComponent(c.value)}`
+            }
             className={chip}
           >
             {c.label}

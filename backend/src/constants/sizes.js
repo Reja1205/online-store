@@ -1,4 +1,4 @@
-const { normalizeCategorySlug } = require("./categories");
+const { isMensDepartmentSlug, normalizeCategorySlug } = require("./categories");
 
 const ADULT_SIZE_CATEGORIES = new Set(["mens", "women"]);
 const CHILD_SIZE_CATEGORIES = new Set(["kids", "child"]);
@@ -23,7 +23,7 @@ const CHILD_SIZES = [
 
 function getCategorySizeMode(category) {
   const slug = normalizeCategorySlug(category);
-  if (ADULT_SIZE_CATEGORIES.has(slug)) return "adult";
+  if (ADULT_SIZE_CATEGORIES.has(slug) || isMensDepartmentSlug(slug)) return "adult";
   if (CHILD_SIZE_CATEGORIES.has(slug)) return "child";
   return null;
 }

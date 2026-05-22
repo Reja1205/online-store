@@ -6,6 +6,7 @@ import {
   productColorOptions,
   productHasColors,
 } from "../../lib/colors";
+import { compactOptionSelectClass } from "./ProductSizeSelect";
 
 const selectClass =
   "w-full min-h-[2rem] rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20";
@@ -21,6 +22,7 @@ export default function ProductColorSelect({
   layout = "select",
   compact = false,
   showLabel = false,
+  className = "",
 }) {
   const colors = productColorOptions(product);
   const [selected, setSelected] = useState(value || "");
@@ -43,11 +45,9 @@ export default function ProductColorSelect({
   const useDropdown = layout === "select" || compact;
 
   if (useDropdown) {
-    const labelEl = showLabel ? (
-      <p className={`font-medium text-slate-700 ${compact ? "mb-1 text-xs" : "mb-1.5 text-sm"}`}>
-        {label}
-      </p>
-    ) : (
+    const labelEl = showLabel && !compact ? (
+      <p className="mb-1.5 text-sm font-medium text-slate-700">{label}</p>
+    ) : showLabel && compact ? null : (
       <label className="sr-only" htmlFor={`color-${product._id}`}>
         {label}
       </label>
@@ -63,7 +63,11 @@ export default function ProductColorSelect({
             setSelected(e.target.value);
             onChange?.(e.target.value);
           }}
-          className={compact ? selectClass : selectClassLg}
+          className={
+            compact
+              ? `${compactOptionSelectClass} ${className}`.trim()
+              : `${selectClassLg} ${className}`.trim()
+          }
           aria-label="Select color"
         >
           {colors.map((c) => (
