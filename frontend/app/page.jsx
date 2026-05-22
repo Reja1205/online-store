@@ -125,7 +125,7 @@ export default function Home() {
 
       <ProductSection
         id="promotions"
-        title="Promotions"
+        title="Summer Sale 15%"
         subtitle="Summer sale, clearance, holiday events, and more."
         viewAllHref="/promotions"
         products={promotionProducts}

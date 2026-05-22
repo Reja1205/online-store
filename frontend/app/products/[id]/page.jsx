@@ -1,45 +1,33 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import ProductAmazonPricing from "../../components/product/ProductAmazonPricing";
+import ProductBuyBox from "../../components/product/ProductBuyBox";
 import ProductColorSelect from "../../components/product/ProductColorSelect";
-import ProductDeliveryInfo from "../../components/product/ProductDeliveryInfo";
+import ProductDetailsAccordion from "../../components/product/ProductDetailsAccordion";
+import ProductImageGallery from "../../components/product/ProductImageGallery";
 import ProductReviews from "../../components/product/ProductReviews";
-import ProductSizeSelect from "../../components/product/ProductSizeSelect";
+import ProductSizeGrid from "../../components/product/ProductSizeGrid";
 import SimilarProductsCompare from "../../components/product/SimilarProductsCompare";
 import StarRating from "../../components/product/StarRating";
 import WishlistButton from "../../components/product/WishlistButton";
-import Badge from "../../components/ui/Badge";
 import Card from "../../components/ui/Card";
-import { compactOptionSelectClass } from "../../components/product/ProductSizeSelect";
 import { useAuth } from "../../context/AuthContext";
-import { apiJson, productDiscountLabel, productHasDiscount, productName } from "../../lib/api";
-import ProductPrice from "../../components/product/ProductPrice";
-import { getCategoryLabel } from "../../lib/categories";
-import { productHasColors } from "../../lib/colors";
+import { apiJson, productName } from "../../lib/api";
+import { getCategoryLabel, normalizeCategorySlug } from "../../lib/categories";
+import { productColorOptions, productHasColors } from "../../lib/colors";
+import { SITE_NAME } from "../../lib/site";
 import {
   productHasSizes,
   productTotalStock,
   stockForSize,
 } from "../../lib/sizes";
 
-const linkSecondary =
-  "inline-flex min-h-[2.75rem] items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-900 shadow-sm transition hover:bg-slate-50";
-
-function isAllowedImageHost(src) {
-  try {
-    const u = new URL(src);
-    if (u.protocol !== "https:") return false;
-    return ["res.cloudinary.com", "images.unsplash.com", "placehold.co"].includes(u.hostname);
-  } catch {
-    return false;
-  }
-}
-
 export default function ProductDetailsPage() {
   const params = useParams();
+  const router = useRouter();
   const id = params?.id;
   const { user } = useAuth();
 
@@ -52,6 +40,7 @@ export default function ProductDetailsPage() {
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedColor, setSelectedColor] = useState("");
   const [quantity, setQuantity] = useState(1);
+  const [buying, setBuying] = useState(false);
 
   const loadProduct = useCallback(async (productId) => {
     setError("");
@@ -100,15 +89,15 @@ export default function ProductDetailsPage() {
     if (quantity > cap) setQuantity(cap);
   }, [p, selectedSize, quantity]);
 
-  async function addToCart() {
-    if (!p?._id) return;
+  async function addToCartInternal() {
+    if (!p?._id) return false;
     if (productHasSizes(p) && !selectedSize) {
       setMsg("Please select a size");
-      return;
+      return false;
     }
     if (productHasColors(p) && !selectedColor) {
       setMsg("Please select a color");
-      return;
+      return false;
     }
     const qty = Math.max(1, Number(quantity) || 1);
     const available =
@@ -117,7 +106,7 @@ export default function ProductDetailsPage() {
         : productTotalStock(p);
     if (qty > available) {
       setMsg(`Only ${available} available in stock`);
-      return;
+      return false;
     }
     setMsg("");
     const { res, data } = await apiJson("/api/cart/add", {
@@ -131,17 +120,33 @@ export default function ProductDetailsPage() {
     });
     if (!res.ok) {
       setMsg(data?.message || "Could not add to cart");
-      return;
+      return false;
     }
     setMsg(qty === 1 ? "Added to cart" : `Added ${qty} to cart`);
     window.dispatchEvent(new Event("cart:updated"));
+    return true;
+  }
+
+  async function addToCart() {
+    await addToCartInternal();
+  }
+
+  async function buyNow() {
+    setBuying(true);
+    const ok = await addToCartInternal();
+    setBuying(false);
+    if (ok) router.push("/checkout");
   }
 
   if (loading) {
     return (
-      <div className="mx-auto w-full max-w-[1500px] space-y-4 py-6">
-        <div className="h-10 w-40 animate-pulse rounded-lg bg-slate-200" aria-hidden />
-        <div className="h-96 animate-pulse rounded-2xl bg-slate-200/80" aria-hidden />
+      <div className="mx-auto w-full max-w-[1500px] space-y-4 px-4 py-6 sm:px-6">
+        <div className="h-4 w-64 animate-pulse rounded bg-slate-200" aria-hidden />
+        <div className="grid gap-6 lg:grid-cols-12">
+          <div className="h-[420px] animate-pulse rounded-lg bg-slate-200/80 lg:col-span-5" />
+          <div className="h-96 animate-pulse rounded-lg bg-slate-200/80 lg:col-span-4" />
+          <div className="h-80 animate-pulse rounded-lg bg-slate-200/80 lg:col-span-3" />
+        </div>
         <p className="sr-only">Loading product</p>
       </div>
     );
@@ -149,7 +154,7 @@ export default function ProductDetailsPage() {
 
   if (error || !p) {
     return (
-      <div className="mx-auto max-w-3xl py-8">
+      <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
         <Card>
           <p role="alert" className="font-medium text-red-700">
             {error || "Product not found"}
@@ -166,221 +171,195 @@ export default function ProductDetailsPage() {
   }
 
   const name = productName(p);
-  const discounted = productHasDiscount(p);
-  const discountLabel = productDiscountLabel(p);
   const hasSizes = productHasSizes(p);
   const hasColors = productHasColors(p);
+  const colors = productColorOptions(p);
   const stock =
     hasSizes && selectedSize ? stockForSize(p, selectedSize) : productTotalStock(p);
   const maxQty = stock > 0 ? Math.min(99, stock) : 1;
   const variantsReady =
     (!hasSizes || Boolean(selectedSize)) && (!hasColors || Boolean(selectedColor));
   const canAdd = stock > 0 && variantsReady && quantity >= 1 && quantity <= maxQty;
-  const useNextImage = p.imageUrl && isAllowedImageHost(p.imageUrl);
-
-  const qtySelectClass = `${compactOptionSelectClass} max-w-[5rem]`;
+  const categorySlug = normalizeCategorySlug(p.category);
+  const categoryHref =
+    categorySlug && categorySlug !== "all"
+      ? `/products?category=${encodeURIComponent(categorySlug)}`
+      : "/products";
 
   return (
-    <div className="mx-auto w-full min-w-0 max-w-[1500px] space-y-6 overflow-x-clip pb-10 animate-fade-up lg:space-y-8">
-      <Link
-        href="/products"
-        className="inline-flex text-sm font-medium text-indigo-600 underline-offset-4 hover:text-indigo-700 hover:underline"
-      >
-        ← Back to catalog
-      </Link>
+    <div className="mx-auto w-full min-w-0 max-w-[1500px] overflow-x-clip px-4 pb-12 pt-4 animate-fade-up sm:px-6">
+      {/* Breadcrumbs */}
+      <nav className="mb-4 text-xs text-slate-600" aria-label="Breadcrumb">
+        <ol className="flex flex-wrap items-center gap-1">
+          <li>
+            <Link href="/" className="text-sky-700 hover:text-sky-900 hover:underline">
+              Home
+            </Link>
+          </li>
+          <li aria-hidden className="text-slate-400">
+            ›
+          </li>
+          <li>
+            <Link href="/products" className="text-sky-700 hover:text-sky-900 hover:underline">
+              Shop
+            </Link>
+          </li>
+          {p.category ? (
+            <>
+              <li aria-hidden className="text-slate-400">
+                ›
+              </li>
+              <li>
+                <Link
+                  href={categoryHref}
+                  className="text-sky-700 hover:text-sky-900 hover:underline"
+                >
+                  {getCategoryLabel(p.category)}
+                </Link>
+              </li>
+            </>
+          ) : null}
+        </ol>
+      </nav>
 
-      <Card className="overflow-hidden p-0" padding="p-0">
-        <div className="flex min-h-0 flex-col lg:min-h-[min(36rem,calc(100dvh-11rem))] lg:flex-row">
-          {/* Left: product image */}
-          <div className="relative w-full shrink-0 border-b border-slate-100 bg-slate-50 lg:min-h-[min(36rem,calc(100dvh-11rem))] lg:w-1/2 lg:border-b-0 lg:border-r xl:w-[52%]">
-            <div className="relative aspect-square w-full lg:absolute lg:inset-0 lg:aspect-auto">
-              {p.imageUrl ? (
-                useNextImage ? (
-                  <Image
-                    src={p.imageUrl}
-                    alt={name}
-                    fill
-                    className="object-contain p-6"
-                    priority
-                    sizes="(max-width: 768px) 100vw, 420px"
-                  />
-                ) : (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={p.imageUrl}
-                    alt={name}
-                    className="h-full w-full object-contain p-6"
-                  />
-                )
-              ) : (
-                <div className="flex h-full min-h-[16rem] items-center justify-center text-slate-400">
-                  No image
-                </div>
-              )}
-              {p.bestSeller ? (
-                <span className="absolute left-4 top-4 rounded bg-amber-600 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-white">
-                  Best Seller
-                </span>
-              ) : null}
-              {discounted && discountLabel ? (
-                <span className="absolute left-4 top-12 rounded bg-rose-700 px-2 py-0.5 text-xs font-bold text-white">
-                  {discountLabel}
-                </span>
+      {/* Amazon-style 3-column layout */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-8">
+        {/* Left: gallery */}
+        <div className="lg:col-span-5">
+          <ProductImageGallery
+            product={p}
+            name={name}
+            colors={colors}
+            selectedColor={selectedColor}
+            onColorSelect={setSelectedColor}
+          />
+        </div>
+
+        {/* Center: title, price, variants */}
+        <div className="min-w-0 space-y-4 lg:col-span-4">
+          <Link
+            href={categoryHref}
+            className="text-sm text-sky-700 hover:text-sky-900 hover:underline"
+          >
+            Visit the {SITE_NAME} Store
+          </Link>
+
+          <h1 className="text-xl font-normal leading-snug text-slate-900 sm:text-2xl">
+            {name}
+          </h1>
+
+          <StarRating
+            rating={reviewSummary.averageRating}
+            count={reviewSummary.count}
+            size="lg"
+            reviewHref="#reviews"
+          />
+
+          {p.bestSeller ? (
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <span className="rounded bg-[#c45500] px-2 py-0.5 text-xs font-bold text-white">
+                #1 Best Seller
+              </span>
+              {p.category ? (
+                <Link href={categoryHref} className="text-sky-700 hover:underline">
+                  in {getCategoryLabel(p.category)}
+                </Link>
               ) : null}
             </div>
+          ) : null}
+
+          {reviewSummary.count > 0 ? (
+            <p className="text-sm font-semibold text-slate-900">
+              {reviewSummary.count >= 1000
+                ? `${Math.floor(reviewSummary.count / 1000)}K+`
+                : reviewSummary.count}{" "}
+              bought in past month
+            </p>
+          ) : null}
+
+          <ProductAmazonPricing product={p} />
+
+          {hasColors ? (
+            <ProductColorSelect
+              product={p}
+              value={selectedColor}
+              onChange={setSelectedColor}
+              layout="swatches"
+              label="Color"
+              showLabel
+            />
+          ) : null}
+
+          {hasSizes ? (
+            <ProductSizeGrid
+              product={p}
+              value={selectedSize}
+              onChange={(size) => {
+                setSelectedSize(size);
+                setQuantity(1);
+              }}
+            />
+          ) : null}
+
+          {p.shortDescription ? (
+            <p className="text-sm leading-relaxed text-slate-700">{p.shortDescription}</p>
+          ) : null}
+
+          {msg ? (
+            <p
+              role="status"
+              className={`text-sm font-medium ${
+                msg.includes("Added") ? "text-emerald-700" : "text-amber-800"
+              }`}
+            >
+              {msg}
+            </p>
+          ) : null}
+
+          <div className="flex flex-wrap items-center gap-3 lg:hidden">
+            <WishlistButton productId={p._id} user={user} />
           </div>
 
-          {/* Right: title, ratings, price, variants, CTA */}
-          <div className="flex min-w-0 flex-1 flex-col gap-4 p-5 sm:p-6 lg:justify-center lg:p-8 xl:p-10">
-            {p.category ? (
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                {getCategoryLabel(p.category)}
-              </p>
-            ) : null}
+          {!user ? (
+            <p className="text-xs text-slate-500">
+              <Link href="/login" className="font-medium text-sky-700 hover:underline">
+                Sign in
+              </Link>{" "}
+              to save to wishlist or leave a review.
+            </p>
+          ) : null}
+        </div>
 
-            <h1 className="text-2xl font-semibold leading-tight text-slate-900 sm:text-3xl">
-              {name}
-            </h1>
-
-            <StarRating
-              rating={reviewSummary.averageRating}
-              count={reviewSummary.count}
-              size="lg"
-              reviewHref="#reviews"
-            />
-
-            {reviewSummary.count > 0 ? (
-              <p className="text-xs text-slate-500">Popular choice this season</p>
-            ) : null}
-
-            <ProductPrice
+        {/* Right: buy box (desktop) */}
+        <div className="lg:col-span-3">
+          <div className="lg:sticky lg:top-24">
+            <ProductBuyBox
               product={p}
-              size="lg"
-              showPromotionName
-              className="gap-3"
+              quantity={quantity}
+              maxQty={maxQty}
+              stock={stock}
+              variantsReady={variantsReady}
+              canAdd={canAdd}
+              paying={buying}
+              onQuantityChange={setQuantity}
+              onAddToCart={addToCart}
+              onBuyNow={buyNow}
             />
-
-            {p.description ? (
-              <p className="max-w-prose text-sm leading-relaxed text-slate-600 sm:text-base">
-                {p.description}
-              </p>
-            ) : (
-              <p className="text-sm text-slate-400">No description provided.</p>
-            )}
-
-            <div className="border-t border-slate-100 pt-4 space-y-3">
-              <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
-                {hasSizes ? (
-                  <div className="shrink-0">
-                    <p className="mb-1 text-xs font-medium text-slate-700">Size</p>
-                    <ProductSizeSelect
-                      product={p}
-                      value={selectedSize}
-                      compact
-                      onChange={(size) => {
-                        setSelectedSize(size);
-                        setQuantity(1);
-                      }}
-                    />
-                  </div>
-                ) : null}
-                {hasColors ? (
-                  <div className="shrink-0">
-                    <p className="mb-1 text-xs font-medium text-slate-700">Color</p>
-                    <ProductColorSelect
-                      product={p}
-                      value={selectedColor}
-                      onChange={setSelectedColor}
-                      layout="select"
-                      compact
-                    />
-                  </div>
-                ) : null}
-                <div className="shrink-0">
-                  <label htmlFor="product-qty" className="mb-1 block text-xs font-medium text-slate-700">
-                    Qty
-                  </label>
-                  <select
-                    id="product-qty"
-                    value={Math.min(quantity, maxQty)}
-                    onChange={(e) => setQuantity(Number(e.target.value))}
-                    disabled={stock <= 0 || !variantsReady}
-                    className={qtySelectClass}
-                    aria-label="Quantity"
-                  >
-                    {Array.from({ length: maxQty }, (_, i) => i + 1).map((n) => (
-                      <option key={n} value={n}>
-                        {n}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              {stock > 0 && variantsReady ? (
-                <p className="text-xs text-slate-500">Max {maxQty} per order</p>
-              ) : hasSizes && !selectedSize ? (
-                <p className="text-xs text-slate-500">Select a size to choose quantity</p>
-              ) : hasColors && !selectedColor ? (
-                <p className="text-xs text-slate-500">Select a color to choose quantity</p>
-              ) : null}
-
-              <div className="flex flex-wrap items-center gap-3">
-                <Badge tone={stock > 0 ? "success" : "danger"}>
-                  {stock > 0
-                    ? hasSizes && selectedSize
-                      ? `${selectedSize}${selectedColor ? ` · ${selectedColor}` : ""} · ${stock} in stock`
-                      : `In stock · ${stock}`
-                    : "Out of stock"}
-                </Badge>
-              </div>
-            </div>
-
-            {msg ? (
-              <p
-                role="status"
-                className={`text-sm font-medium ${
-                  msg.includes("Added") ? "text-emerald-700" : "text-amber-800"
-                }`}
-              >
-                {msg}
-              </p>
-            ) : null}
-
-            <div className="flex flex-wrap items-center gap-3 pt-1">
-              <button
-                type="button"
-                disabled={!canAdd}
-                onClick={addToCart}
-                className="inline-flex min-h-[2.75rem] min-w-[10rem] items-center justify-center rounded-full bg-amber-400 px-8 py-2.5 text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Add to cart
-              </button>
+            <div className="mt-3 hidden lg:flex">
               <WishlistButton productId={p._id} user={user} />
-              <Link href="/cart" className={linkSecondary}>
-                View cart
-              </Link>
-            </div>
-
-            {!user ? (
-              <p className="text-xs text-slate-500">
-                <Link href="/login" className="font-medium text-indigo-600 hover:underline">
-                  Sign in
-                </Link>{" "}
-                to save to wishlist or leave a review. Guest checkout is available.
-              </p>
-            ) : null}
-
-            <div className="mt-2 border-t border-slate-100 pt-4">
-              <ProductDeliveryInfo product={p} />
             </div>
           </div>
         </div>
-      </Card>
+      </div>
 
-      <SimilarProductsCompare currentProduct={p} similarProducts={similarProducts} />
+      {/* Mobile buy box duplicate below main grid — only one buy box on mobile in col 3 actually shows on mobile too since grid is 1 col. Good. */}
 
-      <div id="reviews">
-        <ProductReviews productId={p._id} user={user} initialSummary={reviewSummary} />
+      <div className="mt-10 space-y-10">
+        <ProductDetailsAccordion product={p} />
+        <SimilarProductsCompare currentProduct={p} similarProducts={similarProducts} />
+        <div id="reviews">
+          <ProductReviews productId={p._id} user={user} initialSummary={reviewSummary} />
+        </div>
       </div>
     </div>
   );

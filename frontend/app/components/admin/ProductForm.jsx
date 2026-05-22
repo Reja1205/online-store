@@ -12,7 +12,9 @@ import { productDisplayPrice, productPrice } from "../../lib/api";
 import { getCategoryColorMode } from "../../lib/colors";
 import { defaultSizeStockForCategory, getCategorySizeMode } from "../../lib/sizes";
 import ColorFields from "./ColorFields";
+import ColorImageFields from "./ColorImageFields";
 import SizeStockFields from "./SizeStockFields";
+import { pruneColorImages } from "../../lib/colorImages";
 
 const inputClass =
   "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20";
@@ -23,11 +25,15 @@ export const emptyProductForm = {
   stock: "",
   description: "",
   shortDescription: "",
+  detailTopHighlights: "",
+  detailStyle: "",
+  detailItemDetails: "",
   category: "",
   promotionCategory: "",
   promotionPercent: "",
   sizeStock: [],
   colors: [],
+  colorImages: [],
   featured: false,
   bestSeller: false,
   onSale: false,
@@ -43,6 +49,9 @@ export function productToForm(p) {
     stock: String(p.stock ?? ""),
     description: p.description || "",
     shortDescription: p.shortDescription || "",
+    detailTopHighlights: p.detailTopHighlights || "",
+    detailStyle: p.detailStyle || "",
+    detailItemDetails: p.detailItemDetails || "",
     category: p.category || "",
     promotionCategory: p.promotionCategory || "",
     promotionPercent:
@@ -53,6 +62,15 @@ export function productToForm(p) {
       ? p.sizeStock.map((s) => ({ size: s.size, stock: Number(s.stock ?? 0) }))
       : [],
     colors: Array.isArray(p.colors) ? [...p.colors] : [],
+    colorImages: Array.isArray(p.colorImages)
+      ? p.colorImages.map((row) => ({
+          color: row.color,
+          imageUrl:
+            row.imageUrl ||
+            (Array.isArray(row.imageUrls) ? row.imageUrls[0] : "") ||
+            "",
+        }))
+      : [],
     featured: Boolean(p.featured),
     bestSeller: Boolean(p.bestSeller),
     onSale: Boolean(p.onSale),
@@ -61,7 +79,7 @@ export function productToForm(p) {
   };
 }
 
-export function validateProductForm(values) {
+export function validateProductForm(values, { existingImageUrl = "" } = {}) {
   if (!values.name?.trim()) return "Product name is required.";
   if (values.price === "" || Number.isNaN(Number(values.price))) return "Valid price is required.";
   if (Number(values.price) < 0) return "Price cannot be negative.";
@@ -75,6 +93,15 @@ export function validateProductForm(values) {
   }
   if (getCategoryColorMode(values.category) && !values.colors?.length) {
     return "Select at least one color for this clothing category.";
+  }
+  if (getCategoryColorMode(values.category) && values.colors?.length) {
+    const byColor = Object.fromEntries(
+      (values.colorImages || []).map((row) => [row.color, row.imageUrl])
+    );
+    const missing = values.colors.filter((c) => !byColor[c]);
+    if (missing.length && !values.imageFile && !existingImageUrl) {
+      return `Upload a photo for each color (missing: ${missing.join(", ")}), or add a default product image below.`;
+    }
   }
   if (values.onSale && values.salePrice !== "") {
     const sale = Number(values.salePrice);
@@ -97,6 +124,9 @@ export function buildProductJsonBody(values) {
     stock: Number(values.stock),
     description: values.description?.trim() || "",
     shortDescription: values.shortDescription?.trim().slice(0, 200) || "",
+    detailTopHighlights: values.detailTopHighlights?.trim() || "",
+    detailStyle: values.detailStyle?.trim() || "",
+    detailItemDetails: values.detailItemDetails?.trim() || "",
     category: values.category,
     promotionCategory: values.promotionCategory || "",
     promotionPercent: values.promotionCategory ? Number(values.promotionPercent) : undefined,
@@ -112,6 +142,9 @@ export function buildProductJsonBody(values) {
 
   if (getCategoryColorMode(values.category) && values.colors?.length) {
     payload.colors = values.colors;
+    if (values.colorImages?.length) {
+      payload.colorImages = values.colorImages;
+    }
   }
 
   if (values.onSale && values.salePrice !== "") {
@@ -128,6 +161,9 @@ export function buildProductFormData(values, { includeImage = true } = {}) {
   fd.append("stock", String(Number(values.stock)));
   fd.append("description", values.description?.trim() || "");
   fd.append("shortDescription", values.shortDescription?.trim().slice(0, 200) || "");
+  fd.append("detailTopHighlights", values.detailTopHighlights?.trim() || "");
+  fd.append("detailStyle", values.detailStyle?.trim() || "");
+  fd.append("detailItemDetails", values.detailItemDetails?.trim() || "");
   fd.append("category", values.category);
   fd.append("promotionCategory", values.promotionCategory || "");
   if (values.promotionCategory && values.promotionPercent !== "") {
@@ -140,6 +176,9 @@ export function buildProductFormData(values, { includeImage = true } = {}) {
   }
   if (getCategoryColorMode(values.category) && values.colors?.length) {
     fd.append("colors", JSON.stringify(values.colors));
+    if (values.colorImages?.length) {
+      fd.append("colorImages", JSON.stringify(values.colorImages));
+    }
   }
   fd.append("featured", String(values.featured));
   fd.append("bestSeller", String(values.bestSeller));
@@ -386,7 +425,19 @@ export default function ProductForm({
       <ColorFields
         category={values.category}
         colors={values.colors}
-        onChange={(colors) => onChange({ ...values, colors })}
+        onChange={(colors) =>
+          onChange({
+            ...values,
+            colors,
+            colorImages: pruneColorImages(values.colorImages, colors),
+          })
+        }
+      />
+
+      <ColorImageFields
+        colors={values.colors}
+        colorImages={values.colorImages}
+        onChange={(colorImages) => onChange({ ...values, colorImages })}
       />
 
       <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -455,19 +506,69 @@ export default function ProductForm({
 
       <div>
         <label className="mb-1 block text-sm font-medium text-gray-700">
-          Full description <span className="font-normal text-gray-500">(product page)</span>
+          Full description <span className="font-normal text-gray-500">(optional overview)</span>
         </label>
         <textarea
           className={`${inputClass} min-h-28`}
           value={values.description}
           onChange={(e) => set("description", e.target.value)}
-          placeholder="Longer details shown on the product page…"
+          placeholder="Optional summary — shoppers mainly see the accordion sections below…"
         />
+      </div>
+
+      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-4">
+        <div>
+          <p className="text-sm font-semibold text-slate-900">Product details</p>
+          <p className="mt-1 text-xs text-slate-600">
+            Shown on the product page as dropdown sections (like Amazon): Top highlights, Style, and Item
+            details.
+          </p>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Top highlights</label>
+          <textarea
+            className={`${inputClass} min-h-28 font-mono text-xs`}
+            value={values.detailTopHighlights}
+            onChange={(e) => set("detailTopHighlights", e.target.value)}
+            placeholder={`Fabric type: 60% Cotton, 40% Polyester\nCare instructions: Machine Wash\nOrigin: Imported\nClosure type: Pull On`}
+          />
+          <p className="mt-1 text-xs text-gray-500">One per line. Use Label: value for two-column rows.</p>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Style</label>
+          <textarea
+            className={`${inputClass} min-h-24`}
+            value={values.detailStyle}
+            onChange={(e) => set("detailStyle", e.target.value)}
+            placeholder="Fit, neckline, sleeve type, occasion, etc."
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Item details</label>
+          <textarea
+            className={`${inputClass} min-h-24`}
+            value={values.detailItemDetails}
+            onChange={(e) => set("detailItemDetails", e.target.value)}
+            placeholder="Package dimensions, weight, manufacturer, model number, etc."
+          />
+        </div>
       </div>
 
       {showImageUpload ? (
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Product image</label>
+          <label className="mb-1 block text-sm font-medium text-gray-700">
+            {getCategoryColorMode(values.category) && values.colors?.length
+              ? "Default product image (optional)"
+              : "Product image"}
+          </label>
+          {getCategoryColorMode(values.category) && values.colors?.length ? (
+            <p className="mb-2 text-xs text-gray-500">
+              Used on catalog cards if set. Shop uses one photo per color above.
+            </p>
+          ) : null}
           {existingImageUrl ? (
             <img
               src={existingImageUrl}

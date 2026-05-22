@@ -16,6 +16,7 @@ const orderRoutes = require("./routes/order.routes");
 const wishlistRoutes = require("./routes/wishlist.routes");
 const userRoutes = require("./routes/user.routes");
 const returnRoutes = require("./routes/return.routes");
+const uploadRoutes = require("./routes/upload.routes");
 
 const app = express();
 
@@ -143,6 +144,7 @@ app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/returns", returnRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/uploads", uploadRoutes);
 
 // 404
 app.use((req, res) =>

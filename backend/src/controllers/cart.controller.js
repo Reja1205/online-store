@@ -196,6 +196,81 @@ async function removeFromCart(req, res) {
   }
 }
 
+async function updateCartItem(req, res) {
+  try {
+    const productId = req.body?.productId || req.body?.product;
+    const { size, color } = normalizeVariant(req.body?.size, req.body?.color);
+    const lineIndex = Number(req.body?.lineIndex);
+    const qty = Number(req.body?.qty);
+
+    if (!Number.isFinite(qty)) {
+      return res.status(400).json({ message: "qty is required" });
+    }
+
+    const cart = await findCart(req.cartOwner);
+    if (!cart || !cart.items?.length) {
+      return res.status(404).json({ message: "Cart is empty" });
+    }
+
+    let idx = -1;
+    if (Number.isInteger(lineIndex) && lineIndex >= 0 && lineIndex < cart.items.length) {
+      idx = lineIndex;
+    } else if (productId) {
+      if (!mongoose.Types.ObjectId.isValid(productId)) {
+        return res.status(400).json({ message: "Invalid productId" });
+      }
+      idx = findCartLineIndex(cart, productId, size, color);
+    } else {
+      return res.status(400).json({ message: "productId or lineIndex is required" });
+    }
+
+    if (idx < 0) {
+      return res.status(404).json({ message: "Item not found in cart" });
+    }
+
+    if (qty < 1) {
+      cart.items.splice(idx, 1);
+      await cart.save();
+      return res.json({ message: "Removed", cart });
+    }
+
+    const line = cart.items[idx];
+    const pid = toId(line.product);
+    const product = await Product.findById(pid);
+    if (!product) {
+      cart.items.splice(idx, 1);
+      await cart.save();
+      return res.json({ message: "Product no longer available — removed from cart", cart });
+    }
+
+    const lineSize = normalizeVariant(line.size, line.color).size;
+    const lineColor = normalizeVariant(line.size, line.color).color;
+
+    if (Array.isArray(product.sizes) && product.sizes.length > 0 && !lineSize) {
+      return res.status(400).json({ message: "This line is missing a size" });
+    }
+    if (Array.isArray(product.colors) && product.colors.length > 0 && !lineColor) {
+      return res.status(400).json({ message: "This line is missing a color" });
+    }
+
+    const available = stockForProductSize(product, lineSize);
+    if (available <= 0) {
+      return res.status(400).json({
+        message: lineSize ? `${lineSize} is out of stock` : "Product is out of stock",
+      });
+    }
+
+    const nextQty = Math.min(Math.max(1, Math.floor(qty)), available, 99);
+    cart.items[idx].qty = nextQty;
+    await cart.save();
+
+    return res.json({ message: "Quantity updated", cart });
+  } catch (err) {
+    console.error("UPDATE_CART_ERROR:", err);
+    return res.status(500).json({ message: "Server error", error: err.message });
+  }
+}
+
 async function clearCart(req, res) {
   try {
     const cart = await findCart(req.cartOwner);
@@ -214,6 +289,7 @@ async function clearCart(req, res) {
 module.exports = {
   getCart,
   addToCart,
+  updateCartItem,
   removeFromCart,
   clearCart,
   formatLineLabel,
