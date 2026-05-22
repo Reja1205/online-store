@@ -9,6 +9,7 @@ import { productHasColors } from "../lib/colors";
 import { productCardBlurb, productReviewSummary } from "../lib/productCard";
 import { productHasSizes, productTotalStock } from "../lib/sizes";
 import StarRating from "./product/StarRating";
+import { resolveProductImageUrl } from "../lib/productImage";
 
 function isAllowedImageHost(src) {
   try {
@@ -28,7 +29,8 @@ function ProductCard({ p, user, onAddToCart }) {
   const needsOptions = productHasSizes(p) || productHasColors(p);
   const stock = productTotalStock(p);
   const canAdd = stock > 0 && !needsOptions;
-  const useNextImage = p.imageUrl && isAllowedImageHost(p.imageUrl);
+  const imageSrc = resolveProductImageUrl(p.imageUrl);
+  const useNextImage = imageSrc && isAllowedImageHost(imageSrc);
 
   const detailHref = `/products/${p._id}`;
 
@@ -40,10 +42,10 @@ function ProductCard({ p, user, onAddToCart }) {
         aria-label={`View ${name}`}
       >
         <div className="relative aspect-square w-full md:aspect-[4/3]">
-          {p.imageUrl ? (
+          {imageSrc ? (
             useNextImage ? (
               <Image
-                src={p.imageUrl}
+                src={imageSrc}
                 alt={name}
                 fill
                 sizes="(max-width: 768px) 128px, (max-width: 1024px) 33vw, 16vw"
@@ -53,7 +55,7 @@ function ProductCard({ p, user, onAddToCart }) {
             ) : (
               // eslint-disable-next-line @next/next/no-img-element -- arbitrary merchant image hosts
               <img
-                src={p.imageUrl}
+                src={imageSrc}
                 alt={name}
                 className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
                 loading="lazy"
