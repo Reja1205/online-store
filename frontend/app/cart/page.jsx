@@ -4,13 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { apiJson, productDisplayPrice, productName, productStock } from "../lib/api";
 import ProductPrice from "../components/product/ProductPrice";
-import {
-  countMensTshirtQtyFromRows,
-  mensTshirtFreeShippingHeadline,
-  mensTshirtFreeShippingNote,
-  qualifiesMensTshirtFreeShipping,
-} from "../lib/freeShipping";
+import { getCartSummaryPromo } from "../lib/freeShipping";
 import { productHasSizes, stockForSize } from "../lib/sizes";
+import { weeklyFreeDeliveryLabel } from "../lib/weeklyDelivery";
+import { addSaveForLater } from "../lib/saveForLater";
+import CartLineQty, { CartLineActionLinks } from "../components/cart/CartLineQty";
 
 export default function CartPage() {
   const [items, setItems] = useState([]);
@@ -110,6 +108,28 @@ export default function CartPage() {
     await loadCart();
   }
 
+  async function saveRowForLater(row) {
+    setError("");
+    setMsg("");
+    if (row.deleted || !row.product) {
+      setError("Cannot save a removed product.");
+      return;
+    }
+
+    addSaveForLater({
+      productId: row.id,
+      size: row.size,
+      color: row.color,
+      qty: row.qty,
+      name: row.name,
+      imageUrl: row.imageUrl,
+      price: row.price,
+    });
+
+    await removeItem(row.id, row.size, row.color, row.lineIndex);
+    setMsg("Saved for later");
+  }
+
   useEffect(() => {
     loadCart();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -156,8 +176,7 @@ export default function CartPage() {
     return rows.reduce((sum, r) => sum + r.price * r.qty, 0);
   }, [rows]);
 
-  const mensTshirtQty = useMemo(() => countMensTshirtQtyFromRows(rows), [rows]);
-  const mensTshirtFreeDelivery = qualifiesMensTshirtFreeShipping(mensTshirtQty);
+  const cartPromo = useMemo(() => getCartSummaryPromo(rows, subtotal), [rows, subtotal]);
 
   if (loading) {
     return (
@@ -203,108 +222,104 @@ export default function CartPage() {
         ) : (
           <>
             <div className="grid gap-4">
-              {rows.map((r) => (
-                <div
-                  key={r.lineKey}
-                  className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm flex gap-4"
-                >
-                  <div className="w-24 h-24 rounded-xl bg-gray-100 overflow-hidden flex items-center justify-center border">
-                    {r.imageUrl ? (
-                      <img src={r.imageUrl} alt={r.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-xs text-gray-400">No image</span>
-                    )}
-                  </div>
+              {rows.map((r) => {
+                const maxQty = Math.max(1, Math.min(99, r.stock > 0 ? r.stock : 1));
+                const lineBusy = updatingLine === r.lineKey;
+                const lineDisabled = r.deleted || r.stock <= 0;
 
-                  <div className="flex-1">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-semibold text-gray-900">{r.name}</p>
-                        {r.size || r.color ? (
-                          <p className="text-xs text-gray-500 mt-0.5">
-                            {[r.color && `Color: ${r.color}`, r.size && `Size: ${r.size}`]
-                              .filter(Boolean)
-                              .join(" · ")}
-                          </p>
-                        ) : null}
-
-                        {r.deleted && (
-                          <p className="text-xs mt-1 text-red-600">
-                            This product was deleted by admin. You can remove it from cart.
-                          </p>
-                        )}
-
-                        {r.product ? (
-                          <div className="mt-2">
-                            <ProductPrice product={r.product} size="md" />
-                          </div>
-                        ) : (
-                          <p className="text-sm text-gray-600 mt-2">
-                            Price: <span className="font-medium">${r.price.toFixed(2)}</span>
-                          </p>
-                        )}
-                      </div>
-
-                      <span
-                        className={`text-xs px-3 py-1 rounded-full font-medium ${
-                          r.stock > 0
-                            ? "bg-green-100 text-green-700"
-                            : "bg-red-100 text-red-600"
-                        }`}
-                      >
-                        {r.stock > 0 ? `In Stock: ${r.stock}` : "Out of Stock"}
-                      </span>
+                return (
+                  <div
+                    key={r.lineKey}
+                    className="flex gap-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm"
+                  >
+                    <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl border bg-gray-100">
+                      {r.imageUrl ? (
+                        <img
+                          src={r.imageUrl}
+                          alt={r.name}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-xs text-gray-400">No image</span>
+                      )}
                     </div>
 
-                    <div className="mt-3 flex items-center justify-between gap-3 flex-wrap">
-                      <div className="flex items-center gap-2">
-                        <label
-                          htmlFor={`cart-qty-${r.lineKey}`}
-                          className="text-sm font-medium text-gray-700"
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-gray-900">{r.name}</p>
+                          {r.size || r.color ? (
+                            <p className="mt-0.5 text-xs text-gray-500">
+                              {[r.color && `Color: ${r.color}`, r.size && `Size: ${r.size}`]
+                                .filter(Boolean)
+                                .join(" · ")}
+                            </p>
+                          ) : null}
+
+                          {r.deleted && (
+                            <p className="mt-1 text-xs text-red-600">
+                              This product was deleted by admin. You can remove it from cart.
+                            </p>
+                          )}
+
+                          {r.product ? (
+                            <div className="mt-2">
+                              <ProductPrice product={r.product} size="md" />
+                            </div>
+                          ) : (
+                            <p className="mt-2 text-sm text-gray-600">
+                              Price:{" "}
+                              <span className="font-medium">${r.price.toFixed(2)}</span>
+                            </p>
+                          )}
+
+                          <p className="mt-2 text-sm font-medium text-[#007600]">
+                            {weeklyFreeDeliveryLabel()}
+                          </p>
+                          <span className="mt-1.5 inline-block rounded border border-slate-300 bg-slate-50 px-2 py-0.5 text-[11px] font-bold tracking-wide text-slate-700">
+                            FREE RETURN
+                          </span>
+                        </div>
+
+                        <span
+                          className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium ${
+                            r.stock > 0
+                              ? "bg-green-100 text-green-700"
+                              : "bg-red-100 text-red-600"
+                          }`}
                         >
-                          Qty
-                        </label>
-                        <select
-                          id={`cart-qty-${r.lineKey}`}
-                          value={r.qty}
-                          disabled={
-                            r.deleted ||
-                            r.stock <= 0 ||
-                            updatingLine === r.lineKey
-                          }
-                          onChange={(e) => updateQty(r, Number(e.target.value))}
-                          className="min-h-[2.25rem] rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-sm text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:cursor-not-allowed disabled:opacity-60"
-                          aria-label={`Quantity for ${r.name}`}
-                        >
-                          {Array.from(
-                            {
-                              length: Math.max(
-                                1,
-                                Math.min(99, r.stock > 0 ? r.stock : 1)
-                              ),
-                            },
-                            (_, i) => i + 1
-                          ).map((n) => (
-                            <option key={n} value={n}>
-                              {n}
-                            </option>
-                          ))}
-                        </select>
-                        {updatingLine === r.lineKey ? (
-                          <span className="text-xs text-gray-500">Updating…</span>
-                        ) : null}
+                          {r.stock > 0 ? "In Stock" : "Out of Stock"}
+                        </span>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => removeItem(r.id, r.size, r.color, r.lineIndex)}
-                          className="px-3 py-2 rounded-xl bg-red-50 border border-red-200 text-red-700 hover:bg-red-100 transition text-sm font-medium"
-                        >
-                          Remove
-                        </button>
+                      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-3">
+                        <div className="flex flex-wrap items-center gap-3">
+                          <CartLineQty
+                            qty={r.qty}
+                            maxQty={maxQty}
+                            disabled={lineDisabled}
+                            busy={lineBusy}
+                            ariaLabel={r.name}
+                            onDecrease={() => updateQty(r, r.qty - 1)}
+                            onIncrease={() => updateQty(r, r.qty + 1)}
+                            onRemove={() =>
+                              removeItem(r.id, r.size, r.color, r.lineIndex)
+                            }
+                          />
+                          <CartLineActionLinks
+                            busy={lineBusy}
+                            onDelete={() =>
+                              removeItem(r.id, r.size, r.color, r.lineIndex)
+                            }
+                            onSaveForLater={() => saveRowForLater(r)}
+                          />
+                          {lineBusy ? (
+                            <span className="text-xs text-gray-500">Updating…</span>
+                          ) : null}
+                        </div>
 
                         <p className="text-sm text-gray-700">
-                          Line Total:{" "}
+                          Subtotal:{" "}
                           <span className="font-semibold text-gray-900">
                             ${(r.price * r.qty).toFixed(2)}
                           </span>
@@ -312,20 +327,20 @@ export default function CartPage() {
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="mt-6 bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
               <div
                 className={`mb-4 rounded-xl border px-4 py-3 text-sm ${
-                  mensTshirtFreeDelivery
+                  cartPromo.tone === "success"
                     ? "border-emerald-200 bg-emerald-50 text-emerald-900"
                     : "border-indigo-200 bg-indigo-50 text-indigo-900"
                 }`}
               >
-                <p className="font-semibold">{mensTshirtFreeShippingHeadline(mensTshirtQty)}</p>
-                <p className="mt-1 text-xs opacity-90">{mensTshirtFreeShippingNote(mensTshirtQty)}</p>
+                <p className="font-semibold">{cartPromo.headline}</p>
+                <p className="mt-1 text-xs opacity-90">{cartPromo.note}</p>
               </div>
 
               <div className="flex items-center justify-between">
@@ -333,7 +348,7 @@ export default function CartPage() {
                 <p className="text-gray-900 font-bold">${subtotal.toFixed(2)}</p>
               </div>
 
-              {mensTshirtFreeDelivery ? (
+              {cartPromo.checkoutShippingFree ? (
                 <p className="mt-2 text-sm font-medium text-emerald-700">Shipping at checkout: FREE</p>
               ) : null}
 
