@@ -1,0 +1,46 @@
+<svg width="120" height="48" viewBox="0 0 120 48" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Brand mark">
+  <defs>
+    <linearGradient id="brandGold" x1="8" y1="8" x2="112" y2="40" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F9E27A"/>
+      <stop offset="0.45" stop-color="#E8B923"/>
+      <stop offset="1" stop-color="#C9920A"/>
+    </linearGradient>
+    <filter id="brandSoft" x="-8%" y="-20%" width="116%" height="140%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="0.35" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <!-- Continuous infinity ribbon  left loop tighter, right loop open (matches sketch) -->
+  <path
+    d="M58 24
+       C58 14 46 8 34 12
+       C20 17 18 28 26 32
+       C32 35 40 32 44 26
+       C48 18 56 10 72 10
+       C92 10 102 18 102 24
+       C102 32 90 38 72 38
+       C54 38 48 32 52 26
+       C56 20 58 18 58 24Z"
+    fill="url(#brandGold)"
+    fill-opacity="0.92"
+    filter="url(#brandSoft)"
+  />
+  <path
+    d="M58 24
+       C58 14 46 8 34 12
+       C20 17 18 28 26 32
+       C32 35 40 32 44 26
+       C48 18 56 10 72 10
+       C92 10 102 18 102 24
+       C102 32 90 38 72 38
+       C54 38 48 32 52 26
+       C56 20 58 18 58 24Z"
+    fill="none"
+    stroke="#B8860B"
+    stroke-opacity="0.25"
+    stroke-width="1.5"
+  />
+</svg>

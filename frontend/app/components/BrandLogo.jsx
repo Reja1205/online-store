@@ -1,12 +1,16 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { useId } from "react";
+import { Dancing_Script } from "next/font/google";
 import { SITE_NAME, SITE_WORDMARK } from "../lib/site";
 
-/**
- * BigBag wordmark + RR monogram (Rejaur Rahman).
- */
+const brandCursive = Dancing_Script({
+  subsets: ["latin"],
+  weight: ["600", "700"],
+});
+
+/** Black & blue cursive BB monogram + script wordmark. */
 export default function BrandLogo({
   href = "/",
   className = "",
@@ -15,74 +19,43 @@ export default function BrandLogo({
   variant = "header",
   theme = "light",
 }) {
-  const gradId = useId().replace(/:/g, "");
-  const iconSizes = { sm: 32, md: 40, lg: 48 };
-  const iconPx = iconSizes[size] || iconSizes.md;
+  const markHeights = { sm: 34, md: 42, lg: 50 };
+  const markWidths = { sm: 52, md: 64, lg: 76 };
+  const markH = markHeights[size] || markHeights.md;
+  const markW = markWidths[size] || markWidths.md;
 
   const textSize =
     size === "sm"
-      ? "text-base leading-tight"
+      ? "text-xl"
       : size === "lg"
-        ? "text-2xl sm:text-[1.65rem] leading-tight"
-        : "text-lg sm:text-xl leading-tight";
+        ? "text-3xl sm:text-[2rem]"
+        : "text-2xl sm:text-[1.75rem]";
 
+  const scriptBase = `${brandCursive.className} font-bold leading-none tracking-normal`;
   const firstClass =
-    theme === "dark" ? "font-bold tracking-tight text-white" : "font-bold tracking-tight text-slate-800";
+    theme === "dark" ? `${scriptBase} text-white` : `${scriptBase} text-gray-900`;
   const secondClass =
-    theme === "dark" ? "font-bold tracking-tight text-indigo-300" : "font-bold tracking-tight text-indigo-600";
+    theme === "dark" ? `${scriptBase} text-blue-400` : `${scriptBase} text-blue-600`;
 
   const { first, second } = SITE_WORDMARK;
 
   const mark = (
-    <svg
-      width={iconPx}
-      height={iconPx}
-      viewBox="0 0 48 48"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className="shrink-0 rounded-full"
+    <Image
+      src="/brand-bb-logo.png"
+      alt=""
+      width={markW}
+      height={markH}
+      className="shrink-0 object-contain"
+      priority={variant === "header"}
       aria-hidden
-    >
-      <circle cx="24" cy="24" r="24" fill={`url(#${gradId})`} />
-      <circle
-        cx="24"
-        cy="24"
-        r="22"
-        fill="none"
-        stroke="#e0e7ff"
-        strokeWidth="1.5"
-        opacity="0.85"
-      />
-      <path
-        d="M11 33V15h5.2c2.8 0 4.8 1.9 4.8 4.6 0 2.2-1.3 3.6-3.2 4.1l4.4 9.3"
-        stroke="white"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      />
-      <path
-        d="M25 33V15h5.2c2.8 0 4.8 1.9 4.8 4.6 0 2.2-1.3 3.6-3.2 4.1l4.4 9.3"
-        stroke="white"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      />
-      <defs>
-        <linearGradient id={gradId} x1="4" y1="4" x2="44" y2="44" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#4338ca" />
-          <stop offset="1" stopColor="#6366f1" />
-        </linearGradient>
-      </defs>
-    </svg>
+    />
   );
 
   const wordmark =
     variant === "footer" ? (
       <span className={`flex flex-col ${textSize}`}>
-        <span className="font-bold tracking-tight text-white">{first}</span>
-        <span className="font-bold tracking-tight text-indigo-300">{second}</span>
+        <span className={`${brandCursive.className} font-bold text-white text-xl`}>{first}</span>
+        <span className={`${brandCursive.className} font-bold text-blue-400 text-xl`}>{second}</span>
       </span>
     ) : (
       <span className={`hidden min-[380px]:inline ${textSize}`}>
